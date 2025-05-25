@@ -1,0 +1,39 @@
+cmake_minimum_required(VERSION 3.26)
+project(physics_test C CXX)
+
+set(CMAKE_PREFIX_PATH "~/cmake/")
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+# set(CMAKE_BUILD_TYPE Debug)
+
+find_package(SDL3 REQUIRED)
+find_package(SDL3_image REQUIRED)
+find_package(assimp REQUIRED)
+find_package(Jolt REQUIRED)
+
+
+#add_subdirectory(../assimp-src assimp)
+#add_subdirectory(C:/Users/Ev/SDL_image SDL_image EXCLUDE_FROM_ALL)
+#add_subdirectory(../JoltPhysics/Build/ JoltPhysics)
+
+add_compile_options(-Wall)
+add_executable(car)
+
+target_sources(car
+PRIVATE
+    main.cpp
+    model.cpp
+    shader.cpp
+    texture.cpp
+    camera.cpp
+    convert.cpp
+    physics.cpp
+    input.cpp
+    audio.cpp
+    glad/glad.c
+)
+
+#target_include_directories(car PUBLIC ../JoltPhysics)
+target_link_libraries(car PRIVATE SDL3::SDL3 SDL3_image::SDL3_image assimp::assimp Jolt::Jolt -static-libgcc -static-libstdc++)
+#target_link_libraries(physics_test PRIVATE SDL3::SDL3)
