@@ -133,6 +133,50 @@ void* alignedAllocateImpl(size_t inSize, size_t inAlignment) {
 }
 
 
+static void VehiclePostCollideCallback(VehicleConstraint &inVehicle, const PhysicsStepListenerContext &inContext)
+{
+    // Audio stuff
+    WheeledVehicleController *controller = static_cast<WheeledVehicleController*>
+        (vehicleConstraint->GetController());
+    VehicleEngine &engine = controller->GetEngine();
+    float rpm = engine.GetCurrentRPM();
+    SDL_SetAudioStreamFrequencyRatio(engineSnd->stream, rpm / 4000.0f);
+
+    float averageSlip = 0;
+    float slipLong;
+    //Wheel *wheel1 = vehicleConstraint->GetWheels()[0];
+    //SDL_Log("ang vel: %f", wheel1->GetAngularVelocity());
+    for (Wheel *wheel : vehicleConstraint->GetWheels()) {
+        if (!wheel->HasContact()) {
+            continue;
+        }
+        Vec3 wPos = Vec3(carBody->GetWorldTransform() * Vec4(wheel->GetSettings()->mPosition, 1.0f));
+        Vec3 wVel = carBody->GetPointVelocity(wPos);
+        float wheelLongVel = wheel->GetAngularVelocity() * wheel->GetSettings()->mRadius;
+        slipLong = SDL_fabsf(wheelLongVel) - SDL_fabsf(wVel.Dot(wheel->GetContactLongitudinal()));
+        slipLong = SDL_fabsf(slipLong);
+        //SDL_Log("%f", slipLong);
+
+        float slipLat = wVel.Dot(wheel->GetContactLateral());
+        float slip = slipLong*slipLong + slipLat*slipLat;
+        averageSlip += slip / vehicleConstraint->GetWheels().size();
+        //SDL_Log("slip long: %f, lat: %f", slipLong, slipLat);
+    }
+    //SDL_Log("slip long: %f", SDL_fabsf(slipLong));
+    //SDL_Log("wheel velocity: %f", wVel.Length());
+    //SDL_Log("Wheels: %d", vehicleConstraint->GetWheels().size());
+    //SDL_Log("ang vel: %f", wheel->GetAngularVelocity());
+    //SDL_Log("%f, %f, %f", wPos.GetX(), wPos.GetY(), wPos.GetZ());
+    //SDL_Log("Slip average: %f", averageSlip);
+
+
+    float driftGain = SDL_min(averageSlip / 130.0f, 1.0f);
+    float driftPitch = carBody->GetLinearVelocity().Length() / 30.0f + 0.6;
+    SDL_SetAudioStreamFrequencyRatio(driftSnd->stream, driftPitch);
+    SDL_SetAudioStreamGain(driftSnd->stream, driftGain);
+}
+
+
 void Phys::SetupJolt() 
 {
 	// Register allocation hook. In this example we'll just let Jolt use malloc / free but you can override these if you want (see Memory.h).
@@ -311,6 +355,7 @@ void Phys::CreateCarBody()
 
 
 	vehicleConstraint->SetVehicleCollisionTester(colTester);
+    vehicleConstraint->SetPostCollideCallback(VehiclePostCollideCallback);
 
     // TODO: remove and re-tweak car settings
 	static_cast<WheeledVehicleController *>(vehicleConstraint->GetController())->SetTireMaxImpulseCallback(
@@ -543,40 +588,6 @@ void Phys::PhysicsStep(float delta)
     physics_system.Update(delta, cCollisionSteps, &(*temp_allocator), &(*job_system));
 
 
-    // Audio stuff
-    rpm = engine.GetCurrentRPM();
-    SDL_SetAudioStreamFrequencyRatio(engineSnd->stream, rpm / 4000.0f);
-
-    float averageSlip = 0;
-    float slipLong;
-    //Wheel *wheel1 = vehicleConstraint->GetWheels()[0];
-    //SDL_Log("ang vel: %f", wheel1->GetAngularVelocity());
-    for (Wheel *wheel : vehicleConstraint->GetWheels()) {
-        if (!wheel->HasContact()) {
-            continue;
-        }
-        Vec3 wPos = Vec3(carBody->GetWorldTransform() * Vec4(wheel->GetSettings()->mPosition, 1.0f));
-        Vec3 wVel = carBody->GetPointVelocity(wPos);
-        float wheelLongVel = wheel->GetAngularVelocity() * wheel->GetSettings()->mRadius;
-        slipLong = SDL_fabsf(wheelLongVel) - SDL_fabsf(wVel.Dot(wheel->GetContactLongitudinal()));
-        slipLong = SDL_fabsf(slipLong);
-        //SDL_Log("%f", slipLong);
-
-        float slipLat = wVel.Dot(wheel->GetContactLateral());
-        float slip = slipLong*slipLong + slipLat*slipLat;
-        averageSlip += slip / vehicleConstraint->GetWheels().size();
-        //SDL_Log("slip long: %f, lat: %f", slipLong, slipLat);
-    }
-    //SDL_Log("slip long: %f", SDL_fabsf(slipLong));
-    //SDL_Log("wheel velocity: %f", wVel.Length());
-    //SDL_Log("Wheels: %d", vehicleConstraint->GetWheels().size());
-    //SDL_Log("ang vel: %f", wheel->GetAngularVelocity());
-    //SDL_Log("%f, %f, %f", wPos.GetX(), wPos.GetY(), wPos.GetZ());
-    //SDL_Log("Slip average: %f", averageSlip);
-
-
-    float driftGain = SDL_min(averageSlip / 130.0f, 1.0f);
-    SDL_SetAudioStreamGain(driftSnd->stream, driftGain);
 }
 
 
