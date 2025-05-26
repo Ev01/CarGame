@@ -66,3 +66,21 @@ JPH::RMat44 ToJoltMat4(aiMatrix4x4 aiMat)
          );
     return joltMat;
 }
+
+
+JPH::Vec4 ToJoltVec4(glm::vec4 v)
+{
+    return JPH::Vec4(v.x, v.y, v.z, v.w);
+}
+
+
+JPH::RMat44 ToJoltMat4(glm::mat4 gMat)
+{
+    JPH::RMat44 joltMat(
+         ToJoltVec4(gMat[0]),
+         ToJoltVec4(gMat[1]),
+         ToJoltVec4(gMat[2]),
+         ToJoltVec4(gMat[3])
+         );
+    return joltMat;
+}

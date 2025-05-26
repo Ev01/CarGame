@@ -32,6 +32,7 @@ Model cubeModel;
 Model cylinderModel;
 Model carModel;
 Model wheelModel;
+Model mapModel;
 Camera cam;
 
 const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -46,7 +47,8 @@ float yaw = -SDL_PI_F / 2.0;
 float pitch;
 
 
-double getSeconds() {
+double getSeconds()
+{
     return (double) SDL_GetTicksNS() / (double) SDL_NS_PER_SECOND;
 }
 
@@ -81,7 +83,8 @@ bool carNodeCallback(aiNode *node, aiMatrix4x4 transform)
     return true;
 }
 
-SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
+SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
+{
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO);
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -126,11 +129,13 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     cylinderModel = LoadModel("models/cylinder.obj");
     carModel = LoadModel("models/mycar.gltf", carNodeCallback);
     wheelModel = LoadModel("models/wheel.gltf");
+    mapModel = LoadModel("models/simple_map.gltf");
 
     cam.pos.z = 6.0f;
     cam.SetYawPitch(yaw, pitch);
 
     Phys::SetupSimulation();
+    Phys::LoadMap(mapModel);
 
     glViewport(0, 0, 800, 600);
 
@@ -148,7 +153,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 }
 
 
-SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
+SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
+{
     Input::HandleEvent(event);
 
     if (event->type == SDL_EVENT_QUIT) {
@@ -167,7 +173,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 }
 
 
-SDL_AppResult SDL_AppIterate(void *appstate) {
+SDL_AppResult SDL_AppIterate(void *appstate)
+{
     delta = getSeconds() - lastFrame;
     lastFrame = getSeconds();
 
@@ -201,32 +208,33 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
         yawOffset = SDL_PI_F / 2.0f * Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHTX);
     }
     //SDL_Log("Car yaw: %f, x: %f, z: %f", carYaw, carDir.GetX(), carDir.GetZ());
-    //cam.SetFollow(carYaw, -0.2f, 14.0f, carPos);
-    //cam.SetFollow(yaw, pitch, 14.0f, carPos);
     cam.SetFollowSmooth(carYaw + yawOffset, -0.2f, 14.0f, carPos, 3.0f * delta);
     //cam.SetOrbit(14.0f, 4.0f, carPos);
     // Move Camera
     /*
-    if (scancodesDown[SDL_SCANCODE_A]) {
-        cam.pos -= cam.Right(up) * CAM_SPEED * delta;
+    if (Input::IsScanDown(SDL_SCANCODE_A)) {
+        cam.pos -= cam.Right(up) * CAM_SPEED * (float)delta;
     }
-    if (scancodesDown[SDL_SCANCODE_D]) {
-        cam.pos += cam.Right(up) * CAM_SPEED * delta;
+    if (Input::IsScanDown(SDL_SCANCODE_D)) {
+        cam.pos += cam.Right(up) * CAM_SPEED * (float)delta;
     }
-    if (scancodesDown[SDL_SCANCODE_W]) {
-        cam.pos += cam.dir * CAM_SPEED * delta;
+    if (Input::IsScanDown(SDL_SCANCODE_W)) {
+        cam.pos += cam.dir * CAM_SPEED * (float)delta;
     }
-    if (scancodesDown[SDL_SCANCODE_S]) {
-        cam.pos -= cam.dir * CAM_SPEED * delta;
+    if (Input::IsScanDown(SDL_SCANCODE_S)) {
+        cam.pos -= cam.dir * CAM_SPEED * (float)delta;
     }
     */
+    
 
     glClearColor(0.7f, 0.6f, 0.2f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    /*
     glm::mat4 floorMat = glm::mat4(1.0f);
     floorMat = glm::scale(floorMat, glm::vec3(100.0f, 1.0f, 100.0f));
     floorMat = glm::translate(floorMat, glm::vec3(0.0f, -2.0f, 0.0f));
+    */
 
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, spherePosGlm);
@@ -247,7 +255,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
     glUseProgram(shader.id);
 
-    shader.SetMat4fv((char*)"model", glm::value_ptr(model));
+    //shader.SetMat4fv((char*)"model", glm::value_ptr(model));
     shader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
     shader.SetMat4fv((char*)"view", glm::value_ptr(view));
 
@@ -259,19 +267,24 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
     shader.SetFloat((char*)"material.shininess", 32.0f);
 
-    monkeyModel.Draw(shader);
+    monkeyModel.Draw(shader, model);
 
     for (size_t i=0; i < NUM_SPHERES; i++){
         model = glm::mat4(1.0f);
         model = glm::translate(model, ToGlmVec3(Phys::GetSpherePos(i)));
         model = model * QuatToMatrix(Phys::GetSphereRotation(i));
         model = glm::scale(model, glm::vec3(0.5f));
-        shader.SetMat4fv((char*)"model", glm::value_ptr(model));
-        monkeyModel.Draw(shader);
+        //shader.SetMat4fv((char*)"model", glm::value_ptr(model));
+        monkeyModel.Draw(shader, model);
     }
 
-    shader.SetMat4fv((char*)"model", glm::value_ptr(floorMat));
-    cubeModel.Draw(shader);
+    //shader.SetMat4fv((char*)"model", glm::value_ptr(floorMat));
+    //cubeModel.Draw(shader, floorMat);
+
+    // Draw map
+    model = glm::mat4(1.0f);
+    shader.SetMat4fv((char*)"model", glm::value_ptr(model));
+    mapModel.Draw(shader);
 
     // Draw Car
     glm::mat4 carTrans = glm::mat4(1.0f);
@@ -279,8 +292,8 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     carTrans = carTrans * QuatToMatrix(Phys::GetCarRotation());
     //carTrans = glm::scale(carTrans, glm::vec3(0.9f, 0.2f, 2.0f));
 
-    shader.SetMat4fv((char*)"model", glm::value_ptr(carTrans));
-    carModel.Draw(shader);
+    //shader.SetMat4fv((char*)"model", glm::value_ptr(carTrans));
+    carModel.Draw(shader, carTrans);
 
     // Draw car wheels
     for (int i = 0; i < 4; i++) {
@@ -289,10 +302,11 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
             wheelTrans = glm::rotate(wheelTrans, SDL_PI_F, glm::vec3(1.0f, 0.0f, 0.0f));
         }
         //wheelTrans = glm::scale(wheelTrans, glm::vec3(0.45f, 0.2f, 0.45f));
-        shader.SetMat4fv((char*)"model", glm::value_ptr(wheelTrans));
+        //shader.SetMat4fv((char*)"model", glm::value_ptr(wheelTrans));
         //cylinderModel.Draw(shader);
-        wheelModel.Draw(shader);
+        wheelModel.Draw(shader, wheelTrans);
     }
+
 
 
     
@@ -313,7 +327,8 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 }
 
 
-void SDL_AppQuit(void *appstate, SDL_AppResult result) {
+void SDL_AppQuit(void *appstate, SDL_AppResult result)
+{
     Phys::PhysicsCleanup();
 }
     

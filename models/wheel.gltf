@@ -15,12 +15,7 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"WheelMesh",
-			"translation":[
-				2.6649186611175537,
-				0.43829405307769775,
-				5.618946075439453
-			]
+			"name":"WheelMesh"
 		}
 	],
 	"materials":[

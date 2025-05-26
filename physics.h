@@ -1,5 +1,7 @@
 #pragma once
 
+#include "model.h"
+
 // The Jolt headers don't include Jolt.h. Always include Jolt.h before including any other Jolt header.
 // You can use Jolt.h in your precompiled header to speed up compilation.
 #include <Jolt/Jolt.h>
@@ -25,6 +27,7 @@ namespace Phys {
     void SetupSimulation();
     void PhysicsStep(float delta);
     void CreateCarBody();
+    void LoadMap(const Model &mapModel);
 
     JPH::RVec3 GetCarPos();
     JPH::Quat GetCarRotation();

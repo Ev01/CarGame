@@ -4,6 +4,8 @@
 
 #include "input.h"
 #include "audio.h"
+#include "model.h"
+#include "convert.h"
 
 #include <Jolt/Physics/Collision/BroadPhase/ObjectVsBroadPhaseLayerFilterTable.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayerInterfaceTable.h>
@@ -11,6 +13,7 @@
 #include <Jolt/Physics/Vehicle/VehicleConstraint.h>
 #include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
 
 #include <SDL3/SDL.h>
@@ -241,7 +244,7 @@ void Phys::CreateCarBody()
 	colTester = new VehicleCollisionTesterRay(Layers::MOVING);
     
 	// Create vehicle body
-	RVec3 position(3, 1, 6);
+	RVec3 position(10, 3, 16);
 	BodyCreationSettings car_body_settings(carCompoundShape, position, Quat::sRotation(Vec3::sAxisZ(), 0.0f), EMotionType::Dynamic, Layers::MOVING);
 	car_body_settings.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
 	car_body_settings.mMassPropertiesOverride.mMass = 1500.0f;
@@ -322,6 +325,49 @@ void Phys::CreateCarBody()
 }
 
 
+void Phys::LoadMap(const Model &mapModel)
+{
+    std::vector<BodyID> bodyIds;
+    BodyInterface &bodyInterface = physics_system.GetBodyInterface();
+    for (const ModelNode &node : mapModel.nodes) {
+        RMat44 transform = ToJoltMat4(node.mTransform);
+        for (int meshIdx : node.mMeshes) {
+            IndexedTriangleList triangleList;
+            VertexList meshVertices;
+            const Mesh &mesh = mapModel.meshes[meshIdx];
+            for (size_t i = 0; i < mesh.vertices.size(); i++) {
+                Vec3 vertexV3 = ToJoltVec3(mesh.vertices[i].position);
+                vertexV3 = Vec3(transform * Vec4(vertexV3, 1.0f));
+                Float3 vertexF3(vertexV3.GetX(), vertexV3.GetY(), vertexV3.GetZ());
+                meshVertices.push_back(vertexF3);
+            }
+            
+            for (size_t i = 0; i < mesh.indices.size(); i += 3) {
+                int i1 = mesh.indices[i];
+                int i2 = mesh.indices[i + 1];
+                int i3 = mesh.indices[i + 2];
+                IndexedTriangle triangle(i1, i2, i3, 0);
+                triangleList.push_back(triangle);
+            }
+            Body *body = bodyInterface.CreateBody(
+                    BodyCreationSettings(
+                        new MeshShapeSettings(meshVertices, triangleList),
+                        RVec3::sZero(),
+                        Quat::sIdentity(),
+                        EMotionType::Static,
+                        Layers::NON_MOVING));
+            bodyIds.push_back(body->GetID());
+        }
+    }
+    SDL_assert(bodyIds.size() > 0);
+    BodyInterface::AddState state = bodyInterface.AddBodiesPrepare(
+            &bodyIds[0], bodyIds.size());
+
+    bodyInterface.AddBodiesFinalize(
+            &bodyIds[0], bodyIds.size(),
+            state, EActivation::DontActivate);
+}
+
 
 void Phys::SetupSimulation()
 {
@@ -382,6 +428,7 @@ void Phys::SetupSimulation()
 	// variant of this. We're going to use the locking version (even though we're not planning to access bodies from multiple threads)
 	BodyInterface &body_interface = physics_system.GetBodyInterface();
 
+    /*
 	// Next we can create a rigid body to serve as the floor, we make a large box
 	// Create the settings for the collision volume (the shape).
 	// Note that for simple shapes (like boxes) you can also directly construct a BoxShape.
@@ -401,6 +448,7 @@ void Phys::SetupSimulation()
     
     // Add it to the world
     body_interface.AddBody(floorBody->GetID(), EActivation::DontActivate);
+    */
 
 
 
@@ -419,7 +467,7 @@ void Phys::SetupSimulation()
 
     // Create all spheres
     for (size_t i = 0; i < NUM_SPHERES; i++) {
-        BodyCreationSettings settings(new SphereShape(0.5f), RVec3(2*i + 1.0_r, 1.0_r, SDL_sin((float)i) * 3.0_r), Quat::sIdentity(), EMotionType::Dynamic, Layers::MOVING);
+        BodyCreationSettings settings(new SphereShape(0.5f), RVec3(2*i + 1.0_r, 20.0_r, SDL_sin((float)i) * 3.0_r), Quat::sIdentity(), EMotionType::Dynamic, Layers::MOVING);
         sphereIds[i] = body_interface.CreateAndAddBody(settings, EActivation::Activate);
     }
 
@@ -532,7 +580,8 @@ void Phys::PhysicsStep(float delta)
 }
 
 
-void Phys::ProcessInput() {
+void Phys::ProcessInput()
+{
     sphereForce.SetX(0.0f);
     sphereForce.SetY(0.0f);
     sphereForce.SetZ(0.0f);
@@ -584,31 +633,36 @@ Quat Phys::GetCarRotation()
 }
 
 
-RVec3 Phys::GetSpherePos() {
+RVec3 Phys::GetSpherePos()
+{
     BodyInterface &body_interface = physics_system.GetBodyInterface();
     return body_interface.GetCenterOfMassPosition(sphere_id);
 }
 
 
-Quat Phys::GetSphereRotation() {
+Quat Phys::GetSphereRotation()
+{
     BodyInterface &body_interface = physics_system.GetBodyInterface();
     return body_interface.GetRotation(sphere_id);
 }
 
 
-RVec3 Phys::GetSpherePos(int sphereNum) {
+RVec3 Phys::GetSpherePos(int sphereNum)
+{
     BodyInterface &body_interface = physics_system.GetBodyInterface();
     return body_interface.GetCenterOfMassPosition(sphereIds[sphereNum]);
 }
 
 
-Quat Phys::GetSphereRotation(int sphereNum) {
+Quat Phys::GetSphereRotation(int sphereNum)
+{
     BodyInterface &body_interface = physics_system.GetBodyInterface();
     return body_interface.GetRotation(sphereIds[sphereNum]);
 }
 
 
-void Phys::PhysicsCleanup() {
+void Phys::PhysicsCleanup()
+{
 	// Unregisters all types with the factory and cleans up the default material
     UnregisterTypes();
 
@@ -632,8 +686,8 @@ void Phys::PhysicsCleanup() {
     }
 
 	// Remove and destroy the floor
-	body_interface.RemoveBody(floorBody->GetID());
-	body_interface.DestroyBody(floorBody->GetID());
+	//body_interface.RemoveBody(floorBody->GetID());
+	//body_interface.DestroyBody(floorBody->GetID());
     
 	// Destroy the factory
 	delete Factory::sInstance;

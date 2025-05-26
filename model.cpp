@@ -1,6 +1,7 @@
 #include "model.h"
 #include "texture.h"
 #include "shader.h"
+#include "convert.h"
 #include "glad/glad.h"
 
 #include <SDL3/SDL.h>
@@ -47,7 +48,8 @@ void Mesh::Init(std::vector<Vertex> p_vertices,
 }
 
 
-void Mesh::Draw(ShaderProg shader) {
+void Mesh::Draw(ShaderProg shader)
+{
     glActiveTexture(GL_TEXTURE0);
     
     // TODO: support more than one material
@@ -78,9 +80,35 @@ void Mesh::Draw(ShaderProg shader) {
 }
 
 
-void Model::Draw(ShaderProg shader) {
-    for (unsigned int i = 0; i < meshes.size(); i++) {
-        meshes[i].Draw(shader);
+void ModelNode::Draw(ShaderProg shader, Mesh* meshes, glm::mat4 transform)
+{
+    glm::mat4 newTrans = transform * mTransform;
+    newTrans = ToGlmMat4(ToJoltMat4(newTrans));
+    shader.SetMat4fv((char*)"model", glm::value_ptr(newTrans));
+    for (size_t i = 0; i < mMeshes.size(); i++) {
+        meshes[mMeshes[i]].Draw(shader);
+    }
+}
+
+
+void ModelNode::Draw(ShaderProg shader, Mesh* meshes)
+{
+    Draw(shader, meshes, glm::mat4(1.0f));
+}
+
+
+void Model::Draw(ShaderProg shader, glm::mat4 transform)
+{
+    for (unsigned int i = 0; i < nodes.size(); i++) {
+        nodes[i].Draw(shader, &meshes[0], transform);
+    }
+}
+
+
+void Model::Draw(ShaderProg shader)
+{
+    for (unsigned int i = 0; i < nodes.size(); i++) {
+        nodes[i].Draw(shader, &meshes[0]);
     }
 }
 
@@ -128,33 +156,11 @@ void Model::LoadSceneMaterials(const aiScene *scene)
 }
 
 
-
 void Model::LoadSceneMeshes(const aiScene *scene)
 {
     for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
         ProcessMesh(scene->mMeshes[i]);
     }
-}
-
-
-Model LoadModel(std::string path, node_callback_t nodeCallback) {
-    Model model;
-    Assimp::Importer importer;
-    const aiScene *scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
-
-    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
-    {
-        SDL_Log("Assimp Error: %s", importer.GetErrorString());
-        return model;
-    }
-
-    model.LoadSceneMaterials(scene);
-    model.LoadSceneMeshes(scene);
-
-    // Global transform of root, which is identity matrix
-    aiMatrix4x4 transform;
-    model.ProcessNode(scene->mRootNode, transform, nodeCallback);
-    return model;
 }
 
 
@@ -179,6 +185,7 @@ void Model::ProcessNode(aiNode *node, aiMatrix4x4 accTransform, node_callback_t 
     transform.Decompose(scale, rotation, position);
 
 
+
     SDL_Log("Process Node %s", node->mName.C_Str());
     SDL_Log("Scale: %f, %f, %f", scale.x, scale.y, scale.z);
     /*
@@ -194,14 +201,18 @@ void Model::ProcessNode(aiNode *node, aiMatrix4x4 accTransform, node_callback_t 
     }
     */
     
+    ModelNode modelNode;
+    modelNode.mTransform = ToGlmMat4(transform);
 
     // process all the node's meshes (if any)
-    /*
     for (unsigned int i = 0; i < node->mNumMeshes; i++) {
-        aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-        meshes.push_back(ProcessMesh(mesh, scene));
+        // index in Model mesh array should be same as index in aiScene's 
+        // mesh array
+        modelNode.mMeshes.push_back(node->mMeshes[i]);
     }
-    */
+
+    nodes.push_back(modelNode);
+    
     // then do the same for each of its children
     for (unsigned int i = 0; i < node->mNumChildren; i++) {
         ProcessNode(node->mChildren[i], transform, callback);
@@ -209,7 +220,8 @@ void Model::ProcessNode(aiNode *node, aiMatrix4x4 accTransform, node_callback_t 
 }
 
 
-void Model::ProcessMesh(aiMesh *mesh) {
+void Model::ProcessMesh(aiMesh *mesh)
+{
     /* Convert an aiMesh object to a Mesh object */
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -293,6 +305,28 @@ void Model::ProcessMesh(aiMesh *mesh) {
     Mesh returnMesh;
     returnMesh.Init(vertices, indices, meshMaterial);
     meshes.push_back(returnMesh);
+}
+
+
+Model LoadModel(std::string path, node_callback_t nodeCallback)
+{
+    Model model;
+    Assimp::Importer importer;
+    const aiScene *scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+    {
+        SDL_Log("Assimp Error: %s", importer.GetErrorString());
+        return model;
+    }
+
+    model.LoadSceneMaterials(scene);
+    model.LoadSceneMeshes(scene);
+
+    // Global transform of root, which is identity matrix
+    aiMatrix4x4 transform;
+    model.ProcessNode(scene->mRootNode, transform, nodeCallback);
+    return model;
 }
 
 

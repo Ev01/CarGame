@@ -42,16 +42,34 @@ struct Mesh {
     unsigned int vao, vbo, ebo;
 };
 
+// Forward declaration to allow Model and ModelNode to refer to each other
+//struct Model;
+
+struct ModelNode {
+    void Draw(ShaderProg shader, Mesh* meshes);
+    void Draw(ShaderProg shader, Mesh* meshes, glm::mat4 transform);
+
+    // Array of indices pointing to location of meshes in the Model's meshes
+    // array
+    std::vector<int> mMeshes;
+    //Model* mParentModel = nullptr;
+    glm::mat4 mTransform;
+};
+
 
 struct Model {
     void Draw(ShaderProg shader);
+    void Draw(ShaderProg shader, glm::mat4 transform);
+
     void LoadSceneMaterials(const aiScene *scene);
     void LoadSceneMeshes(const aiScene *scene);
     void ProcessNode(aiNode *node, aiMatrix4x4 accTransform, node_callback_t callback = NULL);
     void ProcessMesh(aiMesh *mesh);
     std::vector<Mesh> meshes;
     std::vector<Material> materials;
+    std::vector<ModelNode> nodes;
 };
+
 
 Model LoadModel(std::string path, node_callback_t nodeCallback=NULL);
 
