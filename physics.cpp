@@ -288,7 +288,7 @@ void Phys::CreateCarBody()
 	colTester = new VehicleCollisionTesterRay(Layers::MOVING);
     
 	// Create vehicle body
-	RVec3 position(10, 3, 16);
+	RVec3 position(6, 3, 12);
 	BodyCreationSettings car_body_settings(carCompoundShape, position, Quat::sRotation(Vec3::sAxisZ(), 0.0f), EMotionType::Dynamic, Layers::MOVING);
 	car_body_settings.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
 	car_body_settings.mMassPropertiesOverride.mMass = 1500.0f;
