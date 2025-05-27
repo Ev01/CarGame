@@ -31,8 +31,16 @@
 21/05
 - Wheel turn lerping
 
+26/05
+- Level with mesh shape
+- [x] Fix drifting sound stutter (lerp volume?)
+
+
+
+
 - [ ] Support specular/shininess/reflectivity model rather than
       roughness/metallic model (gltf default)
 - [ ] Refactor car into a struct/class
-- [ ] Fix drifting sound stutter (lerp volume?)
 - [ ] Load car parameters at runtime from a file (json?)
+- [ ] Fix weird jitter problem
+

@@ -202,7 +202,6 @@ void Model::ProcessNode(aiNode *node, aiMatrix4x4 accTransform, node_callback_t 
     */
     
     ModelNode modelNode;
-    modelNode.mTransform = ToGlmMat4(transform);
 
     // process all the node's meshes (if any)
     for (unsigned int i = 0; i < node->mNumMeshes; i++) {
@@ -210,8 +209,12 @@ void Model::ProcessNode(aiNode *node, aiMatrix4x4 accTransform, node_callback_t 
         // mesh array
         modelNode.mMeshes.push_back(node->mMeshes[i]);
     }
-
-    nodes.push_back(modelNode);
+    
+    // Only add the model node if it contains meshes
+    if (modelNode.mMeshes.size() > 0) {
+        modelNode.mTransform = ToGlmMat4(transform);
+        nodes.push_back(modelNode);
+    }
     
     // then do the same for each of its children
     for (unsigned int i = 0; i < node->mNumChildren; i++) {
