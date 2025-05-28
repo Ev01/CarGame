@@ -13,33 +13,54 @@
 #include <SDL3/SDL.h>
 
 static std::vector<Render::Light> lights;
+static Render::SunLight sunLight;
 static ShaderProg shader;
 static SDL_Window *window;
 static SDL_GLContext context;
 
-static const glm::vec3 sunDir = glm::vec3(0.1, -0.5, 0.1);
+//static const glm::vec3 sunDir = glm::vec3(0.1, -0.5, 0.1);
 static const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
 void Render::AssimpAddLight(const aiLight *aLight, const aiNode *aNode, aiMatrix4x4 aTransform)
 {
-    if (aLight->mType != aiLightSource_POINT) {
-        return;
-    }
-    SDL_Log("Adding light %s...", aLight->mName.C_Str());
-    Light newLight;
-
     aiQuaternion rotation;
     aiVector3D position;
-    aTransform.DecomposeNoScaling(rotation, position);
+    glm::mat4 glmTransform = ToGlmMat4(aTransform);
+    switch (aLight->mType) {
+        case aiLightSource_UNDEFINED:
+            SDL_Log("Undefined light source!");
+            break;
 
-    newLight.mPosition = ToGlmVec3(position);
-    newLight.mColour = ToGlmVec3(aLight->mColorDiffuse);
-    SDL_Log("Colour = (%f, %f, %f)", newLight.mColour.x, newLight.mColour.y, newLight.mColour.z);
-    //newLight.mDirection = toGlmVec3(aLight->mDirection);
-    // NOTE: always 1 for gltf imports. Intensity would be stored in colour
-    newLight.mQuadratic = aLight->mAttenuationQuadratic;
+        case aiLightSource_POINT:
+            SDL_Log("Adding Point light %s...", aLight->mName.C_Str());
+            Light newLight;
 
-    lights.push_back(newLight);
+            aTransform.DecomposeNoScaling(rotation, position);
+
+            newLight.mPosition = ToGlmVec3(position);
+            newLight.mColour = ToGlmVec3(aLight->mColorDiffuse);
+            SDL_Log("Colour = (%f, %f, %f)", newLight.mColour.x, newLight.mColour.y, newLight.mColour.z);
+            //newLight.mDirection = toGlmVec3(aLight->mDirection);
+            // NOTE: always 1 for gltf imports. Intensity would be stored in colour
+            newLight.mQuadratic = aLight->mAttenuationQuadratic;
+
+            lights.push_back(newLight);
+            break;
+
+        case aiLightSource_DIRECTIONAL:
+            SDL_Log("Adding Sun Light...");
+            //aTransform.DecomposeNoScaling(rotation, position);
+            sunLight.mDirection = glm::vec3(glmTransform * glm::vec4(0.0, 0.0, -1.0, 0.0));
+            sunLight.mColour = ToGlmVec3(aLight->mColorDiffuse);
+            SDL_Log("Sun direction = %f, %f, %f", sunLight.mDirection.x, sunLight.mDirection.y, sunLight.mDirection.z);
+            break;
+
+        default:
+            SDL_Log("Light not supported");
+            break;
+    }
+            
+
 }
 
 
@@ -100,11 +121,13 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
     shader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
     shader.SetMat4fv((char*)"view", glm::value_ptr(view));
 
-    glm::vec3 lightDir = glm::vec3(view * glm::vec4(sunDir, 0.0f));
-    shader.SetVec3((char*)"dirLight.direction", glm::value_ptr(lightDir));
-    //shader.SetVec3((char*)"dirLight.ambient", 0.1, 0.1, 0.1);
-    //shader.SetVec3((char*)"dirLight.diffuse", 0.3, 0.3, 0.3);
-    //shader.SetVec3((char*)"dirLight.specular", 0.3, 0.3, 0.3);
+    //glm::vec3 lightDir = glm::vec3(view * glm::vec4(sunDir, 0.0f));
+    glm::vec3 sunCol = sunLight.mColour / glm::vec3(1000.0);
+    glm::vec3 sunDir = glm::vec3(view * glm::vec4(sunLight.mDirection, 0.0));
+    shader.SetVec3((char*)"dirLight.direction", glm::value_ptr(sunDir));
+    shader.SetVec3((char*)"dirLight.ambient", 0.1, 0.1, 0.1);
+    shader.SetVec3((char*)"dirLight.diffuse", glm::value_ptr(sunCol));
+    shader.SetVec3((char*)"dirLight.specular", glm::value_ptr(sunCol));
 
     char uniformName[64];
     for (size_t i = 0; i < lights.size(); i++) {

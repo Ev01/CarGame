@@ -17,6 +17,13 @@ namespace Render {
         float mQuadratic;
     };
 
+    struct SunLight
+    {
+        glm::vec3 mDirection;
+        glm::vec3 mColour;
+    };
+        
+
     bool Init();
     void AssimpAddLight(const aiLight *light, const aiNode *node, aiMatrix4x4 transform);
     void RenderFrame(const Camera &cam, const Model &mapModel,
