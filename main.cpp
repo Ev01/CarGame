@@ -129,6 +129,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 {
     Input::HandleEvent(event);
+    Render::HandleEvent(event);
 
     if (event->type == SDL_EVENT_QUIT) {
         return SDL_APP_SUCCESS;
@@ -141,6 +142,13 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     else if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_F) {
         SDL_Log("FPS: %f", 1.0/delta);
     }
+    else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_TAB) {
+        SDL_SetWindowRelativeMouseMode(Render::Window(), false);
+    }
+    else if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN && event->button.button == 1) {
+        SDL_SetWindowRelativeMouseMode(Render::Window(), true);
+    }
+
 
     return SDL_APP_CONTINUE;
 }

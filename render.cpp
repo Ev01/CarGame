@@ -17,6 +17,7 @@ static Render::SunLight sunLight;
 static ShaderProg shader;
 static SDL_Window *window;
 static SDL_GLContext context;
+static glm::mat4 projection; 
 
 //static const glm::vec3 sunDir = glm::vec3(0.1, -0.5, 0.1);
 static const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -71,7 +72,7 @@ bool Render::Init()
     SDL_GL_SetAttribute(
             SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-    int flags = SDL_WINDOW_OPENGL;
+    int flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     window = SDL_CreateWindow("Car", 800, 600, flags);
 
     if (window == NULL) {
@@ -93,6 +94,11 @@ bool Render::Init()
     unsigned int fShader = CreateShaderFromFile("shaders/fragment.glsl", 
                                                  GL_FRAGMENT_SHADER);
     shader = CreateAndLinkShaderProgram(vShader, fShader);
+
+    projection = glm::perspective(SDL_PI_F / 4.0f,
+                                  800.0f / 600.0f,
+                                  0.1f, 100.0f);
+
     return true;
 }
 
@@ -111,9 +117,13 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
     */
 
     glm::mat4 view = cam.LookAtMatrix(up);
-    static glm::mat4 projection = glm::perspective(SDL_PI_F / 4.0f,
-                                            800.0f / 600.0f,
-                                            0.1f, 100.0f);
+    int windowWidth;
+    int windowHeight;
+    if (!SDL_GetWindowSize(window, &windowWidth, &windowHeight)) {
+        SDL_Log("Could not get window size, using defaults");
+        //windowWidth = 800;
+        //windowHeight = 600;
+    } 
 
     glUseProgram(shader.id);
 
@@ -204,6 +214,22 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
     
     SDL_GL_SwapWindow(window);
 }
+
+void Render::HandleEvent(SDL_Event *event)
+{
+    if (event->type == SDL_EVENT_WINDOW_RESIZED) {
+        int width = event->window.data1;
+        int height = event->window.data2;
+        glViewport(0, 0, width, height);
+        projection = glm::perspective(SDL_PI_F / 4.0f,
+                                      (float) width / height,
+                                      0.1f, 100.0f);
+    }
+    else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_F11) {
+        SDL_SetWindowFullscreen(window, !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN));
+    }
+}
+
 
 
 SDL_Window* Render::Window()    { return window; }
