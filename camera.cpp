@@ -30,6 +30,7 @@ glm::mat4 Camera::LookAtMatrix(glm::vec3 up) const
 void Camera::SetFollow(float yaw, float pitch, float dist, glm::vec3 targ)
 {
     SetYawPitch(yaw, pitch);
+    dir = glm::normalize(dir);
     glm::vec3 posOffset = dir * dist;
     pos = targ - posOffset;
 }
@@ -53,7 +54,9 @@ void Camera::SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ,
     float newYaw = currYaw + angleDist * smoothing;
     //SDL_Log("currYaw: %f, newYaw: %f, x: %f, z: %f", currYaw, newYaw, hDir.x, hDir.z);
 
-    SetFollow(newYaw, pitch, dist, targ);
+    float currDist = glm::length(pos - targ);
+    float newDist = currDist + (dist - currDist) * smoothing;
+    SetFollow(newYaw, pitch, newDist, targ);
 }
 
 
