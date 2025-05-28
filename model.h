@@ -9,7 +9,8 @@
 #include "shader.h"
 #include "texture.h"
 
-using node_callback_t = bool (*)(aiNode *node, aiMatrix4x4 transform);
+using node_callback_t = bool (*)(const aiNode *node, aiMatrix4x4 transform);
+using light_callback_t = void (*)(const aiLight *light, const aiNode *node, aiMatrix4x4 transform);
 
 struct Vertex {
     glm::vec3 position;
@@ -38,7 +39,7 @@ struct Mesh {
               std::vector<unsigned int> p_indices,
               Material *material);
 
-    void Draw(ShaderProg shader);
+    void Draw(ShaderProg shader) const;
     unsigned int vao, vbo, ebo;
 };
 
@@ -46,8 +47,8 @@ struct Mesh {
 //struct Model;
 
 struct ModelNode {
-    void Draw(ShaderProg shader, Mesh* meshes);
-    void Draw(ShaderProg shader, Mesh* meshes, glm::mat4 transform);
+    void Draw(ShaderProg shader, const Mesh* meshes) const;
+    void Draw(ShaderProg shader, const Mesh* meshes, glm::mat4 transform) const;
 
     // Array of indices pointing to location of meshes in the Model's meshes
     // array
@@ -58,12 +59,12 @@ struct ModelNode {
 
 
 struct Model {
-    void Draw(ShaderProg shader);
-    void Draw(ShaderProg shader, glm::mat4 transform);
+    void Draw(ShaderProg shader) const;
+    void Draw(ShaderProg shader, glm::mat4 transform) const;
 
     void LoadSceneMaterials(const aiScene *scene);
     void LoadSceneMeshes(const aiScene *scene);
-    void ProcessNode(aiNode *node, aiMatrix4x4 accTransform, node_callback_t callback = NULL);
+    void ProcessNode(const aiNode *node, aiMatrix4x4 accTransform, const aiScene *scene, node_callback_t NodeCallback = NULL, light_callback_t LightCallback = NULL);
     void ProcessMesh(aiMesh *mesh);
     std::vector<Mesh> meshes;
     std::vector<Material> materials;
@@ -71,7 +72,7 @@ struct Model {
 };
 
 
-Model LoadModel(std::string path, node_callback_t nodeCallback=NULL);
+Model LoadModel(std::string path, node_callback_t NodeCallback=NULL, light_callback_t LightCallback=NULL);
 
 std::vector<Texture> LoadMaterialTextures(aiMaterial *mat,
                                           aiTextureType type,

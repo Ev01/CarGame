@@ -31,6 +31,7 @@ PRIVATE
     physics.cpp
     input.cpp
     audio.cpp
+    render.cpp
     glad/glad.c
 )
 

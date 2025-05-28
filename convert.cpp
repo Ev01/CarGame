@@ -26,6 +26,18 @@ glm::vec3 ToGlmVec3(JPH::Vec3 v)
 }
 
 
+glm::vec3 ToGlmVec3(aiVector3D v)
+{
+    return glm::vec3(v.x, v.y, v.z);
+}
+
+
+glm::vec3 ToGlmVec3(aiColor3D col)
+{
+    return glm::vec3(col.r, col.g, col.b);
+}
+
+
 glm::mat4 ToGlmMat4(JPH::RMat44 joltMat)
 {
     JPH::Vec4 col1 = joltMat.GetColumn4(0);

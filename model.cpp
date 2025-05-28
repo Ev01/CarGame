@@ -48,7 +48,7 @@ void Mesh::Init(std::vector<Vertex> p_vertices,
 }
 
 
-void Mesh::Draw(ShaderProg shader)
+void Mesh::Draw(ShaderProg shader) const
 {
     glActiveTexture(GL_TEXTURE0);
     
@@ -80,7 +80,7 @@ void Mesh::Draw(ShaderProg shader)
 }
 
 
-void ModelNode::Draw(ShaderProg shader, Mesh* meshes, glm::mat4 transform)
+void ModelNode::Draw(ShaderProg shader, const Mesh* meshes, glm::mat4 transform) const
 {
     glm::mat4 newTrans = transform * mTransform;
     newTrans = ToGlmMat4(ToJoltMat4(newTrans));
@@ -91,13 +91,13 @@ void ModelNode::Draw(ShaderProg shader, Mesh* meshes, glm::mat4 transform)
 }
 
 
-void ModelNode::Draw(ShaderProg shader, Mesh* meshes)
+void ModelNode::Draw(ShaderProg shader, const Mesh* meshes) const
 {
     Draw(shader, meshes, glm::mat4(1.0f));
 }
 
 
-void Model::Draw(ShaderProg shader, glm::mat4 transform)
+void Model::Draw(ShaderProg shader, glm::mat4 transform) const
 {
     for (unsigned int i = 0; i < nodes.size(); i++) {
         nodes[i].Draw(shader, &meshes[0], transform);
@@ -105,7 +105,7 @@ void Model::Draw(ShaderProg shader, glm::mat4 transform)
 }
 
 
-void Model::Draw(ShaderProg shader)
+void Model::Draw(ShaderProg shader) const
 {
     for (unsigned int i = 0; i < nodes.size(); i++) {
         nodes[i].Draw(shader, &meshes[0]);
@@ -164,7 +164,7 @@ void Model::LoadSceneMeshes(const aiScene *scene)
 }
 
 
-void Model::ProcessNode(aiNode *node, aiMatrix4x4 accTransform, node_callback_t callback) 
+void Model::ProcessNode(const aiNode *node, aiMatrix4x4 accTransform, const aiScene *scene, node_callback_t NodeCallback, light_callback_t LightCallback) 
 {
     /* Recursively add all the meshes from this node to the Model */
 
@@ -173,10 +173,21 @@ void Model::ProcessNode(aiNode *node, aiMatrix4x4 accTransform, node_callback_t 
     transform = node->mTransformation * accTransform;
 
     //glm::mat4 glmTrans = ToGlmMat4(transform);
-    if (callback != NULL && !callback(node, transform)) {
+    if (NodeCallback != NULL && !NodeCallback(node, transform)) {
         // Don't process this node
         return;
     }
+
+    // Check if this node is a light source
+    if (LightCallback != NULL) {
+        for (unsigned int i = 0; i < scene->mNumLights; i++) {
+            aiLight *light = scene->mLights[i];
+            if (light->mName == node->mName) {
+                LightCallback(light, node, transform);
+            }
+        }
+    }
+
     
     aiQuaternion rotation;
     aiVector3D position;
@@ -218,7 +229,7 @@ void Model::ProcessNode(aiNode *node, aiMatrix4x4 accTransform, node_callback_t 
     
     // then do the same for each of its children
     for (unsigned int i = 0; i < node->mNumChildren; i++) {
-        ProcessNode(node->mChildren[i], transform, callback);
+        ProcessNode(node->mChildren[i], transform, scene, NodeCallback, LightCallback);
     }
 }
 
@@ -311,7 +322,7 @@ void Model::ProcessMesh(aiMesh *mesh)
 }
 
 
-Model LoadModel(std::string path, node_callback_t nodeCallback)
+Model LoadModel(std::string path, node_callback_t NodeCallback, light_callback_t LightCallback)
 {
     Model model;
     Assimp::Importer importer;
@@ -326,9 +337,35 @@ Model LoadModel(std::string path, node_callback_t nodeCallback)
     model.LoadSceneMaterials(scene);
     model.LoadSceneMeshes(scene);
 
+    SDL_Log("Num lights: %d", scene->mNumLights);
+    if (scene->mNumLights > 0) {
+        aiString lightName = scene->mLights[0]->mName;
+        aiNode *lightNode = scene->mRootNode->FindNode(lightName);
+
+        aiQuaternion rotation;
+        aiVector3D position;
+        lightNode->mTransformation.DecomposeNoScaling(rotation, position);
+
+        float range;
+        if (lightNode->mMetaData->Get("PBR_LightRange", range)) {
+            SDL_Log("Range: %f", range);
+        } else {
+            SDL_Log("Couldn't get range");
+        }
+
+        aiColor3D col = scene->mLights[0]->mColorDiffuse;
+        SDL_Log("Colour: %f, %f, %f", col.r, col.b, col.g);
+
+        SDL_Log("Name: %s", lightName.C_Str());
+        SDL_Log("Pos x: %f", position.x);
+        SDL_Log("Constant: %f", scene->mLights[0]->mAttenuationConstant);
+        SDL_Log("Quadratic: %f", scene->mLights[0]->mAttenuationQuadratic);
+        SDL_Log("Linear: %f", scene->mLights[0]->mAttenuationLinear);
+    }
+
     // Global transform of root, which is identity matrix
     aiMatrix4x4 transform;
-    model.ProcessNode(scene->mRootNode, transform, nodeCallback);
+    model.ProcessNode(scene->mRootNode, transform, scene, NodeCallback, LightCallback);
     return model;
 }
 

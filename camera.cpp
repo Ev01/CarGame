@@ -3,11 +3,13 @@
 
 #include "camera.h"
 
-glm::vec3 Camera::Target() {
+glm::vec3 Camera::Target() const
+{
     return pos + dir;
 }
 
-glm::vec3 Camera::Right(glm::vec3 up) {
+glm::vec3 Camera::Right(glm::vec3 up) const
+{
     return -glm::normalize(glm::cross(up, dir));
 }
 
@@ -18,7 +20,8 @@ void Camera::SetYawPitch(float yaw, float pitch) {
     //SDL_Log("yaw: %f, Cam dir x: %f, dir z: %f", yaw, dir.x, dir.z);
 }
 
-glm::mat4 Camera::LookAtMatrix(glm::vec3 up) {
+glm::mat4 Camera::LookAtMatrix(glm::vec3 up) const
+{
     glm::mat4 view = glm::lookAt(pos, Target(), up);
     return view;
 }

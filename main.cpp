@@ -13,20 +13,17 @@
 
 #include "glad/glad.h"
 #include "model.h"
-#include "shader.h"
 #include "camera.h"
 #include "input.h"
 #include "audio.h"
+#include "render.h"
 
 #define MOUSE_SENSITIVITY 0.001f
 #define CAM_SPEED 4.0f
 #define PHYSICS_STEP_TIME 1.0 / 60
 
 
-SDL_Window *window;
-SDL_GLContext context;
 
-ShaderProg shader;
 Model monkeyModel;
 Model cubeModel;
 Model cylinderModel;
@@ -41,18 +38,17 @@ double delta, lastFrame;
 float physicsTime = 0;
 glm::vec3 spherePosGlm;
 glm::vec3 sphere2PosGlm;
-glm::vec3 sunDir = glm::vec3(0.1, -0.5, 0.1);
 
 float yaw = -SDL_PI_F / 2.0;
 float pitch;
 
 
-double getSeconds()
+double GetSeconds()
 {
     return (double) SDL_GetTicksNS() / (double) SDL_NS_PER_SECOND;
 }
 
-bool carNodeCallback(aiNode *node, aiMatrix4x4 transform)
+bool CarNodeCallback(const aiNode *node, aiMatrix4x4 transform)
 {
     aiQuaternion aRotation;
     aiVector3D aPosition;
@@ -83,39 +79,16 @@ bool carNodeCallback(aiNode *node, aiMatrix4x4 transform)
     return true;
 }
 
+
+
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO);
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(
-            SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-    int flags = SDL_WINDOW_OPENGL;
-    window = SDL_CreateWindow("Car", 800, 600, flags);
-
-    if (window == NULL) {
-        SDL_Log("Could not create window: %s", SDL_GetError());
+    if (!Render::Init()) {
         return SDL_APP_FAILURE;
     }
-
-    context = SDL_GL_CreateContext(window);
-
-    // Load opengl functions
-    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-        SDL_Log("Failed to initialise GLAD");
-        return SDL_APP_FAILURE;
-    }
-
     InitDefaultTexture();
-
-    // Create shaders
-    unsigned int vShader = CreateShaderFromFile("shaders/vertex.glsl", 
-                                                 GL_VERTEX_SHADER);
-    unsigned int fShader = CreateShaderFromFile("shaders/fragment.glsl", 
-                                                 GL_FRAGMENT_SHADER);
-    shader = CreateAndLinkShaderProgram(vShader, fShader);
 
     // Audio
     Audio::Init();
@@ -127,9 +100,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     monkeyModel = LoadModel("models/monkey.obj");
     cubeModel = LoadModel("models/cube.obj");
     cylinderModel = LoadModel("models/cylinder.obj");
-    carModel = LoadModel("models/mycar.gltf", carNodeCallback);
+    carModel = LoadModel("models/mycar.gltf", CarNodeCallback);
     wheelModel = LoadModel("models/wheel.gltf");
-    mapModel = LoadModel("models/simple_map.gltf");
+    mapModel = LoadModel("models/simple_map.gltf", NULL, Render::AssimpAddLight);
 
     cam.pos.z = 6.0f;
     cam.SetYawPitch(yaw, pitch);
@@ -139,7 +112,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     glViewport(0, 0, 800, 600);
 
-    SDL_SetWindowRelativeMouseMode(window, true);
+    SDL_SetWindowRelativeMouseMode(Render::Window(), true);
     /*
     if (!SDL_SetWindowSurfaceVSync(window, 1)) {
         SDL_Log("Couldn't set VSync: %s", SDL_GetError());
@@ -147,7 +120,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     */
     glEnable(GL_DEPTH_TEST);
 
-    lastFrame = getSeconds();
+    lastFrame = GetSeconds();
 
     return SDL_APP_CONTINUE;
 }
@@ -175,8 +148,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
-    delta = getSeconds() - lastFrame;
-    lastFrame = getSeconds();
+    delta = GetSeconds() - lastFrame;
+    lastFrame = GetSeconds();
 
 
     // Do physics step
@@ -226,102 +199,18 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     }
     */
     
+    Render::RenderFrame(cam, mapModel, carModel, wheelModel);
 
-    glClearColor(0.7f, 0.6f, 0.2f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    /*
-    glm::mat4 floorMat = glm::mat4(1.0f);
-    floorMat = glm::scale(floorMat, glm::vec3(100.0f, 1.0f, 100.0f));
-    floorMat = glm::translate(floorMat, glm::vec3(0.0f, -2.0f, 0.0f));
-    */
-
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, spherePosGlm);
-    model = model * QuatToMatrix(Phys::GetSphereRotation());
-    model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
-
-    /*
-    glm::mat4 model2 = glm::mat4(1.0f);
-    model2 = glm::translate(model2, sphere2PosGlm);
-    model2 = model2 * QuatToMatrix(Phys::getSphere2Rotation());
-    model2 = glm::scale(model2, glm::vec3(0.25f, 0.25f, 0.25f));
-    */
-    
-    glm::mat4 view = cam.LookAtMatrix(up);
-    static glm::mat4 projection = glm::perspective(SDL_PI_F / 4.0f,
-                                            800.0f / 600.0f,
-                                            0.1f, 100.0f);
-
-    glUseProgram(shader.id);
-
-    //shader.SetMat4fv((char*)"model", glm::value_ptr(model));
-    shader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
-    shader.SetMat4fv((char*)"view", glm::value_ptr(view));
-
-    glm::vec3 lightDir = glm::vec3(view * glm::vec4(sunDir, 0.0f));
-    shader.SetVec3((char*)"dirLight.direction", glm::value_ptr(lightDir));
-    shader.SetVec3((char*)"dirLight.ambient", 0.2f, 0.2f, 0.2f);
-    shader.SetVec3((char*)"dirLight.diffuse", 0.8f, 0.8f, 0.8f);
-    shader.SetVec3((char*)"dirLight.specular", 1.0f, 1.0f, 1.0f);
-
-    shader.SetFloat((char*)"material.shininess", 32.0f);
-
-    monkeyModel.Draw(shader, model);
-
-    for (size_t i=0; i < NUM_SPHERES; i++){
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, ToGlmVec3(Phys::GetSpherePos(i)));
-        model = model * QuatToMatrix(Phys::GetSphereRotation(i));
-        model = glm::scale(model, glm::vec3(0.5f));
-        //shader.SetMat4fv((char*)"model", glm::value_ptr(model));
-        monkeyModel.Draw(shader, model);
-    }
-
-    //shader.SetMat4fv((char*)"model", glm::value_ptr(floorMat));
-    //cubeModel.Draw(shader, floorMat);
-
-    // Draw map
-    model = glm::mat4(1.0f);
-    shader.SetMat4fv((char*)"model", glm::value_ptr(model));
-    mapModel.Draw(shader);
-
-    // Draw Car
-    glm::mat4 carTrans = glm::mat4(1.0f);
-    carTrans = glm::translate(carTrans, carPos);
-    carTrans = carTrans * QuatToMatrix(Phys::GetCarRotation());
-    //carTrans = glm::scale(carTrans, glm::vec3(0.9f, 0.2f, 2.0f));
-
-    //shader.SetMat4fv((char*)"model", glm::value_ptr(carTrans));
-    carModel.Draw(shader, carTrans);
-
-    // Draw car wheels
-    for (int i = 0; i < 4; i++) {
-        glm::mat4 wheelTrans = ToGlmMat4(Phys::GetWheelTransform(i));
-        if (Phys::IsWheelFlipped(i)) {
-            wheelTrans = glm::rotate(wheelTrans, SDL_PI_F, glm::vec3(1.0f, 0.0f, 0.0f));
-        }
-        //wheelTrans = glm::scale(wheelTrans, glm::vec3(0.45f, 0.2f, 0.45f));
-        //shader.SetMat4fv((char*)"model", glm::value_ptr(wheelTrans));
-        //cylinderModel.Draw(shader);
-        wheelModel.Draw(shader, wheelTrans);
-    }
-
-
-
-    
-    SDL_GL_SwapWindow(window);
-
-    double delta2 = getSeconds() - lastFrame;
+    double delta2 = GetSeconds() - lastFrame;
 
     constexpr double sfp = 1.0 / 300.0;
     //SDL_Log("delta: %f", delta);
     if (delta2 < sfp) {
         double toDelaySeconds = (sfp - delta2);
         //SDL_Log("Delta is %f. Delaying %f nanoseconds. SFP: %f", delta2, toDelaySeconds, sfp);
-        //double delayBefore = getSeconds();
+        //double delayBefore = GetSeconds();
         SDL_DelayPrecise((Uint64)(toDelaySeconds * 1000000000.0));
-        //SDL_Log("Real delay: %f", getSeconds() - delayBefore);
+        //SDL_Log("Real delay: %f", GetSeconds() - delayBefore);
     }
     return SDL_APP_CONTINUE;
 }
