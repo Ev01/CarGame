@@ -35,9 +35,13 @@
 - Level with mesh shape
 - [x] Fix drifting sound stutter (lerp volume?)
 
+28/05
+- Fullscreen and window resize
+- Point lights and sun light from gltf file
 
 
-
+- [ ] Support variable number of lights
+- [ ] Spot lights
 - [ ] Support specular/shininess/reflectivity model rather than
       roughness/metallic model (gltf default)
 - [ ] Refactor car into a struct/class
