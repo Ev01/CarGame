@@ -16,9 +16,62 @@ static std::vector<Render::Light> lights;
 static std::vector<Render::SpotLight> spotLights;
 static Render::SunLight sunLight;
 static ShaderProg shader;
+static ShaderProg skyboxShader;
 static SDL_Window *window;
 static SDL_GLContext context;
 static glm::mat4 projection; 
+
+static Texture skyboxTex;
+
+static Model cubeModel;
+
+static float skyboxVertices[] = {
+    // positions          
+    -1.0f,  1.0f, -1.0f,
+    -1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+    -1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f
+};
+static unsigned int skyboxVAO;
+static unsigned int skyboxVBO;
+
 
 //static const glm::vec3 sunDir = glm::vec3(0.1, -0.5, 0.1);
 static const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -114,9 +167,33 @@ bool Render::Init()
                                                  GL_FRAGMENT_SHADER);
     shader = CreateAndLinkShaderProgram(vShader, fShader);
 
+    unsigned int vSkybox = CreateShaderFromFile("shaders/v_skybox.glsl",
+                                                GL_VERTEX_SHADER);
+    unsigned int fSkybox = CreateShaderFromFile("shaders/f_skybox.glsl",
+                                                GL_FRAGMENT_SHADER);
+    skyboxShader = CreateAndLinkShaderProgram(vSkybox, fSkybox);
+
+    // Skybox VAO
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
     projection = glm::perspective(SDL_PI_F / 4.0f,
                                   800.0f / 600.0f,
                                   0.1f, 100.0f);
+
+    //glDisableVertexAttribArray(1);
+    //glDisableVertexAttribArray(2);
+    skyboxTex = CreateCubemapFromFiles("texture/Lycksele/posx.jpg",
+                                       "texture/Lycksele/negx.jpg",
+                                       "texture/Lycksele/posy.jpg",
+                                       "texture/Lycksele/negy.jpg",
+                                       "texture/Lycksele/posz.jpg",
+                                       "texture/Lycksele/negz.jpg");
 
     return true;
 }
@@ -127,6 +204,7 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
 {
     glClearColor(0.7f, 0.6f, 0.2f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 
     glm::mat4 model = glm::mat4(1.0f);
     /*
@@ -143,6 +221,8 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
         //windowWidth = 800;
         //windowHeight = 600;
     } 
+
+
 
     glUseProgram(shader.id);
 
@@ -252,6 +332,24 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
     }
 
 
+    // Draw skybox
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    // Remove translation component from view matrix
+    glm::mat4 skyboxView = glm::mat4(glm::mat3(view));
+    glUseProgram(skyboxShader.id);
+
+    skyboxShader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
+    skyboxShader.SetMat4fv((char*)"view", glm::value_ptr(skyboxView));
+    skyboxShader.SetInt((char*)"skybox", 0);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex.id);
+    glBindVertexArray(skyboxVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
 
     
     SDL_GL_SwapWindow(window);

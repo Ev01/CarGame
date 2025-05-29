@@ -25,7 +25,6 @@
 
 
 Model monkeyModel;
-Model cubeModel;
 Model cylinderModel;
 Model carModel;
 Model wheelModel;
@@ -98,7 +97,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     // Load model
     monkeyModel = LoadModel("models/monkey.obj");
-    cubeModel = LoadModel("models/cube.obj");
     cylinderModel = LoadModel("models/cylinder.obj");
     carModel = LoadModel("models/mycar.gltf", CarNodeCallback);
     wheelModel = LoadModel("models/wheel.gltf");

@@ -77,6 +77,70 @@ Texture CreateBlankTexture()
     return texture;
 }
 
+
+static void LoadTextureToCubemap(const char* filename, int target)
+{
+    SDL_Surface *surf = IMG_Load(filename);
+    if (surf == NULL) {
+        SDL_Log("Could not load texture %s: %s", filename, SDL_GetError());
+        return;
+    }
+
+    GLenum format;
+    switch (surf->format) {
+        case SDL_PIXELFORMAT_RGBA32:
+            format = GL_RGBA;
+            break;
+        case SDL_PIXELFORMAT_BGRA32:
+            format = GL_BGRA;
+            break;
+        case SDL_PIXELFORMAT_RGB24:
+            format = GL_RGB;
+            break;
+        case SDL_PIXELFORMAT_BGR24:
+            format = GL_BGR;
+            break;
+        default:
+            SDL_Log("Pixel format of file %s not recognised: Using default (RGB)", filename);
+            format = GL_RGB;
+            break;
+    }
+
+    glTexImage2D(target, 0, GL_RGBA, surf->w, surf->h, 0,
+                 format, GL_UNSIGNED_BYTE, surf->pixels);
+    SDL_free(surf);
+}
+
+
+
+Texture CreateCubemapFromFiles(const char* fileRight, const char* fileLeft, 
+                               const char* fileTop, const char* fileBottom, 
+                               const char* fileBack, const char* fileFront)
+{
+    unsigned int textureId;
+    glGenTextures(1, &textureId);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureId);
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    LoadTextureToCubemap(fileRight, GL_TEXTURE_CUBE_MAP_POSITIVE_X);
+    LoadTextureToCubemap(fileLeft, GL_TEXTURE_CUBE_MAP_NEGATIVE_X);
+    LoadTextureToCubemap(fileTop, GL_TEXTURE_CUBE_MAP_POSITIVE_Y);
+    LoadTextureToCubemap(fileBottom, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y);
+    LoadTextureToCubemap(fileBack, GL_TEXTURE_CUBE_MAP_POSITIVE_Z);
+    LoadTextureToCubemap(fileFront, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z);
+
+    Texture texture;
+    texture.id = textureId;
+    return texture;
+}
+
+
+
 void InitDefaultTexture()
 {
     gDefaultTexture = CreateBlankTexture();
