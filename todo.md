@@ -39,9 +39,11 @@
 - Fullscreen and window resize
 - Point lights and sun light from gltf file
 
+29/05
+- [x] Spot lights
+
 
 - [ ] Support variable number of lights
-- [ ] Spot lights
 - [ ] Support specular/shininess/reflectivity model rather than
       roughness/metallic model (gltf default)
 - [ ] Refactor car into a struct/class

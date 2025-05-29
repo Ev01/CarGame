@@ -13,6 +13,7 @@
 #include <SDL3/SDL.h>
 
 static std::vector<Render::Light> lights;
+static std::vector<Render::SpotLight> spotLights;
 static Render::SunLight sunLight;
 static ShaderProg shader;
 static SDL_Window *window;
@@ -54,6 +55,24 @@ void Render::AssimpAddLight(const aiLight *aLight, const aiNode *aNode, aiMatrix
             sunLight.mDirection = glm::vec3(glmTransform * glm::vec4(0.0, 0.0, -1.0, 0.0));
             sunLight.mColour = ToGlmVec3(aLight->mColorDiffuse);
             SDL_Log("Sun direction = %f, %f, %f", sunLight.mDirection.x, sunLight.mDirection.y, sunLight.mDirection.z);
+            break;
+
+        case aiLightSource_SPOT:
+            SDL_Log("Adding Spot light...");
+            SpotLight spotLight;
+
+            aTransform.DecomposeNoScaling(rotation, position);
+
+            spotLight.mPosition = ToGlmVec3(position);
+            glm::vec3 dir;
+            dir = ToGlmVec3(aLight->mDirection);
+            spotLight.mDirection = glm::vec3(glmTransform * glm::vec4(dir, 0.0));
+            spotLight.mColour = ToGlmVec3(aLight->mColorDiffuse);
+            spotLight.mQuadratic = aLight->mAttenuationQuadratic;
+            spotLight.mCutoffInner = SDL_cos(aLight->mAngleInnerCone);
+            spotLight.mCutoffOuter = SDL_cos(aLight->mAngleOuterCone);
+
+            spotLights.push_back(spotLight);
             break;
 
         default:
@@ -161,6 +180,29 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
         shader.SetFloat(uniformName, 0.0f);
         SDL_snprintf(uniformName, 64, "pointLights[%llu].linear", i);
         shader.SetFloat(uniformName, 0.0f);
+    }
+
+    for (size_t i = 0; i < spotLights.size(); i++) {
+        glm::vec3 lightCol = spotLights[i].mColour / glm::vec3(1000.0);
+        SDL_snprintf(uniformName, 64, "spotLights[%llu].diffuse", i);
+        shader.SetVec3(uniformName, glm::value_ptr(lightCol));
+        SDL_snprintf(uniformName, 64, "spotLights[%llu].specular", i);
+        shader.SetVec3(uniformName, glm::value_ptr(lightCol));
+
+        glm::vec3 viewPos = glm::vec3(view * glm::vec4(spotLights[i].mPosition, 1.0));
+        SDL_snprintf(uniformName, 64, "spotLights[%llu].position", i);
+        shader.SetVec3(uniformName, glm::value_ptr(viewPos));
+
+        glm::vec3 viewDir = glm::vec3(view * glm::vec4(spotLights[i].mDirection, 0.0));
+        SDL_snprintf(uniformName, 64, "spotLights[%llu].direction", i);
+        shader.SetVec3(uniformName, glm::value_ptr(viewDir));
+
+        SDL_snprintf(uniformName, 64, "spotLights[%llu].quadratic", i);
+        shader.SetFloat(uniformName, spotLights[i].mQuadratic);
+        SDL_snprintf(uniformName, 64, "spotLights[%llu].cutoffInner", i);
+        shader.SetFloat(uniformName, spotLights[i].mCutoffInner);
+        SDL_snprintf(uniformName, 64, "spotLights[%llu].cutoffOuter", i);
+        shader.SetFloat(uniformName, spotLights[i].mCutoffOuter);
     }
 
 
