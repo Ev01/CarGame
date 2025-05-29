@@ -41,6 +41,7 @@
 
 29/05
 - [x] Spot lights
+- Skybox
 
 
 - [ ] Support variable number of lights

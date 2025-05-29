@@ -87,7 +87,6 @@ namespace BroadPhaseLayers
 };
 
 
-Vec3 sphereForce(0.0f, 0.0f, 0.0f);
 Array<Ref<WheelSettings>> carWheels;
 
 
@@ -258,7 +257,6 @@ void Phys::AddCarCollisionBox(Vec3 position, Vec3 scale)
 	Ref<Shape> shape = OffsetCenterOfMassShapeSettings(-position, new BoxShape(scale)).Create().Get();
     carCompoundShape->AddShape(position, Quat::sIdentity(), shape);
 }
-
 
 
 bool Phys::IsWheelFlipped(int wheelIndex)
@@ -471,50 +469,7 @@ void Phys::SetupSimulation()
 
 	// The main way to interact with the bodies in the physics system is through the body interface. There is a locking and a non-locking
 	// variant of this. We're going to use the locking version (even though we're not planning to access bodies from multiple threads)
-	BodyInterface &body_interface = physics_system.GetBodyInterface();
-
-    /*
-	// Next we can create a rigid body to serve as the floor, we make a large box
-	// Create the settings for the collision volume (the shape).
-	// Note that for simple shapes (like boxes) you can also directly construct a BoxShape.
-	BoxShapeSettings floor_shape_settings(Vec3(100.0f, 1.0f, 100.0f));
-	floor_shape_settings.SetEmbedded(); // A ref counted object on the stack (base class RefTarget) should be marked as such to prevent it from being freed when its reference count goes to 0.
-
-	// Create the shape
-	ShapeSettings::ShapeResult floor_shape_result = floor_shape_settings.Create();
-	ShapeRefC floor_shape = floor_shape_result.Get(); // We don't expect an error here, but you can check floor_shape_result for HasError() / GetError()
-
-
-	// Create the settings for the body itself. Note that here you can also set other properties like the restitution / friction.
-	BodyCreationSettings floor_settings(floor_shape, RVec3(0.0_r, -2.0_r, 0.0_r), Quat::sIdentity(), EMotionType::Static, Layers::NON_MOVING);
-
-	// Create the actual rigid body
-	floorBody = body_interface.CreateBody(floor_settings); // Note that if we run out of bodies this can return nullptr
-    
-    // Add it to the world
-    body_interface.AddBody(floorBody->GetID(), EActivation::DontActivate);
-    */
-
-
-
-	// Now create a dynamic body to bounce on the floor
-	// Note that this uses the shorthand version of creating and adding a body to the world
-	BodyCreationSettings sphere_settings(new SphereShape(0.5f), RVec3(0.0_r, 2.0_r, 0.0_r), Quat::sIdentity(), EMotionType::Dynamic, Layers::MOVING);
-    sphere_settings.mRestitution = 0.9f;
-	sphere_id = body_interface.CreateAndAddBody(sphere_settings, EActivation::Activate);
-	// Now you can interact with the dynamic body, in this case we're going to give it a velocity.
-	// (note that if we had used CreateBody then we could have set the velocity straight on the body before adding it to the physics system)
-	body_interface.SetLinearVelocity(sphere_id, Vec3(0.0f, -5.0f, 0.0f));
-
-    // Second sphere
-    //BodyCreationSettings sphere2_settings(new SphereShape(0.25f), RVec3(10.0_r, 1.0_r, 0.0_r), Quat::sIdentity(), EMotionType::Dynamic, Layers::MOVING);
-    //sphere2_id = body_interface.CreateAndAddBody(sphere2_settings, EActivation::Activate);
-
-    // Create all spheres
-    for (size_t i = 0; i < NUM_SPHERES; i++) {
-        BodyCreationSettings settings(new SphereShape(0.5f), RVec3(2*i + 1.0_r, 20.0_r, SDL_sin((float)i) * 3.0_r), Quat::sIdentity(), EMotionType::Dynamic, Layers::MOVING);
-        sphereIds[i] = body_interface.CreateAndAddBody(settings, EActivation::Activate);
-    }
+	//BodyInterface &body_interface = physics_system.GetBodyInterface();
 
     Phys::CreateCarBody();
     
@@ -529,7 +484,6 @@ void Phys::SetupSimulation()
 void Phys::PhysicsStep(float delta) 
 {
     BodyInterface &body_interface = physics_system.GetBodyInterface();
-    //body_interface.AddForce(sphere_id, sphereForce);
     //carSteer = carSteer + (carSteerTarget - carSteer) * 0.1f;
     if (!Input::GetGamepad()) {
         carSteer += glm::sign(carSteerTarget - carSteer) * 0.1f;
@@ -593,9 +547,6 @@ void Phys::PhysicsStep(float delta)
 
 void Phys::ProcessInput()
 {
-    sphereForce.SetX(0.0f);
-    sphereForce.SetY(0.0f);
-    sphereForce.SetZ(0.0f);
     //Vec3 rightDir = forwardDir.Cross(Vec3(0.0f, 1.0f, 0.0f));
 
     if (Input::GetGamepad()) {
@@ -644,34 +595,6 @@ Quat Phys::GetCarRotation()
 }
 
 
-RVec3 Phys::GetSpherePos()
-{
-    BodyInterface &body_interface = physics_system.GetBodyInterface();
-    return body_interface.GetCenterOfMassPosition(sphere_id);
-}
-
-
-Quat Phys::GetSphereRotation()
-{
-    BodyInterface &body_interface = physics_system.GetBodyInterface();
-    return body_interface.GetRotation(sphere_id);
-}
-
-
-RVec3 Phys::GetSpherePos(int sphereNum)
-{
-    BodyInterface &body_interface = physics_system.GetBodyInterface();
-    return body_interface.GetCenterOfMassPosition(sphereIds[sphereNum]);
-}
-
-
-Quat Phys::GetSphereRotation(int sphereNum)
-{
-    BodyInterface &body_interface = physics_system.GetBodyInterface();
-    return body_interface.GetRotation(sphereIds[sphereNum]);
-}
-
-
 void Phys::PhysicsCleanup()
 {
 	// Unregisters all types with the factory and cleans up the default material
@@ -679,27 +602,9 @@ void Phys::PhysicsCleanup()
 
     BodyInterface &body_interface = physics_system.GetBodyInterface();
 
-	// Remove the sphere from the physics system. Note that the sphere itself keeps all of its state and can be re-added at any time.
-	body_interface.RemoveBody(sphere_id);
+    body_interface.RemoveBody(carBody->GetID());
+    body_interface.DestroyBody(carBody->GetID());
 
-	// Destroy the sphere. After this the sphere ID is no longer valid.
-	body_interface.DestroyBody(sphere_id);
-
-    /*
-    body_interface.RemoveBody(sphere2_id);
-    body_interface.DestroyBody(sphere2_id);
-    */
-
-    // Destroy all spheres
-    for (size_t i = 0; i < NUM_SPHERES; i++) {
-        body_interface.RemoveBody(sphereIds[i]);
-        body_interface.DestroyBody(sphereIds[i]);
-    }
-
-	// Remove and destroy the floor
-	//body_interface.RemoveBody(floorBody->GetID());
-	//body_interface.DestroyBody(floorBody->GetID());
-    
 	// Destroy the factory
 	delete Factory::sInstance;
 	Factory::sInstance = nullptr;

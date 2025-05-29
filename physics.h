@@ -36,14 +36,6 @@ namespace Phys {
     void AddCarCollisionBox(JPH::Vec3 position, JPH::Vec3 scale);
     bool IsWheelFlipped(int wheelIndex);
 
-    JPH::RVec3 GetSpherePos();
-    JPH::Quat GetSphereRotation();
-    JPH::RVec3 GetSpherePos(int sphereNum);
-    JPH::Quat GetSphereRotation(int sphereNum);
-    /*
-    JPH::RVec3 getSphere2Pos();
-    JPH::Quat getSphere2Rotation();
-    */
     void PhysicsCleanup();
     void ProcessInput();
     void SetForwardDir(JPH::Vec3 dir);

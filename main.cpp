@@ -35,8 +35,6 @@ const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
 double delta, lastFrame;
 float physicsTime = 0;
-glm::vec3 spherePosGlm;
-glm::vec3 sphere2PosGlm;
 
 float yaw = -SDL_PI_F / 2.0;
 float pitch;
@@ -165,14 +163,6 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         Phys::ProcessInput();
         Phys::PhysicsStep(PHYSICS_STEP_TIME);
         physicsTime -= PHYSICS_STEP_TIME;
-
-        JPH::RVec3 spherePos = Phys::GetSpherePos();
-        spherePosGlm = glm::vec3(spherePos.GetX(), spherePos.GetY(), spherePos.GetZ());
-        /*
-        JPH::RVec3 sphere2Pos = Phys::getSphere2Pos();
-        sphere2PosGlm = glm::vec3(sphere2Pos.GetX(), sphere2Pos.GetY(), sphere2Pos.GetZ());
-        */
-        //SDL_Log("sphere pos: %f, %f, %f", spherePosGlm.x, spherePosGlm.y, spherePosGlm.z);
     }
 
     // Audio
