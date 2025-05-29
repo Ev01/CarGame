@@ -143,6 +143,8 @@ bool Render::Init()
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(
             SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
     int flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     window = SDL_CreateWindow("Car", 800, 600, flags);
@@ -194,6 +196,7 @@ bool Render::Init()
                                        "texture/Lycksele/negy.jpg",
                                        "texture/Lycksele/posz.jpg",
                                        "texture/Lycksele/negz.jpg");
+    glEnable(GL_MULTISAMPLE);
 
     return true;
 }
