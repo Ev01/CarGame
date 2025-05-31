@@ -57,24 +57,36 @@ bool CarNodeCallback(const aiNode *node, aiMatrix4x4 transform)
     if (SDL_strcmp(node->mName.C_Str(), "WheelPosFR") == 0) {
         //SDL_Log("FR, %s", node->mName.C_Str());
 
-        Phys::AddCarWheel(position, true);
+        Phys::GetCar().AddWheel(position, true);
     }
     else if (SDL_strcmp(node->mName.C_Str(), "WheelPosFL") == 0) {
         //SDL_Log("FL");
-        Phys::AddCarWheel(position, true);
+        Phys::GetCar().AddWheel(position, true);
     }
     else if (SDL_strcmp(node->mName.C_Str(), "WheelPosRR") == 0) {
         //SDL_Log("RR");
-        Phys::AddCarWheel(position, false);
+        Phys::GetCar().AddWheel(position, false);
     }
     else if (SDL_strcmp(node->mName.C_Str(), "WheelPosRL") == 0) {
-        Phys::AddCarWheel(position, false);
+        Phys::GetCar().AddWheel(position, false);
     }
     else if (SDL_strncmp(node->mName.C_Str(), "CollisionBox", 12) == 0) {
-        Phys::AddCarCollisionBox(ToJoltVec3(aPosition), ToJoltVec3(aScale));
+        Phys::GetCar().AddCollisionBox(ToJoltVec3(aPosition), ToJoltVec3(aScale));
     }
     return true;
 }
+
+/*
+static void GLAPIENTRY GLErrorCallback(GLenum source, GLenum type,
+                                       GLuint, GLenum severity,
+                                       GLsizei legnth, const GLchar* message,
+                                       const void* userParam)
+{
+    SDL_Log("GL CALLBACK: type = 0x%x, severity = 0x%x, message = %s",
+            //(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR**" : ""),
+            type, severity, message);
+}
+*/
 
 
 
@@ -168,8 +180,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     // Audio
     Audio::Update();
 
-    glm::vec3 carPos = ToGlmVec3(Phys::GetCarPos());
-    JPH::Quat carRot = Phys::GetCarRotation();
+    glm::vec3 carPos = ToGlmVec3(Phys::GetCar().GetPos());
+    JPH::Quat carRot = Phys::GetCar().GetRotation();
     JPH::Vec3 carDir = carRot.RotateAxisX();
     float carYaw = SDL_PI_F - SDL_atan2f(carDir.GetX(), carDir.GetZ());
     float yawOffset;

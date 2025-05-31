@@ -17,6 +17,7 @@ static std::vector<Render::SpotLight> spotLights;
 static Render::SunLight sunLight;
 static ShaderProg shader;
 static ShaderProg skyboxShader;
+static ShaderProg screenShader;
 static SDL_Window *window;
 static SDL_GLContext context;
 static glm::mat4 projection; 
@@ -69,12 +70,103 @@ static float skyboxVertices[] = {
     -1.0f, -1.0f,  1.0f,
      1.0f, -1.0f,  1.0f
 };
+
+static float quadVertices[] = {
+    // Positions  // Tex Coords
+    -1.0f, 1.0f,  0.0f, 1.0f,     // Top left
+    1.0f, 1.0f,    1.0f, 1.0f,     // Top right
+    1.0f, -1.0f,   1.0f, 0.0f,    // Bottom right
+    1.0f, -1.0f,   1.0f, 0.0f,    // Bottom right
+    -1.0f, -1.0f, 0.0f, 0.0f,    // Bottom left
+    -1.0f, 1.0f,  0.0f, 1.0f      // Top left
+};
+
+
 static unsigned int skyboxVAO;
 static unsigned int skyboxVBO;
+
+static unsigned int fbo;
+static unsigned int rbo;
+static unsigned int textureColourBuffer;
+static unsigned int msFBO;
+static unsigned int msRBO;
+static unsigned int msTexColourBuffer;
+
+
+static unsigned int quadVAO;
+static unsigned int quadVBO;
+
+static const int fbWidth = 1080;
+static const int fbHeight = 720;
+//static const int fbWidth = 800;
+//static const int fbHeight = 600;
 
 
 //static const glm::vec3 sunDir = glm::vec3(0.1, -0.5, 0.1);
 static const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+
+
+static void CreateFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned int *aRBO)
+{
+    glGenFramebuffers(1, aFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, *aFBO);
+
+    // Create texture for frame buffer
+    glGenTextures(1, aCbTex);
+    glBindTexture(GL_TEXTURE_2D, *aCbTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, fbWidth, fbHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    // Attach texture to framebuffer
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *aCbTex, 0);
+    // Create renderbuffer for depth and stencil components
+    glGenRenderbuffers(1, aRBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, *aRBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, fbWidth, fbHeight);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    // Attach render buffer to framebuffer
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, *aRBO);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        SDL_Log("Error: Framebuffer is not complete!");
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+
+static void CreateMSFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned int *aRBO)
+{
+    glGenFramebuffers(1, aFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, *aFBO);
+
+    // Create texture for frame buffer
+    glGenTextures(1, aCbTex);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, *aCbTex);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, fbWidth, fbHeight, GL_TRUE);
+    glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+    // Attach texture to framebuffer
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, *aCbTex, 0);
+    // Create renderbuffer for depth and stencil components
+    glGenRenderbuffers(1, aRBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, *aRBO);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, fbWidth, fbHeight);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    // Attach render buffer to framebuffer
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, *aRBO);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        SDL_Log("Error: Framebuffer is not complete!");
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 
 void Render::AssimpAddLight(const aiLight *aLight, const aiNode *aNode, aiMatrix4x4 aTransform)
 {
@@ -175,6 +267,12 @@ bool Render::Init()
                                                 GL_FRAGMENT_SHADER);
     skyboxShader = CreateAndLinkShaderProgram(vSkybox, fSkybox);
 
+    unsigned int vScreen = CreateShaderFromFile("shaders/v_screen.glsl",
+                                                GL_VERTEX_SHADER);
+    unsigned int fScreen = CreateShaderFromFile("shaders/f_screen.glsl",
+                                                GL_FRAGMENT_SHADER);
+    screenShader = CreateAndLinkShaderProgram(vScreen, fScreen);
+
     // Skybox VAO
     glGenVertexArrays(1, &skyboxVAO);
     glGenBuffers(1, &skyboxVBO);
@@ -196,6 +294,24 @@ bool Render::Init()
                                        "texture/Lycksele/negy.jpg",
                                        "texture/Lycksele/posz.jpg",
                                        "texture/Lycksele/negz.jpg");
+    // ----- Quad VAO -----
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glBindVertexArray(0);
+
+
+    // ----- Framebuffer -----
+    CreateFramebuffer(&fbo, &textureColourBuffer, &rbo);
+    CreateMSFramebuffer(&msFBO, &msTexColourBuffer, &msRBO);
+
+    // Enable MSAA (anti-aliasing)
     glEnable(GL_MULTISAMPLE);
 
     return true;
@@ -205,17 +321,47 @@ bool Render::Init()
 void Render::RenderFrame(const Camera &cam, const Model &mapModel,
                          const Model &carModel, const Model &wheelModel)
 {
+    int screenWidth, screenHeight;
+    bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
+    glViewport(0, 0, fbWidth, fbHeight);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, msFBO);
+    glEnable(GL_DEPTH_TEST);
     glClearColor(0.7f, 0.6f, 0.2f, 1.0f);
+    glClearDepth(1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    RenderScene(cam, mapModel, carModel, wheelModel);
 
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, msFBO);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+    glBlitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight,
+                      GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+    if (screenSuccess) {
+        glViewport(0, 0, screenWidth, screenHeight);
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glDisable(GL_DEPTH_TEST);
+    glUseProgram(screenShader.id);
+    glBindVertexArray(quadVAO);
+    glBindTexture(GL_TEXTURE_2D, textureColourBuffer);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    SDL_GL_SwapWindow(window);
+}
+
+
+void Render::RenderScene(const Camera &cam, const Model &mapModel,
+                         const Model &carModel, const Model &wheelModel)
+{
     glm::mat4 model = glm::mat4(1.0f);
-    /*
-    model = glm::translate(model, spherePosGlm);
-    model = model * QuatToMatrix(Phys::GetSphereRotation());
-    model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
-    */
-
     glm::mat4 view = cam.LookAtMatrix(up);
     int windowWidth;
     int windowHeight;
@@ -225,15 +371,11 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
         //windowHeight = 600;
     } 
 
-
-
     glUseProgram(shader.id);
 
-    //shader.SetMat4fv((char*)"model", glm::value_ptr(model));
     shader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
     shader.SetMat4fv((char*)"view", glm::value_ptr(view));
 
-    //glm::vec3 lightDir = glm::vec3(view * glm::vec4(sunDir, 0.0f));
     glm::vec3 sunCol = sunLight.mColour / glm::vec3(1000.0);
     glm::vec3 sunDir = glm::vec3(view * glm::vec4(sunLight.mDirection, 0.0));
     shader.SetVec3((char*)"dirLight.direction", glm::value_ptr(sunDir));
@@ -291,51 +433,31 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
 
     shader.SetFloat((char*)"material.shininess", 32.0f);
 
-    /*
-    monkeyModel.Draw(shader, model);
-
-    for (size_t i=0; i < NUM_SPHERES; i++){
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, ToGlmVec3(Phys::GetSpherePos(i)));
-        model = model * QuatToMatrix(Phys::GetSphereRotation(i));
-        model = glm::scale(model, glm::vec3(0.5f));
-        //shader.SetMat4fv((char*)"model", glm::value_ptr(model));
-        monkeyModel.Draw(shader, model);
-    }
-    */
-
-    //shader.SetMat4fv((char*)"model", glm::value_ptr(floorMat));
-    //cubeModel.Draw(shader, floorMat);
-
     // Draw map
     model = glm::mat4(1.0f);
     shader.SetMat4fv((char*)"model", glm::value_ptr(model));
     mapModel.Draw(shader);
 
     // Draw Car
-    glm::vec3 carPos = ToGlmVec3(Phys::GetCarPos());
+    glm::vec3 carPos = ToGlmVec3(Phys::GetCar().GetPos());
     glm::mat4 carTrans = glm::mat4(1.0f);
     carTrans = glm::translate(carTrans, carPos);
-    carTrans = carTrans * QuatToMatrix(Phys::GetCarRotation());
-    //carTrans = glm::scale(carTrans, glm::vec3(0.9f, 0.2f, 2.0f));
+    carTrans = carTrans * QuatToMatrix(Phys::GetCar().GetRotation());
 
-    //shader.SetMat4fv((char*)"model", glm::value_ptr(carTrans));
     carModel.Draw(shader, carTrans);
 
     // Draw car wheels
     for (int i = 0; i < 4; i++) {
-        glm::mat4 wheelTrans = ToGlmMat4(Phys::GetWheelTransform(i));
-        if (Phys::IsWheelFlipped(i)) {
+        glm::mat4 wheelTrans = ToGlmMat4(Phys::GetCar().GetWheelTransform(i));
+        if (Phys::GetCar().IsWheelFlipped(i)) {
             wheelTrans = glm::rotate(wheelTrans, SDL_PI_F, glm::vec3(1.0f, 0.0f, 0.0f));
         }
-        //wheelTrans = glm::scale(wheelTrans, glm::vec3(0.45f, 0.2f, 0.45f));
-        //shader.SetMat4fv((char*)"model", glm::value_ptr(wheelTrans));
-        //cylinderModel.Draw(shader);
         wheelModel.Draw(shader, wheelTrans);
     }
 
 
     // Draw skybox
+    
     glDepthFunc(GL_LEQUAL);
     glDepthMask(GL_FALSE);
     // Remove translation component from view matrix
@@ -353,9 +475,6 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
 
     glDepthFunc(GL_LESS);
     glDepthMask(GL_TRUE);
-
-    
-    SDL_GL_SwapWindow(window);
 }
 
 void Render::HandleEvent(SDL_Event *event)
@@ -373,6 +492,11 @@ void Render::HandleEvent(SDL_Event *event)
     }
 }
 
+
+void Render::CleanUp()
+{
+    glDeleteFramebuffers(1, &fbo);
+}
 
 
 SDL_Window* Render::Window()    { return window; }

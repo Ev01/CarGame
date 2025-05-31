@@ -7,13 +7,13 @@
 #include "model.h"
 #include "convert.h"
 
-#include <Jolt/Physics/Collision/BroadPhase/ObjectVsBroadPhaseLayerFilterTable.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayerInterfaceTable.h>
+#include <Jolt/Physics/Collision/BroadPhase/ObjectVsBroadPhaseLayerFilterTable.h>
 #include <Jolt/Physics/Collision/ObjectLayerPairFilterTable.h>
-#include <Jolt/Physics/Vehicle/VehicleConstraint.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
-#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Vehicle/VehicleConstraint.h>
 #include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
 
 #include <SDL3/SDL.h>
@@ -34,22 +34,11 @@ using namespace JPH::literals;
 
 bool isJoltSetup = false;
     
-BodyID sphere_id;
-BodyID sphere2_id;
-BodyID sphereIds[NUM_SPHERES];
 PhysicsSystem physics_system;
 Body *floorBody;
 Vec3 forwardDir;
 
-Body *carBody;
-Ref<VehicleConstraint> vehicleConstraint;
-Ref<VehicleCollisionTester> colTester;
-RefConst<Shape> carShape;
-Ref<StaticCompoundShapeSettings> carCompoundShape;
-// Car inputs
-float carForward, carBrake, carSteer;
-float carSteerTarget = 0;
-float carDrivingDir = 1.0f; 
+Vehicle car;
 
 std::optional<BroadPhaseLayerInterfaceTable> broad_phase_layer_interface = std::nullopt;
 std::optional<ObjectLayerPairFilterTable> object_vs_object_layer_filter = std::nullopt;
@@ -136,21 +125,21 @@ static void VehiclePostCollideCallback(VehicleConstraint &inVehicle, const Physi
 {
     // Audio stuff
     WheeledVehicleController *controller = static_cast<WheeledVehicleController*>
-        (vehicleConstraint->GetController());
+        (inVehicle.GetController());
     VehicleEngine &engine = controller->GetEngine();
     float rpm = engine.GetCurrentRPM();
-    SDL_SetAudioStreamFrequencyRatio(engineSnd->stream, rpm / 4000.0f);
+    SDL_SetAudioStreamFrequencyRatio(car.engineSnd->stream, rpm / 4000.0f);
 
     float averageSlip = 0;
     float slipLong;
     //Wheel *wheel1 = vehicleConstraint->GetWheels()[0];
     //SDL_Log("ang vel: %f", wheel1->GetAngularVelocity());
-    for (Wheel *wheel : vehicleConstraint->GetWheels()) {
+    for (Wheel *wheel : inVehicle.GetWheels()) {
         if (!wheel->HasContact()) {
             continue;
         }
-        Vec3 wPos = Vec3(carBody->GetWorldTransform() * Vec4(wheel->GetSettings()->mPosition, 1.0f));
-        Vec3 wVel = carBody->GetPointVelocity(wPos);
+        Vec3 wPos = Vec3(car.mBody->GetWorldTransform() * Vec4(wheel->GetSettings()->mPosition, 1.0f));
+        Vec3 wVel = car.mBody->GetPointVelocity(wPos);
         float wheelLongVel = wheel->GetAngularVelocity() * wheel->GetSettings()->mRadius;
         slipLong = SDL_fabsf(wheelLongVel) - SDL_fabsf(wVel.Dot(wheel->GetContactLongitudinal()));
         slipLong = SDL_fabsf(slipLong);
@@ -158,7 +147,7 @@ static void VehiclePostCollideCallback(VehicleConstraint &inVehicle, const Physi
 
         float slipLat = wVel.Dot(wheel->GetContactLateral());
         float slip = slipLong*slipLong + slipLat*slipLat;
-        averageSlip += slip / vehicleConstraint->GetWheels().size();
+        averageSlip += slip / inVehicle.GetWheels().size();
         //SDL_Log("slip long: %f, lat: %f", slipLong, slipLat);
     }
     //SDL_Log("slip long: %f", SDL_fabsf(slipLong));
@@ -170,9 +159,9 @@ static void VehiclePostCollideCallback(VehicleConstraint &inVehicle, const Physi
 
 
     float driftGain = SDL_min(averageSlip / 130.0f, 1.0f);
-    float driftPitch = carBody->GetLinearVelocity().Length() / 30.0f + 0.6;
-    SDL_SetAudioStreamFrequencyRatio(driftSnd->stream, driftPitch);
-    SDL_SetAudioStreamGain(driftSnd->stream, driftGain);
+    float driftPitch = car.mBody->GetLinearVelocity().Length() / 30.0f + 0.6;
+    SDL_SetAudioStreamFrequencyRatio(car.driftSnd->stream, driftPitch);
+    SDL_SetAudioStreamGain(car.driftSnd->stream, driftGain);
 }
 
 
@@ -212,12 +201,7 @@ void Phys::SetupJolt()
 	// If you have your own custom shape types you probably need to register their handlers with the CollisionDispatch before calling this function.
 	// If you implement your own default material (PhysicsMaterial::sDefault) make sure to initialize it before this function or else this function will create one for you.
 	RegisterTypes();
-    carCompoundShape = new StaticCompoundShapeSettings;
 
-    engineSnd = Audio::CreateSoundFromFile("sound/car_engine.wav");
-    driftSnd = Audio::CreateSoundFromFile("sound/drift.wav");
-    engineSnd->doRepeat = true;
-    driftSnd->doRepeat = true;
 
 
     //engineSnd->play();
@@ -226,7 +210,7 @@ void Phys::SetupJolt()
 }
 
 
-void Phys::AddCarWheel(Vec3 position, bool isSteering)
+void Vehicle::AddWheel(Vec3 position, bool isSteering)
 {
     SDL_Log("Add Wheel with position %f, %f, %f", 
             position.GetX(), position.GetY(), position.GetZ());
@@ -244,96 +228,60 @@ void Phys::AddCarWheel(Vec3 position, bool isSteering)
     //wheel->mSuspensionSpring.mDamping = 1.0f;
 
 
-    carWheels.push_back(wheel);
+    mWheels.push_back(wheel);
 }
 
 
-void Phys::AddCarCollisionBox(Vec3 position, Vec3 scale)
+void Vehicle::AddCollisionBox(Vec3 position, Vec3 scale)
 {
-    // Can only call this once at the moment
+
     SDL_Log("Adding collision box with size (%f, %f, %f) and pos (%f, %f, %f",
             scale.GetX(), scale.GetY(), scale.GetZ(),
             position.GetX(), position.GetY(), position.GetZ());
+    if (!mCompoundShape) {
+        mCompoundShape = new StaticCompoundShapeSettings;
+    }
+
 	Ref<Shape> shape = OffsetCenterOfMassShapeSettings(-position, new BoxShape(scale)).Create().Get();
-    carCompoundShape->AddShape(position, Quat::sIdentity(), shape);
+    mCompoundShape->AddShape(position, Quat::sIdentity(), shape);
 }
 
-
-bool Phys::IsWheelFlipped(int wheelIndex)
+bool Vehicle::IsWheelFlipped(int wheelIndex)
 {
-    const WheelSettings *settings = vehicleConstraint->GetWheels()[wheelIndex]
+    const WheelSettings *settings = mVehicleConstraint->GetWheels()[wheelIndex]
                                                      ->GetSettings();
     return settings->mPosition.GetX() > 0.0f;
 }
 
 
-void Phys::CreateCarBody()
+void Vehicle::Init()
 {
-    /*
-	const float wheel_radius = 0.3f;
-	const float wheel_width = 0.1f;
-	const float half_vehicle_length = 2.0f;
-	const float half_vehicle_width = 0.9f;
-	const float half_vehicle_height = 0.2f;
-    const float max_steer_angle = SDL_PI_F / 6.0f;
-    */
-
-	BodyInterface &body_interface = physics_system.GetBodyInterface();
+	BodyInterface &bodyInterface = physics_system.GetBodyInterface();
 
     // Create collision tester
 	//colTester = new VehicleCollisionTesterCastSphere(Layers::MOVING, 0.5f * wheel_width);
 	//colTester = new VehicleCollisionTesterCastCylinder(Layers::MOVING);
-	colTester = new VehicleCollisionTesterRay(Layers::MOVING);
+	mColTester = new VehicleCollisionTesterRay(Layers::MOVING);
     
 	// Create vehicle body
 	RVec3 position(6, 3, 12);
-	BodyCreationSettings car_body_settings(carCompoundShape, position, Quat::sRotation(Vec3::sAxisZ(), 0.0f), EMotionType::Dynamic, Layers::MOVING);
-	car_body_settings.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
-	car_body_settings.mMassPropertiesOverride.mMass = 1500.0f;
-	carBody = body_interface.CreateBody(car_body_settings);
-	body_interface.AddBody(carBody->GetID(), EActivation::Activate);
+	BodyCreationSettings carBodySettings(mCompoundShape, position, Quat::sRotation(Vec3::sAxisZ(), 0.0f), EMotionType::Dynamic, Layers::MOVING);
+	carBodySettings.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
+	carBodySettings.mMassPropertiesOverride.mMass = 1500.0f;
+	mBody = bodyInterface.CreateBody(carBodySettings);
+	bodyInterface.AddBody(mBody->GetID(), EActivation::Activate);
 
 	// Create vehicle constraint
-	VehicleConstraintSettings vehicle;
+	VehicleConstraintSettings constraintSettings;
 
-    // Wheels
-    /*
-    // Left front
-	WheelSettingsWV *w1 = new WheelSettingsWV;
-	w1->mPosition = Vec3(half_vehicle_width, -0.9f * half_vehicle_height, half_vehicle_length - 2.0f * wheel_radius);
-    w1->mMaxSteerAngle = max_steer_angle;
-
-    // Right front
-	WheelSettingsWV *w2 = new WheelSettingsWV;
-	w2->mPosition = Vec3(-half_vehicle_width, -0.9f * half_vehicle_height, half_vehicle_length - 2.0f * wheel_radius);
-    w2->mMaxSteerAngle = max_steer_angle;
-
-    // Left rear
-	WheelSettingsWV *w3 = new WheelSettingsWV;
-	w3->mPosition = Vec3(half_vehicle_width, -0.9f * half_vehicle_height, -half_vehicle_length + 2.0f * wheel_radius);
-    w3->mMaxSteerAngle = 0.0f;
-
-    // Right rear
-	WheelSettingsWV *w4 = new WheelSettingsWV;
-	w4->mPosition = Vec3(-half_vehicle_width, -0.9f * half_vehicle_height, -half_vehicle_length + 2.0f * wheel_radius);
-    w4->mMaxSteerAngle = 0.0f;
-    */
-    /*
-    vehicle.mWheels = {w1, w2, w3, w4};
-    
-    for (WheelSettings *w : vehicle.mWheels) {
-        w->mRadius = wheel_radius;
-        w->mWidth = wheel_width;
-    }
-    */
-    vehicle.mWheels = carWheels;
+    constraintSettings.mWheels = mWheels;
 
 	WheeledVehicleControllerSettings *controller = new WheeledVehicleControllerSettings;
-	vehicle.mController = controller;
+	constraintSettings.mController = controller;
 
 	controller->mDifferentials.resize(1);
-    for (unsigned int i = 0; i < carWheels.size(); i++) {
-        Vec3 pos = carWheels[i]->mPosition;
+    for (unsigned int i = 0; i < mWheels.size(); i++) {
+        Vec3 pos = mWheels[i]->mPosition;
         if (pos.GetX() < 0.0f && pos.GetZ() > 1.0f) {
             controller->mDifferentials[0].mLeftWheel = i;
         }
@@ -346,17 +294,17 @@ void Phys::CreateCarBody()
     controller->mTransmission.mMode = ETransmissionMode::Auto;
     SDL_Log("%f", controller->mTransmission.mShiftUpRPM);
 
-	vehicleConstraint = new VehicleConstraint(*carBody, vehicle);
-	physics_system.AddConstraint(vehicleConstraint);
-	physics_system.AddStepListener(vehicleConstraint);
+	mVehicleConstraint = new VehicleConstraint(*mBody, constraintSettings);
+	physics_system.AddConstraint(mVehicleConstraint);
+	physics_system.AddStepListener(mVehicleConstraint);
 
 
 
-	vehicleConstraint->SetVehicleCollisionTester(colTester);
-    vehicleConstraint->SetPostCollideCallback(VehiclePostCollideCallback);
+	mVehicleConstraint->SetVehicleCollisionTester(mColTester);
+    mVehicleConstraint->SetPostCollideCallback(VehiclePostCollideCallback);
 
     // TODO: remove and re-tweak car settings
-	static_cast<WheeledVehicleController *>(vehicleConstraint->GetController())->SetTireMaxImpulseCallback(
+	static_cast<WheeledVehicleController *>(mVehicleConstraint->GetController())->SetTireMaxImpulseCallback(
 		[](uint, float &outLongitudinalImpulse, float &outLateralImpulse, float inSuspensionImpulse, float inLongitudinalFriction, float inLateralFriction, float, float, float)
 		{
 			outLongitudinalImpulse = 10.0f * inLongitudinalFriction * inSuspensionImpulse;
@@ -365,6 +313,10 @@ void Phys::CreateCarBody()
 
     //RVec3 com = Phys::GetCarPos();
     //SDL_Log("car com (%f, %f, %f)", com.GetX(), com.GetY(), com.GetZ());
+    engineSnd = Audio::CreateSoundFromFile("sound/car_engine.wav");
+    driftSnd = Audio::CreateSoundFromFile("sound/drift.wav");
+    engineSnd->doRepeat = true;
+    driftSnd->doRepeat = true;
 }
 
 
@@ -471,7 +423,8 @@ void Phys::SetupSimulation()
 	// variant of this. We're going to use the locking version (even though we're not planning to access bodies from multiple threads)
 	//BodyInterface &body_interface = physics_system.GetBodyInterface();
 
-    Phys::CreateCarBody();
+    //Phys::CreateCarBody();
+    car.Init();
     
 
 	// Optional step: Before starting the physics simulation you can optimize the broad phase. This improves collision detection performance (it's pointless here because we only have 2 bodies).
@@ -481,25 +434,25 @@ void Phys::SetupSimulation()
 }
 
 
-void Phys::PhysicsStep(float delta) 
+void Vehicle::Update(float delta)
 {
-    BodyInterface &body_interface = physics_system.GetBodyInterface();
-    //carSteer = carSteer + (carSteerTarget - carSteer) * 0.1f;
+    BodyInterface &bodyInterface = physics_system.GetBodyInterface();
+    //mSteer = mSteer + (mSteerTarget - mSteer) * 0.1f;
     if (!Input::GetGamepad()) {
-        carSteer += glm::sign(carSteerTarget - carSteer) * 0.1f;
-        carSteer = SDL_clamp(carSteer, -1.0f, 1.0f);
+        mSteer += glm::sign(mSteerTarget - mSteer) * 0.1f;
+        mSteer = SDL_clamp(mSteer, -1.0f, 1.0f);
     } else {
-        carSteer = carSteerTarget;
+        mSteer = mSteerTarget;
     }
 
     //RVec3 com = Phys::GetCarPos();
     //SDL_Log("car com (%f, %f, %f)", com.GetX(), com.GetY(), com.GetZ());
 
-    if (carSteer || carForward || carBrake)
-        body_interface.ActivateBody(carBody->GetID());
+    if (mSteer || mForward || mBrake)
+        bodyInterface.ActivateBody(mBody->GetID());
 
     WheeledVehicleController *controller = static_cast<WheeledVehicleController*>
-        (vehicleConstraint->GetController());
+        (mVehicleConstraint->GetController());
     // Don't know what this does
     controller->SetDifferentialLimitedSlipRatio(1.4f);
     for (VehicleDifferentialSettings &d : controller->GetDifferentials())
@@ -508,32 +461,38 @@ void Phys::PhysicsStep(float delta)
     
     VehicleEngine &engine = controller->GetEngine();
     float rpm = engine.GetCurrentRPM();
-    controller->GetTransmission().Update(delta, rpm, carForward, true);
+    controller->GetTransmission().Update(delta, rpm, mForward, true);
 
     // Longitudinal velocity local to the car
-    float longVelocity = (carBody->GetRotation().Conjugated() * carBody->GetLinearVelocity()).GetZ();
+    float longVelocity = (mBody->GetRotation().Conjugated() * mBody->GetLinearVelocity()).GetZ();
 
-    if (longVelocity < 0.1f && carDrivingDir > 0.0f && carBrake > 0.0f) {
+    if (longVelocity < 0.1f && mDrivingDir > 0.0f && mBrake > 0.0f) {
         // Braked to a stop when going forward, switch to going backward
-        carDrivingDir = -1.0f;
+        mDrivingDir = -1.0f;
     }
-    else if (longVelocity > -0.1f && carDrivingDir < 0.0f && carForward > 0.0f) {
+    else if (longVelocity > -0.1f && mDrivingDir < 0.0f && mForward > 0.0f) {
         // Braked to a stop when going backward, switch to going forward
-        carDrivingDir = 1.0f;
+        mDrivingDir = 1.0f;
     }
 
-    if (carDrivingDir < 0.0f) {
-        if (carBrake > 0.0f) {
-            carForward = -carBrake;
-            carBrake = 0.0f;
+    if (mDrivingDir < 0.0f) {
+        if (mBrake > 0.0f) {
+            mForward = -mBrake;
+            mBrake = 0.0f;
         }
-        if (carForward > 0.0f) {
-            carBrake = carForward;
-            carForward = 0.0f;
+        if (mForward > 0.0f) {
+            mBrake = mForward;
+            mForward = 0.0f;
         }
     }
 
-    controller->SetDriverInput(carForward, carSteer, carBrake, 0.0f);
+    controller->SetDriverInput(mForward, mSteer, mBrake, 0.0f);
+}
+
+
+void Phys::PhysicsStep(float delta) 
+{
+    car.Update(delta);
 
     // If you take larger steps than 1 / 60th of a second you need to do multiple collision steps in order to keep the simulation stable. Do 1 collision step per 1 / 60th of a second (round up).
     const int cCollisionSteps = 1;
@@ -545,21 +504,24 @@ void Phys::PhysicsStep(float delta)
 }
 
 
-void Phys::ProcessInput()
+void Vehicle::ProcessInput()
 {
-    //Vec3 rightDir = forwardDir.Cross(Vec3(0.0f, 1.0f, 0.0f));
-
     if (Input::GetGamepad()) {
-        carForward = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
-        carBrake = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER);
-        carSteerTarget = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_LEFTX);
+        mForward = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
+        mBrake = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER);
+        mSteerTarget = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_LEFTX);
     }
     else {
-        carSteerTarget = Input::GetScanAxis(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT);
-        carBrake = (float) Input::IsScanDown(SDL_SCANCODE_DOWN);
-        carForward = (float) Input::IsScanDown(SDL_SCANCODE_UP);
+        mSteerTarget = Input::GetScanAxis(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT);
+        mBrake = (float) Input::IsScanDown(SDL_SCANCODE_DOWN);
+        mForward = (float) Input::IsScanDown(SDL_SCANCODE_UP);
     }
+}
 
+
+void Phys::ProcessInput()
+{
+    car.ProcessInput();
 }
 
 
@@ -571,27 +533,34 @@ void Phys::SetForwardDir(Vec3 dir)
 }
 
 
-RMat44 Phys::GetWheelTransform(int wheelNum)
+RMat44 Vehicle::GetWheelTransform(int wheelNum)
 {
-    //const WheelSettings *settings = vehicleConstraint->GetWheels()[wheelNum]
-    //                                                 ->GetSettings();
-    RMat44 wheelTransform = vehicleConstraint->GetWheelWorldTransform
+    RMat44 wheelTransform = mVehicleConstraint->GetWheelWorldTransform
                             (wheelNum, Vec3::sAxisY(), Vec3::sAxisX());
     return wheelTransform;
 }
 
 
-RVec3 Phys::GetCarPos() 
+JPH::RVec3 Vehicle::GetPos()
 {
-    BodyInterface &body_interface = physics_system.GetBodyInterface();
-    return body_interface.GetCenterOfMassPosition(carBody->GetID());
+    BodyInterface &bodyInterface = physics_system.GetBodyInterface();
+    return bodyInterface.GetCenterOfMassPosition(mBody->GetID());
 }
 
 
-Quat Phys::GetCarRotation()
+JPH::Quat Vehicle::GetRotation()
 {
-    BodyInterface &body_interface = physics_system.GetBodyInterface();
-    return body_interface.GetRotation(carBody->GetID());
+    BodyInterface &bodyInterface = physics_system.GetBodyInterface();
+    return bodyInterface.GetRotation(mBody->GetID());
+}
+
+
+void Vehicle::Destroy()
+{
+    BodyInterface &bodyInterface = physics_system.GetBodyInterface();
+
+    bodyInterface.RemoveBody(mBody->GetID());
+    bodyInterface.DestroyBody(mBody->GetID());
 }
 
 
@@ -600,10 +569,7 @@ void Phys::PhysicsCleanup()
 	// Unregisters all types with the factory and cleans up the default material
     UnregisterTypes();
 
-    BodyInterface &body_interface = physics_system.GetBodyInterface();
-
-    body_interface.RemoveBody(carBody->GetID());
-    body_interface.DestroyBody(carBody->GetID());
+    car.Destroy();
 
 	// Destroy the factory
 	delete Factory::sInstance;
@@ -611,6 +577,10 @@ void Phys::PhysicsCleanup()
 }
 
 
+Vehicle& Phys::GetCar()
+{
+    return car;
+}
 
 
 
