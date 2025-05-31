@@ -379,7 +379,7 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel,
     glm::vec3 sunCol = sunLight.mColour / glm::vec3(1000.0);
     glm::vec3 sunDir = glm::vec3(view * glm::vec4(sunLight.mDirection, 0.0));
     shader.SetVec3((char*)"dirLight.direction", glm::value_ptr(sunDir));
-    shader.SetVec3((char*)"dirLight.ambient", 0.1, 0.1, 0.1);
+    shader.SetVec3((char*)"dirLight.ambient", 0.0, 0.0, 0.0);
     shader.SetVec3((char*)"dirLight.diffuse", glm::value_ptr(sunCol));
     shader.SetVec3((char*)"dirLight.specular", glm::value_ptr(sunCol));
 

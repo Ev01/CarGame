@@ -79,7 +79,7 @@ void main() {
     }
 
     //vec4 result = texture(diffuse, TexCoords);
-    FragColor = vec4(result, 1.0f);
+    FragColor = vec4(result, 1.0);
 }
 
 
@@ -103,11 +103,11 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 {
-    if (light.constant + light.linear + light.quadratic == 0.0f) {
-        return vec3(0.0f);
+    if (light.constant + light.linear + light.quadratic == 0.0) {
+        return vec3(0.0);
     }
     float dist = length(fragPos - light.position);
-    float attenuation = 1.0f / (light.constant + light.linear * dist
+    float attenuation = 1.0 / (light.constant + light.linear * dist
                                 + light.quadratic * dist * dist);
 
     vec3 lightDir = normalize(light.position - fragPos);
@@ -130,11 +130,11 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 {
-    if (light.quadratic == 0.0f) {
-        return vec3(0.0f);
+    if (light.quadratic == 0.0) {
+        return vec3(0.0);
     }
     float dist = length(fragPos - light.position);
-    float attenuation = 1.0f / (light.quadratic * dist * dist);
+    float attenuation = 1.0 / (light.quadratic * dist * dist);
 
     vec3 lightDir = normalize(light.position - fragPos);
     vec3 reflectDir = reflect(-lightDir, normal);

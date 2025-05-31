@@ -6,7 +6,7 @@
 
 Texture gDefaultTexture;
 
-Texture CreateTextureFromFile(const char* filename) {
+Texture CreateTextureFromFile(const char* filename, bool isSRGB) {
     unsigned int textureId;
     Texture texture;
     // Init ID to prevent garbage values
@@ -44,13 +44,19 @@ Texture CreateTextureFromFile(const char* filename) {
             break;
     }
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surf->w, surf->h, 0,
+    GLenum targetFormat = isSRGB ? GL_SRGB : GL_RGB;
+
+    glTexImage2D(GL_TEXTURE_2D, 0, targetFormat, surf->w, surf->h, 0,
                  format, GL_UNSIGNED_BYTE, surf->pixels);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     SDL_free(surf);
     texture.id = textureId;
     return texture;
+}
+
+Texture CreateTextureFromFile(const char* filename) {
+    return CreateTextureFromFile(filename, true);
 }
 
 

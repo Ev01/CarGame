@@ -15,6 +15,10 @@ void main()
 {
     //vec4 col = vec4(EdgeDetect(), 1.0);
     vec4 col = texture(screenTexture, TexCoords);
+    // Gamma correction
+    float gamma = 2.2;
+    col.rgb = pow(col.rgb, vec3(1.0/gamma));
+
     FragColor = col;
     //FragColor = vec4(0.0, 1.0, 0.0, 1.0);
 }
