@@ -114,7 +114,7 @@ static void CreateFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned
     // Create texture for frame buffer
     glGenTextures(1, aCbTex);
     glBindTexture(GL_TEXTURE_2D, *aCbTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, fbWidth, fbHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, fbWidth, fbHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -145,7 +145,7 @@ static void CreateMSFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsign
     // Create texture for frame buffer
     glGenTextures(1, aCbTex);
     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, *aCbTex);
-    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, fbWidth, fbHeight, GL_TRUE);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB32F, fbWidth, fbHeight, GL_TRUE);
     glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -376,7 +376,7 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel,
     shader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
     shader.SetMat4fv((char*)"view", glm::value_ptr(view));
 
-    glm::vec3 sunCol = sunLight.mColour / glm::vec3(1000.0);
+    glm::vec3 sunCol = sunLight.mColour / glm::vec3(10.0);
     glm::vec3 sunDir = glm::vec3(view * glm::vec4(sunLight.mDirection, 0.0));
     shader.SetVec3((char*)"dirLight.direction", glm::value_ptr(sunDir));
     shader.SetVec3((char*)"dirLight.ambient", 0.0, 0.0, 0.0);
@@ -408,7 +408,7 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel,
     }
 
     for (size_t i = 0; i < spotLights.size(); i++) {
-        glm::vec3 lightCol = spotLights[i].mColour / glm::vec3(1000.0);
+        glm::vec3 lightCol = spotLights[i].mColour / glm::vec3(10.0);
         SDL_snprintf(uniformName, 64, "spotLights[%llu].diffuse", i);
         shader.SetVec3(uniformName, glm::value_ptr(lightCol));
         SDL_snprintf(uniformName, 64, "spotLights[%llu].specular", i);

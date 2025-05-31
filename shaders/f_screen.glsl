@@ -6,6 +6,7 @@ in vec2 TexCoords;
 uniform sampler2D screenTexture;
 
 const float of = 1.0 / 300.0;
+const float exposure = 0.05;
 
 
     
@@ -14,12 +15,17 @@ vec3 EdgeDetect();
 void main()
 {
     //vec4 col = vec4(EdgeDetect(), 1.0);
-    vec4 col = texture(screenTexture, TexCoords);
+    vec3 col = texture(screenTexture, TexCoords).rgb;
+
+    // reinhard tonemapping
+    //col = col / (col + vec3(1.0));
+    // exposure tonemapping
+    col = vec3(1.0) - exp(-col * exposure);
     // Gamma correction
     float gamma = 2.2;
-    col.rgb = pow(col.rgb, vec3(1.0/gamma));
+    col = pow(col, vec3(1.0/gamma));
 
-    FragColor = col;
+    FragColor = vec4(col, 1.0);
     //FragColor = vec4(0.0, 1.0, 0.0, 1.0);
 }
 
