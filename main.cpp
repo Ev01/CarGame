@@ -94,6 +94,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO);
 
+
     if (!Render::Init()) {
         return SDL_APP_FAILURE;
     }
@@ -106,7 +107,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
 
     // Load model
+    SDL_Log("Loading monkey...");
     monkeyModel = LoadModel("models/monkey.obj");
+    SDL_Log("Monkey model stored at %p", &monkeyModel);
     cylinderModel = LoadModel("models/cylinder.obj");
     carModel = LoadModel("models/mycar.gltf", CarNodeCallback);
     wheelModel = LoadModel("models/wheel.gltf");

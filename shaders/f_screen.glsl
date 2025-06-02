@@ -19,8 +19,10 @@ void main()
 
     // reinhard tonemapping
     //col = col / (col + vec3(1.0));
+    
     // exposure tonemapping
     col = vec3(1.0) - exp(-col * exposure);
+
     // Gamma correction
     float gamma = 2.2;
     col = pow(col, vec3(1.0/gamma));

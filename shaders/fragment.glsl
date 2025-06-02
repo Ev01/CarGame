@@ -3,6 +3,7 @@
 in vec3 Normal;
 in vec3 FragPos;
 in vec2 TexCoords;
+in mat3 TBN;
 
 out vec4 FragColor;
 
@@ -47,6 +48,7 @@ struct SpotLight {
 struct Material {
     sampler2D texture_diffuse;
     sampler2D texture_specular;
+    sampler2D normalMap;
     vec3 diffuseColour;
     float shininess;
 };
@@ -66,20 +68,35 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 
 void main() {
-    vec3 norm = normalize(Normal);
+    //vec3 norm = normalize(Normal);
+
+    vec3 norm = texture(material.normalMap, TexCoords).rgb;
+    // RGB is from 0.0 to 1.0. Normals coords should be from -1.0 to 1.0.
+    norm = norm * 2.0 - 1.0;
+    norm = normalize(TBN * norm);
+
     vec3 viewDir = normalize(-FragPos);
     
     vec3 result = CalcDirLight(dirLight, norm, viewDir);
 
+    
+    
     for (int i = 0; i < NUM_POINT_LIGHTS; i++) {
         result += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
     }
+    
+    
     for (int i = 0; i < NUM_SPOT_LIGHTS; i++) {
         result += CalcSpotLight(spotLights[i], norm, FragPos, viewDir);
     }
+    
+    
 
     //vec4 result = texture(diffuse, TexCoords);
     FragColor = vec4(result, 1.0);
+    
+    //vec3 normCol = (norm + 1.0) / 2.0;
+    //FragColor = vec4(normCol, 1.0);
 }
 
 
@@ -90,10 +107,12 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     float diff = max(dot(normal, lightDir), 0.0);
     float spec = pow(max(dot(normal, halfwayDir), 0.0), material.shininess);
 
+    vec3 col = material.diffuseColour;
+
     vec3 ambient = vec3(texture(material.texture_diffuse, TexCoords)) 
-        * light.ambient * material.diffuseColour;
+        * light.ambient * col;
     vec3 diffuse = diff * vec3(texture(material.texture_diffuse, TexCoords))
-        * light.diffuse * material.diffuseColour;
+        * light.diffuse * col;
     vec3 specular = spec * vec3(texture(material.texture_specular, TexCoords))
         * light.specular;
 

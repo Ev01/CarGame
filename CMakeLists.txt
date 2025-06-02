@@ -6,11 +6,13 @@ set(CMAKE_PREFIX_PATH "~/cmake/")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 # set(CMAKE_BUILD_TYPE Debug)
+set(Jolt_ROOT "../JoltPhysics/Build/Debug/")
+set(SDL3_ROOT "~/SDL/build/Debug/")
 
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
 find_package(assimp REQUIRED)
-find_package(Jolt REQUIRED)
+find_package(Jolt CONFIG REQUIRED)
 
 
 #add_subdirectory(../assimp-src assimp)

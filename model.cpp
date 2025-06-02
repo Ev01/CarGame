@@ -13,13 +13,14 @@
 std::vector<Material> loadedMaterials;
 std::vector<Mesh> loadedMeshes;
 
-void Mesh::Init(std::vector<Vertex> p_vertices,
-                std::vector<unsigned int> p_indices,
-                Material *p_material) 
+void Mesh::Init(std::vector<Vertex> aVertices,
+                std::vector<unsigned int> aIndices,
+                unsigned int aMaterialIdx)
 {
-    this->vertices = p_vertices;
-    this->indices = p_indices;
-    this->material = p_material;
+    vertices = aVertices;
+    indices = aIndices;
+    materialIdx = aMaterialIdx;
+
 
     // Initialise all opengl vertex array stuff
 
@@ -38,41 +39,65 @@ void Mesh::Init(std::vector<Vertex> p_vertices,
                  &indices[0], GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) 0);
-    glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 
             (void*) (offsetof(Vertex, normal)));
-    glEnableVertexAttribArray(1);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
             (void*) (offsetof(Vertex, texCoords)));
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+            (void*) (offsetof(Vertex, tangent)));
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+            (void*) (offsetof(Vertex, bitangent)));
+
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
+    glEnableVertexAttribArray(3);
+    glEnableVertexAttribArray(4);
 }
 
 
-void Mesh::Draw(ShaderProg shader) const
+
+
+
+void Mesh::Draw(ShaderProg shader, const std::vector<Material> &materials) const
 {
-    glActiveTexture(GL_TEXTURE0);
     
-    // TODO: support more than one material
-    if (material != NULL) {
-        shader.SetInt((char*)"material.texture_diffuse", GL_TEXTURE0);
-        unsigned int texId = material->texture.id;
-        
-        if (texId == 0) {
-            texId = gDefaultTexture.id;
-        }
-        glBindTexture(GL_TEXTURE_2D, texId);
-        shader.SetVec3((char*)"material.diffuseColour",
-                        glm::value_ptr(material->diffuseColour));
-        shader.SetFloat((char*)"material.shininess", material->shininess);
+    unsigned int texId = gDefaultTexture.id;
+    unsigned int normalMapId = gDefaultNormalMap.id;
+    glm::vec3 diffuseColour = glm::vec3(1.0f);
+    float shininess = 8;
+
+    const Material &material = materials[materialIdx];
+    
+    //if (material != NULL) {
+        texId = material.texture.id;
+        normalMapId = material.normalMap.id;
+        diffuseColour = material.diffuseColour;
+        shininess = material.shininess;
+    //}
+
+    texId = texId == 0 ? gDefaultTexture.id : texId;
+    normalMapId = normalMapId == 0 ? gDefaultNormalMap.id : normalMapId;
+
+    /*
+    if (normalMapId != 0) {
+        SDL_Log("Normal map id: %d", normalMapId);
     }
-    else {
-        // Don't draw with any texture
-        SDL_Log("Null material");
-        shader.SetInt((char*)"material.texture_diffuse", GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gDefaultTexture.id);
-        glm::vec3 col = glm::vec3(1.0f);
-        shader.SetVec3((char*)"material.diffuseColour", glm::value_ptr(col));
-    }
+    */
+
+
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, normalMapId);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texId);
+    shader.SetInt((char*)"material.texture_diffuse", 0);
+    shader.SetInt((char*)"material.normalMap", 1);
+
+    shader.SetVec3((char*)"material.diffuseColour",
+                    glm::value_ptr(diffuseColour));
+    shader.SetFloat((char*)"material.shininess", shininess);
 
     glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
@@ -80,27 +105,28 @@ void Mesh::Draw(ShaderProg shader) const
 }
 
 
-void ModelNode::Draw(ShaderProg shader, const Mesh* meshes, glm::mat4 transform) const
+void ModelNode::Draw(ShaderProg shader, const std::vector<Mesh> &meshes, const std::vector<Material> &materials, glm::mat4 transform) const
 {
     glm::mat4 newTrans = transform * mTransform;
     newTrans = ToGlmMat4(ToJoltMat4(newTrans));
     shader.SetMat4fv((char*)"model", glm::value_ptr(newTrans));
+
     for (size_t i = 0; i < mMeshes.size(); i++) {
-        meshes[mMeshes[i]].Draw(shader);
+        meshes[mMeshes[i]].Draw(shader, materials);
     }
 }
 
 
-void ModelNode::Draw(ShaderProg shader, const Mesh* meshes) const
+void ModelNode::Draw(ShaderProg shader, const std::vector<Mesh> &meshes, const std::vector<Material> &materials) const
 {
-    Draw(shader, meshes, glm::mat4(1.0f));
+    Draw(shader, meshes, materials, glm::mat4(1.0f));
 }
 
 
 void Model::Draw(ShaderProg shader, glm::mat4 transform) const
 {
     for (unsigned int i = 0; i < nodes.size(); i++) {
-        nodes[i].Draw(shader, &meshes[0], transform);
+        nodes[i].Draw(shader, meshes, materials, transform);
     }
 }
 
@@ -108,7 +134,7 @@ void Model::Draw(ShaderProg shader, glm::mat4 transform) const
 void Model::Draw(ShaderProg shader) const
 {
     for (unsigned int i = 0; i < nodes.size(); i++) {
-        nodes[i].Draw(shader, &meshes[0]);
+        nodes[i].Draw(shader, meshes, materials);
     }
 }
 
@@ -123,6 +149,8 @@ void Model::LoadSceneMaterials(const aiScene *scene)
         Material newMat;
         // Prevent garbage values
         newMat.texture.id = 0;
+        newMat.normalMap.id = 0;
+
         if (aiMat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
             aiString str;
             aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &str);
@@ -133,6 +161,17 @@ void Model::LoadSceneMaterials(const aiScene *scene)
             Texture texture = CreateTextureFromFile(filepath);
             newMat.texture = texture;
         }
+        if (aiMat->GetTextureCount(aiTextureType_NORMALS) > 0) {
+            aiString str;
+            aiMat->GetTexture(aiTextureType_NORMALS, 0, &str);
+
+            char filepath[256];
+            SDL_snprintf(filepath, 256, "models/%s", str.C_Str());
+            SDL_Log("Loading texture %s", filepath);
+            Texture normalMap = CreateTextureFromFile(filepath, false);
+            newMat.normalMap = normalMap;
+            SDL_Log("Found normal map, id is %d", normalMap.id);
+        }
         aiColor3D colour;
         aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
         newMat.diffuseColour.x = colour.r;
@@ -141,14 +180,12 @@ void Model::LoadSceneMaterials(const aiScene *scene)
 
         float shininess;
         if (aiMat->Get(AI_MATKEY_ROUGHNESS_FACTOR, shininess) != aiReturn_SUCCESS) {
-            SDL_Log("Failed to get roughness Factor");
+            //SDL_Log("Failed to get roughness Factor");
             shininess = 32.0f; // Set to a reasonable default
         }
         else {
             shininess = 16.0f / shininess;
         }
-        SDL_Log("roughness = %f", shininess);
-        SDL_Log("shininess = %f", shininess);
         newMat.shininess = shininess;
 
         materials.push_back(newMat);
@@ -198,7 +235,6 @@ void Model::ProcessNode(const aiNode *node, aiMatrix4x4 accTransform, const aiSc
 
 
     SDL_Log("Process Node %s", node->mName.C_Str());
-    SDL_Log("Scale: %f, %f, %f", scale.x, scale.y, scale.z);
     /*
     if (node->mMetaData != nullptr) {
         SDL_Log("Has metadata");
@@ -239,14 +275,14 @@ void Model::ProcessMesh(aiMesh *mesh)
     /* Convert an aiMesh object to a Mesh object */
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
-    Material *meshMaterial = NULL;
+    //Material *meshMaterial = NULL;
 
     // Process all vertices
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
         Vertex vertex;
         glm::vec3 vec;
 
-        // mVertices holds vertex positions
+        // mesh->mVertices holds vertex positions
         vec.x = mesh->mVertices[i].x;
         vec.y = mesh->mVertices[i].y;
         vec.z = mesh->mVertices[i].z;
@@ -256,6 +292,16 @@ void Model::ProcessMesh(aiMesh *mesh)
         vec.y = mesh->mNormals[i].y;
         vec.z = mesh->mNormals[i].z;
         vertex.normal = vec;
+
+        vec.x = mesh->mTangents[i].x;
+        vec.y = mesh->mTangents[i].y;
+        vec.z = mesh->mTangents[i].z;
+        vertex.tangent = vec;
+
+        vec.x = mesh->mBitangents[i].x;
+        vec.y = mesh->mBitangents[i].y;
+        vec.z = mesh->mBitangents[i].z;
+        vertex.bitangent = vec;
 
         
         if (mesh->mTextureCoords[0]) {
@@ -281,43 +327,11 @@ void Model::ProcessMesh(aiMesh *mesh)
         }
     }
 
-    // Process all materials (todo)
-    
-        /*
-        aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-        //std::vector<Texture> diffuseMaps = LoadMaterialTextures(
-        //        material, aiTextureType_DIFFUSE, "texture_diffuse");
-        //textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-        Material newMat;
-        if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
-            aiString str;
-            material->GetTexture(aiTextureType_DIFFUSE, 0, &str);
-
-            char filepath[256];
-            SDL_snprintf(filepath, 256, "models/%s", str.C_Str());
-            SDL_Log("Loading texture %s", filepath);
-            Texture texture = CreateTextureFromFile(filepath);
-            newMat.texture = texture;
-        }
-        aiColor3D colour;
-        material->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
-        newMat.diffuseColour.x = colour.r;
-        newMat.diffuseColour.y = colour.g;
-        newMat.diffuseColour.z = colour.b;
-        */
-        // If this assertion fails, the material has not been loaded into the
-        // materials vector. LoadSceneMaterials must be called before this
-        // method.
-        //meshMaterials.push_back(materials[mesh->mMaterialIndex]);
-
-    
     // NOTE: There will always be at least one material
     SDL_assert(materials.size() > mesh->mMaterialIndex);
-    meshMaterial = &materials[mesh->mMaterialIndex];
     
-
     Mesh returnMesh;
-    returnMesh.Init(vertices, indices, meshMaterial);
+    returnMesh.Init(vertices, indices, mesh->mMaterialIndex);
     meshes.push_back(returnMesh);
 }
 
@@ -326,7 +340,7 @@ Model LoadModel(std::string path, node_callback_t NodeCallback, light_callback_t
 {
     Model model;
     Assimp::Importer importer;
-    const aiScene *scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+    const aiScene *scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {

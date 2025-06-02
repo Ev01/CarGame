@@ -5,11 +5,13 @@
 #include "texture.h"
 
 Texture gDefaultTexture;
+Texture gDefaultNormalMap;
 
 Texture CreateTextureFromFile(const char* filename, bool isSRGB) {
     unsigned int textureId;
     Texture texture;
     // Init ID to prevent garbage values
+    texture.id = 0;
     SDL_Surface *surf = IMG_Load(filename);
     if (surf == NULL) {
         SDL_Log("Could not load texture %s: %s", filename, SDL_GetError());
@@ -60,11 +62,11 @@ Texture CreateTextureFromFile(const char* filename) {
 }
 
 
-Texture CreateBlankTexture()
+Texture CreateBlankTexture(Uint32 colour)
 {
     SDL_Surface *surf = SDL_CreateSurface(1, 1, SDL_PIXELFORMAT_RGB24);
     // Fill surface with white
-    SDL_FillSurfaceRect(surf, NULL, 0xFFFFFF);
+    SDL_FillSurfaceRect(surf, NULL, colour);
     unsigned int textureId;
 
     glGenTextures(1, &textureId);
@@ -75,7 +77,7 @@ Texture CreateBlankTexture()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE,
                  surf->pixels);
     SDL_free(surf);
     Texture texture;
@@ -149,6 +151,7 @@ Texture CreateCubemapFromFiles(const char* fileRight, const char* fileLeft,
 
 void InitDefaultTexture()
 {
-    gDefaultTexture = CreateBlankTexture();
+    gDefaultTexture = CreateBlankTexture(0xFFFFFF);
+    gDefaultNormalMap = CreateBlankTexture(0xFF7F7F);
     SDL_Log("Default texture id = %d", gDefaultTexture.id);
 }

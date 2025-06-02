@@ -99,9 +99,9 @@ static bool assertFailedImpl(const char *inExpression, const char *inMessage, co
 {
 	// Print to the TTY
 	// cout << inFile << ":" << inLine << ": (" << inExpression << ") " << (inMessage != nullptr? inMessage : "") << endl;
-    SDL_LogWarn(
-            SDL_LOG_CATEGORY_ASSERT,
-            "%s:%d: (%s) %s",
+    SDL_Log(
+           // SDL_LOG_CATEGORY_ASSERT,
+            "JPH ASSERT FAILED: %s:%d: (%s) %s",
             inFile,
             inLine,
             inExpression,

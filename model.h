@@ -16,30 +16,34 @@ struct Vertex {
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec2 texCoords;
+    glm::vec3 tangent;
+    glm::vec3 bitangent;
 };
 
 
 struct Material
 {
     Texture texture;
+    Texture normalMap;
     glm::vec3 diffuseColour;
     float shininess;
 };
-
 
 struct Mesh {
     // NOTE: The vertices and indices may not need to be stored in the struct,
     // as they are stored on the GPU after initialisation.
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
-    // Pointer to material held in Mesh struct
-    Material *material;
 
-    void Init(std::vector<Vertex> p_vertices,
-              std::vector<unsigned int> p_indices,
-              Material *material);
+    // Index of material in Model's materials vector
+    unsigned int materialIdx;
 
-    void Draw(ShaderProg shader) const;
+    void Init(std::vector<Vertex> aVertices,
+              std::vector<unsigned int> aIndices,
+              unsigned int aMaterialIdx);
+
+
+    void Draw(ShaderProg shader, const std::vector<Material> &materials) const;
     unsigned int vao, vbo, ebo;
 };
 
@@ -47,13 +51,12 @@ struct Mesh {
 //struct Model;
 
 struct ModelNode {
-    void Draw(ShaderProg shader, const Mesh* meshes) const;
-    void Draw(ShaderProg shader, const Mesh* meshes, glm::mat4 transform) const;
+    void Draw(ShaderProg shader, const std::vector<Mesh> &meshes, const std::vector<Material> &materials) const;
+    void Draw(ShaderProg shader, const std::vector<Mesh> &meshes, const std::vector<Material> &materials, glm::mat4 transform) const;
 
     // Array of indices pointing to location of meshes in the Model's meshes
     // array
     std::vector<int> mMeshes;
-    //Model* mParentModel = nullptr;
     glm::mat4 mTransform;
 };
 
@@ -69,6 +72,7 @@ struct Model {
     std::vector<Mesh> meshes;
     std::vector<Material> materials;
     std::vector<ModelNode> nodes;
+    float thing = 5;
 };
 
 

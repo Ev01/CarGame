@@ -284,7 +284,7 @@ bool Render::Init()
 
     projection = glm::perspective(SDL_PI_F / 4.0f,
                                   800.0f / 600.0f,
-                                  0.1f, 100.0f);
+                                  0.1f, 1000.0f);
 
     //glDisableVertexAttribArray(1);
     //glDisableVertexAttribArray(2);
@@ -379,7 +379,7 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel,
     glm::vec3 sunCol = sunLight.mColour / glm::vec3(10.0);
     glm::vec3 sunDir = glm::vec3(view * glm::vec4(sunLight.mDirection, 0.0));
     shader.SetVec3((char*)"dirLight.direction", glm::value_ptr(sunDir));
-    shader.SetVec3((char*)"dirLight.ambient", 0.0, 0.0, 0.0);
+    shader.SetVec3((char*)"dirLight.ambient", 0.1, 0.1, 0.1);
     shader.SetVec3((char*)"dirLight.diffuse", glm::value_ptr(sunCol));
     shader.SetVec3((char*)"dirLight.specular", glm::value_ptr(sunCol));
 
@@ -485,7 +485,7 @@ void Render::HandleEvent(SDL_Event *event)
         glViewport(0, 0, width, height);
         projection = glm::perspective(SDL_PI_F / 4.0f,
                                       (float) width / height,
-                                      0.1f, 100.0f);
+                                      0.1f, 1000.0f);
     }
     else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_F11) {
         SDL_SetWindowFullscreen(window, !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN));
