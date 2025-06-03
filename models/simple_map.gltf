@@ -18,21 +18,7 @@
 						1,
 						1
 					],
-					"intensity":271757.0653294113,
-					"spot":{
-						"innerConeAngle":0.5890486389398575,
-						"outerConeAngle":0.7853981852531433
-					},
-					"type":"spot",
-					"name":"Light"
-				},
-				{
-					"color":[
-						1,
-						1,
-						1
-					],
-					"intensity":40.29699006676674,
+					"intensity":0.30000001192092896,
 					"type":"directional",
 					"name":"Sun"
 				},
@@ -42,7 +28,7 @@
 						1,
 						1
 					],
-					"intensity":163054.2391976468,
+					"intensity":6000,
 					"spot":{
 						"innerConeAngle":0.5890486389398575,
 						"outerConeAngle":0.7853981852531433
@@ -56,7 +42,7 @@
 						1,
 						1
 					],
-					"intensity":163054.2391976468,
+					"intensity":6000,
 					"spot":{
 						"innerConeAngle":0.5890486389398575,
 						"outerConeAngle":0.7853981852531433
@@ -70,7 +56,7 @@
 						1,
 						1
 					],
-					"intensity":164304.32169816206,
+					"intensity":6000,
 					"spot":{
 						"innerConeAngle":0.5890486389398575,
 						"outerConeAngle":0.7853981852531433
@@ -84,7 +70,7 @@
 						1,
 						1
 					],
-					"intensity":163054.2391976468,
+					"intensity":6000,
 					"spot":{
 						"innerConeAngle":0.5890486389398575,
 						"outerConeAngle":0.7853981852531433
@@ -98,7 +84,7 @@
 						1,
 						1
 					],
-					"intensity":163054.2391976468,
+					"intensity":6000,
 					"spot":{
 						"innerConeAngle":0.5890486389398575,
 						"outerConeAngle":0.7853981852531433
@@ -112,7 +98,7 @@
 						1,
 						1
 					],
-					"intensity":163054.2391976468,
+					"intensity":6000,
 					"spot":{
 						"innerConeAngle":0.5890486389398575,
 						"outerConeAngle":0.7853981852531433
@@ -126,7 +112,7 @@
 						1,
 						1
 					],
-					"intensity":52981.75347580564,
+					"intensity":2000,
 					"type":"point",
 					"name":"Point"
 				}
@@ -170,8 +156,7 @@
 				29,
 				30,
 				31,
-				32,
-				33
+				32
 			]
 		}
 	],
@@ -506,25 +491,6 @@
 					"light":0
 				}
 			},
-			"name":"Light",
-			"rotation":[
-				-0.3581051528453827,
-				0.5196741223335266,
-				0.719646155834198,
-				0.2894977927207947
-			],
-			"translation":[
-				-22.262237548828125,
-				17.135299682617188,
-				20.095426559448242
-			]
-		},
-		{
-			"extensions":{
-				"KHR_lights_punctual":{
-					"light":1
-				}
-			},
 			"name":"Sun",
 			"rotation":[
 				-0.9186674952507019,
@@ -541,7 +507,7 @@
 		{
 			"extensions":{
 				"KHR_lights_punctual":{
-					"light":2
+					"light":1
 				}
 			},
 			"name":"Light.001",
@@ -560,7 +526,7 @@
 		{
 			"extensions":{
 				"KHR_lights_punctual":{
-					"light":3
+					"light":2
 				}
 			},
 			"name":"Light.002",
@@ -579,7 +545,7 @@
 		{
 			"extensions":{
 				"KHR_lights_punctual":{
-					"light":4
+					"light":3
 				}
 			},
 			"name":"Light.003",
@@ -598,7 +564,7 @@
 		{
 			"extensions":{
 				"KHR_lights_punctual":{
-					"light":5
+					"light":4
 				}
 			},
 			"name":"Light.004",
@@ -617,7 +583,7 @@
 		{
 			"extensions":{
 				"KHR_lights_punctual":{
-					"light":6
+					"light":5
 				}
 			},
 			"name":"Light.005",
@@ -636,7 +602,7 @@
 		{
 			"extensions":{
 				"KHR_lights_punctual":{
-					"light":7
+					"light":6
 				}
 			},
 			"name":"Light.006",
@@ -655,7 +621,7 @@
 		{
 			"extensions":{
 				"KHR_lights_punctual":{
-					"light":8
+					"light":7
 				}
 			},
 			"name":"Point",
@@ -666,9 +632,9 @@
 				0.7071068286895752
 			],
 			"translation":[
-				-32.319610595703125,
-				4.60440731048584,
-				-59.93486022949219
+				-25.224576950073242,
+				9.127076148986816,
+				-69.90715789794922
 			]
 		}
 	],
@@ -683,7 +649,8 @@
 				"baseColorTexture":{
 					"index":1
 				},
-				"metallicFactor":0
+				"metallicFactor":0,
+				"roughnessFactor":0.7751572132110596
 			}
 		},
 		{
@@ -696,7 +663,10 @@
 				"baseColorTexture":{
 					"index":3
 				},
-				"metallicFactor":0
+				"metallicFactor":0,
+				"metallicRoughnessTexture":{
+					"index":4
+				}
 			}
 		},
 		{
@@ -709,8 +679,7 @@
 					0.05266061797738075,
 					1
 				],
-				"metallicFactor":0,
-				"roughnessFactor":0.9074074029922485
+				"roughnessFactor":0.27721869945526123
 			}
 		},
 		{
@@ -1104,6 +1073,10 @@
 		{
 			"sampler":0,
 			"source":3
+		},
+		{
+			"sampler":0,
+			"source":4
 		}
 	],
 	"images":[
@@ -1119,13 +1092,18 @@
 		},
 		{
 			"mimeType":"image/png",
-			"name":"BrickNormal",
-			"uri":"BrickNormal.png"
+			"name":"dirtgrass_normals",
+			"uri":"dirtgrass_normals.png"
 		},
 		{
 			"mimeType":"image/png",
-			"name":"dirtgrass",
-			"uri":"dirtgrass.png"
+			"name":"dirtgrass_noshadow",
+			"uri":"dirtgrass_noshadow.png"
+		},
+		{
+			"mimeType":"image/png",
+			"name":"dirtgrass_roughness",
+			"uri":"dirtgrass_roughness.png"
 		}
 	],
 	"accessors":[

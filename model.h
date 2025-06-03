@@ -25,8 +25,10 @@ struct Material
 {
     Texture texture;
     Texture normalMap;
+    Texture roughnessMap;
     glm::vec3 diffuseColour;
-    float shininess;
+    float roughness;
+    float metallic;
 };
 
 struct Mesh {

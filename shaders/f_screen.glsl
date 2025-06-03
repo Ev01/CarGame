@@ -6,7 +6,7 @@ in vec2 TexCoords;
 uniform sampler2D screenTexture;
 
 const float of = 1.0 / 300.0;
-const float exposure = 0.05;
+const float exposure = -1.0;
 
 
     
@@ -21,7 +21,8 @@ void main()
     //col = col / (col + vec3(1.0));
     
     // exposure tonemapping
-    col = vec3(1.0) - exp(-col * exposure);
+    //col = vec3(1.0) - exp(-col * exposure);
+    col = col * pow(2, exposure);
 
     // Gamma correction
     float gamma = 2.2;

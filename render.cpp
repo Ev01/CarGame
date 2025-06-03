@@ -254,6 +254,10 @@ bool Render::Init()
         return false;
     }
 
+    if (!SDL_GL_SetSwapInterval(1)) {
+        SDL_Log("Could not turn on VSync");
+    }
+
     // Create shaders
     unsigned int vShader = CreateShaderFromFile("shaders/vertex.glsl", 
                                                  GL_VERTEX_SHADER);
@@ -376,7 +380,8 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel,
     shader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
     shader.SetMat4fv((char*)"view", glm::value_ptr(view));
 
-    glm::vec3 sunCol = sunLight.mColour / glm::vec3(10.0);
+    glm::vec3 sunCol = sunLight.mColour / glm::vec3(1.0);
+    //glm::vec3 sunCol = glm::vec3(0.3);
     glm::vec3 sunDir = glm::vec3(view * glm::vec4(sunLight.mDirection, 0.0));
     shader.SetVec3((char*)"dirLight.direction", glm::value_ptr(sunDir));
     shader.SetVec3((char*)"dirLight.ambient", 0.1, 0.1, 0.1);
@@ -389,7 +394,8 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel,
         glm::vec3 viewPos = glm::vec3(view * glm::vec4(lights[i].mPosition, 1.0));
         shader.SetVec3(uniformName, glm::value_ptr(viewPos));
 
-        glm::vec3 lightCol = lights[i].mColour / glm::vec3(1000.0);
+        glm::vec3 lightCol = lights[i].mColour / glm::vec3(1.0);
+        //glm::vec3 lightCol = glm::vec3(6000.0);
         SDL_snprintf(uniformName, 64, "pointLights[%llu].ambient", i);
         shader.SetVec3(uniformName, 0.0, 0.0, 0.0);
         SDL_snprintf(uniformName, 64, "pointLights[%llu].diffuse", i);
@@ -408,7 +414,8 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel,
     }
 
     for (size_t i = 0; i < spotLights.size(); i++) {
-        glm::vec3 lightCol = spotLights[i].mColour / glm::vec3(10.0);
+        glm::vec3 lightCol = spotLights[i].mColour / glm::vec3(1.0);
+        //glm::vec3 lightCol = glm::vec3(6000.0);
         SDL_snprintf(uniformName, 64, "spotLights[%llu].diffuse", i);
         shader.SetVec3(uniformName, glm::value_ptr(lightCol));
         SDL_snprintf(uniformName, 64, "spotLights[%llu].specular", i);

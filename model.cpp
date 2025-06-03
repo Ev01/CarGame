@@ -61,23 +61,20 @@ void Mesh::Init(std::vector<Vertex> aVertices,
 
 void Mesh::Draw(ShaderProg shader, const std::vector<Material> &materials) const
 {
-    
-    unsigned int texId = gDefaultTexture.id;
-    unsigned int normalMapId = gDefaultNormalMap.id;
     glm::vec3 diffuseColour = glm::vec3(1.0f);
-    float shininess = 8;
+    float roughness = 1.0;
 
     const Material &material = materials[materialIdx];
     
-    //if (material != NULL) {
-        texId = material.texture.id;
-        normalMapId = material.normalMap.id;
-        diffuseColour = material.diffuseColour;
-        shininess = material.shininess;
-    //}
+    unsigned int texId = material.texture.id;
+    unsigned int normalMapId = material.normalMap.id;
+    unsigned int roughnessMapId = material.roughnessMap.id;
+    diffuseColour = material.diffuseColour;
+    roughness = material.roughness;
 
     texId = texId == 0 ? gDefaultTexture.id : texId;
     normalMapId = normalMapId == 0 ? gDefaultNormalMap.id : normalMapId;
+    roughnessMapId = roughnessMapId == 0 ? gDefaultTexture.id : roughnessMapId;
 
     /*
     if (normalMapId != 0) {
@@ -85,19 +82,22 @@ void Mesh::Draw(ShaderProg shader, const std::vector<Material> &materials) const
     }
     */
 
-
-
+    
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, roughnessMapId);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, normalMapId);
-
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texId);
+
     shader.SetInt((char*)"material.texture_diffuse", 0);
     shader.SetInt((char*)"material.normalMap", 1);
+    shader.SetInt((char*)"material.roughnessMap", 2);
 
-    shader.SetVec3((char*)"material.diffuseColour",
+    shader.SetVec3((char*)"material.baseColour",
                     glm::value_ptr(diffuseColour));
-    shader.SetFloat((char*)"material.shininess", shininess);
+    shader.SetFloat((char*)"material.roughness", roughness);
+    shader.SetFloat((char*)"material.metallic", material.metallic);
 
     glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
@@ -172,21 +172,36 @@ void Model::LoadSceneMaterials(const aiScene *scene)
             newMat.normalMap = normalMap;
             SDL_Log("Found normal map, id is %d", normalMap.id);
         }
+        if (aiMat->GetTextureCount(aiTextureType_DIFFUSE_ROUGHNESS) > 0) {
+            aiString str;
+            aiMat->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &str);
+
+            char filepath[256];
+            SDL_snprintf(filepath, 256, "models/%s", str.C_Str());
+            SDL_Log("Loading texture %s", filepath);
+            Texture roughnessMap = CreateTextureFromFile(filepath, false);
+            newMat.roughnessMap = roughnessMap;
+            SDL_Log("Found roughness map, id is %d", roughnessMap.id);
+        }
+
         aiColor3D colour;
         aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
         newMat.diffuseColour.x = colour.r;
         newMat.diffuseColour.y = colour.g;
         newMat.diffuseColour.z = colour.b;
 
-        float shininess;
-        if (aiMat->Get(AI_MATKEY_ROUGHNESS_FACTOR, shininess) != aiReturn_SUCCESS) {
-            //SDL_Log("Failed to get roughness Factor");
-            shininess = 32.0f; // Set to a reasonable default
+        float roughness;
+        float metallic;
+        if (aiMat->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) != aiReturn_SUCCESS) {
+            SDL_Log("Couldn't get roughness");
+            roughness = 1.0;
         }
-        else {
-            shininess = 16.0f / shininess;
+        if (aiMat->Get(AI_MATKEY_METALLIC_FACTOR, metallic) != aiReturn_SUCCESS) {
+            SDL_Log("Couldn't get metallic");
+            metallic = 0.0;
         }
-        newMat.shininess = shininess;
+        newMat.roughness = roughness;
+        newMat.metallic = metallic;
 
         materials.push_back(newMat);
     }

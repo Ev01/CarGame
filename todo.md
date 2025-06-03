@@ -44,10 +44,18 @@
 - Skybox
 
 
-- [ ] Support variable number of lights
-- [ ] Support specular/shininess/reflectivity model rather than
-      roughness/metallic model (gltf default)
-- [ ] Refactor car into a struct/class
+- [x] Support variable number of lights
+- [x] Refactor car into a struct/class
+
+
+2/06
+- Normal maps
+
+3/06
+- PBR Materials (roughness and metallic)
+
+
 - [ ] Load car parameters at runtime from a file (json?)
 - [ ] Fix weird jitter problem
+- [ ] Prevent camera from going inside objects
 
