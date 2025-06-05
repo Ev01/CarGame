@@ -107,13 +107,12 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
 
     // Load model
-    SDL_Log("Loading monkey...");
     monkeyModel = LoadModel("models/monkey.obj");
-    SDL_Log("Monkey model stored at %p", &monkeyModel);
     cylinderModel = LoadModel("models/cylinder.obj");
     carModel = LoadModel("models/mycar.gltf", CarNodeCallback);
     wheelModel = LoadModel("models/wheel.gltf");
-    mapModel = LoadModel("models/simple_map.gltf", NULL, Render::AssimpAddLight);
+    //mapModel = LoadModel("models/simple_map.gltf", NULL, Render::AssimpAddLight);
+    mapModel = LoadModel("models/map1.gltf", NULL, Render::AssimpAddLight);
 
     cam.pos.z = 6.0f;
     cam.SetYawPitch(yaw, pitch);

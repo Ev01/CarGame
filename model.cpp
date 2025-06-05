@@ -9,6 +9,7 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include <assimp/DefaultLogger.hpp>
 
 std::vector<Material> loadedMaterials;
 std::vector<Mesh> loadedMeshes;
@@ -291,6 +292,9 @@ void Model::ProcessMesh(aiMesh *mesh)
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     //Material *meshMaterial = NULL;
+    
+    SDL_Log("Mesh vertices size: %d", 
+            mesh->mNumVertices);
 
     // Process all vertices
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
@@ -353,6 +357,11 @@ void Model::ProcessMesh(aiMesh *mesh)
 
 Model LoadModel(std::string path, node_callback_t NodeCallback, light_callback_t LightCallback)
 {
+    Assimp::Logger *logger = Assimp::DefaultLogger::create(
+            ASSIMP_DEFAULT_LOG_NAME, Assimp::Logger::NORMAL, 
+            aiDefaultLogStream_STDOUT, nullptr);
+
+
     Model model;
     Assimp::Importer importer;
     const aiScene *scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
@@ -362,6 +371,12 @@ Model LoadModel(std::string path, node_callback_t NodeCallback, light_callback_t
         SDL_Log("Assimp Error: %s", importer.GetErrorString());
         return model;
     }
+    /*
+    if (!(scene->mFlags & AI_SCENE_FLAGS_VALIDATED)) {
+        SDL_Log("Assimp Error, scene is not validated: %s", importer.GetErrorString());
+        return model;
+    }
+    */
 
     model.LoadSceneMaterials(scene);
     model.LoadSceneMeshes(scene);
