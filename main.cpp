@@ -192,7 +192,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         yawOffset = SDL_PI_F / 2.0f * Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHTX);
     }
     //SDL_Log("Car yaw: %f, x: %f, z: %f", carYaw, carDir.GetX(), carDir.GetZ());
-    cam.SetFollowSmooth(carYaw + yawOffset, -0.2f, 14.0f, carPos, 3.0f * delta);
+    cam.SetFollowSmooth(carYaw + yawOffset, -0.2f, 14.0f, carPos, 3.0f * delta, 10.0f * delta);
     //cam.SetOrbit(14.0f, 4.0f, carPos);
     // Move Camera
     /*
