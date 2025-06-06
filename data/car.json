@@ -6,7 +6,6 @@
     "front_king_pin": 0.0,
     "rear_camber": -5.0,
     "rear_toe": 0.0,
-    "rear_caster": 0.0,
     "long_grip": 2.0,
     "lat_grip": 2.0,
     "max_torque": 800.0
