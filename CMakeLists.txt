@@ -31,6 +31,7 @@ PRIVATE
     camera.cpp
     convert.cpp
     physics.cpp
+    vehicle.cpp
     input.cpp
     audio.cpp
     render.cpp

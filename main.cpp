@@ -9,6 +9,7 @@
 #include <string>
 
 #include "physics.h"
+#include "vehicle.h"
 #include "convert.h"
 
 #include "glad/glad.h"

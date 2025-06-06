@@ -6,6 +6,7 @@
 #include "shader.h"
 #include "glad/glad.h"
 #include "physics.h"
+#include "vehicle.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
