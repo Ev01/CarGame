@@ -18,9 +18,23 @@
 						1,
 						1
 					],
-					"intensity":1.149999976158142,
+					"intensity":0.6699999570846558,
 					"type":"directional",
 					"name":"Light"
+				},
+				{
+					"color":[
+						1,
+						1,
+						1
+					],
+					"intensity":900,
+					"spot":{
+						"innerConeAngle":0.6186319307815893,
+						"outerConeAngle":0.7278022766113281
+					},
+					"type":"spot",
+					"name":"Spot"
 				}
 			]
 		}
@@ -32,7 +46,21 @@
 			"nodes":[
 				0,
 				1,
-				2
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16
 			]
 		}
 	],
@@ -72,41 +100,281 @@
 		},
 		{
 			"mesh":1,
-			"name":"Plane.001",
+			"name":"Terrain",
 			"translation":[
 				16.107948303222656,
 				0,
 				88.81136322021484
+			]
+		},
+		{
+			"mesh":2,
+			"name":"StreetLight",
+			"rotation":[
+				0,
+				0.7071068286895752,
+				0,
+				0.7071068286895752
+			],
+			"translation":[
+				-93.63838958740234,
+				4.820512771606445,
+				-394.53765869140625
+			]
+		},
+		{
+			"extensions":{
+				"KHR_lights_punctual":{
+					"light":1
+				}
+			},
+			"name":"Spot",
+			"rotation":[
+				-0.6117727160453796,
+				0,
+				0,
+				0.7910336256027222
+			],
+			"translation":[
+				-93.60814666748047,
+				10.223376274108887,
+				-398.9171447753906
+			]
+		},
+		{
+			"mesh":2,
+			"name":"StreetLight.002",
+			"rotation":[
+				0,
+				0.384500652551651,
+				0,
+				0.9231247305870056
+			],
+			"translation":[
+				-26.720806121826172,
+				4.820512771606445,
+				-382.58001708984375
+			]
+		},
+		{
+			"extensions":{
+				"KHR_lights_punctual":{
+					"light":1
+				}
+			},
+			"name":"Spot.002",
+			"rotation":[
+				-0.565663754940033,
+				-0.3012770712375641,
+				-0.23300281167030334,
+				0.7314139604568481
+			],
+			"translation":[
+				-23.61473846435547,
+				10.223376274108887,
+				-385.667724609375
+			]
+		},
+		{
+			"mesh":2,
+			"name":"StreetLight.006",
+			"rotation":[
+				0,
+				0.6195138096809387,
+				0,
+				0.7849857807159424
+			],
+			"translation":[
+				-39.81378936767578,
+				4.820512771606445,
+				-391.3537292480469
+			]
+		},
+		{
+			"extensions":{
+				"KHR_lights_punctual":{
+					"light":1
+				}
+			},
+			"name":"Spot.006",
+			"rotation":[
+				-0.6075705885887146,
+				-0.09255623072385788,
+				-0.07158149778842926,
+				0.7856001257896423
+			],
+			"translation":[
+				-38.76655578613281,
+				10.223376274108887,
+				-395.6063537597656
+			]
+		},
+		{
+			"mesh":2,
+			"name":"StreetLight.005",
+			"rotation":[
+				0,
+				-0.7786082029342651,
+				0,
+				0.6275103688240051
+			],
+			"translation":[
+				-20.918142318725586,
+				4.820512771606445,
+				-413.5086364746094
+			]
+		},
+		{
+			"extensions":{
+				"KHR_lights_punctual":{
+					"light":1
+				}
+			},
+			"name":"Spot.005",
+			"rotation":[
+				-0.06536336243152618,
+				0.7865056991577148,
+				0.6082708835601807,
+				0.08451606333255768
+			],
+			"translation":[
+				-21.878171920776367,
+				10.223376274108887,
+				-409.2355041503906
+			]
+		},
+		{
+			"mesh":2,
+			"name":"StreetLight.004",
+			"rotation":[
+				0,
+				-0.7118719816207886,
+				0,
+				0.7023093104362488
+			],
+			"translation":[
+				-47.20587158203125,
+				4.820512771606445,
+				-417.0488586425781
+			]
+		},
+		{
+			"extensions":{
+				"KHR_lights_punctual":{
+					"light":1
+				}
+			},
+			"name":"Spot.004",
+			"rotation":[
+				-0.004136818926781416,
+				0.7910155653953552,
+				0.6117587089538574,
+				0.005348985083401203
+			],
+			"translation":[
+				-47.29533386230469,
+				10.223376274108887,
+				-412.6701354980469
+			]
+		},
+		{
+			"mesh":2,
+			"name":"StreetLight.003",
+			"rotation":[
+				0,
+				-0.7118719816207886,
+				0,
+				0.7023093104362488
+			],
+			"translation":[
+				-76.71000671386719,
+				4.820512771606445,
+				-417.6806335449219
+			]
+		},
+		{
+			"extensions":{
+				"KHR_lights_punctual":{
+					"light":1
+				}
+			},
+			"name":"Spot.003",
+			"rotation":[
+				-0.004136818926781416,
+				0.7910155653953552,
+				0.6117587089538574,
+				0.005348985083401203
+			],
+			"translation":[
+				-76.79946899414062,
+				10.223376274108887,
+				-413.3019104003906
+			]
+		},
+		{
+			"mesh":2,
+			"name":"StreetLight.001",
+			"rotation":[
+				0,
+				0.7071068286895752,
+				0,
+				0.7071068286895752
+			],
+			"translation":[
+				-62.583900451660156,
+				4.692384243011475,
+				-394.3302917480469
+			]
+		},
+		{
+			"extensions":{
+				"KHR_lights_punctual":{
+					"light":1
+				}
+			},
+			"name":"Spot.001",
+			"rotation":[
+				-0.6117727160453796,
+				0,
+				0,
+				0.7910336256027222
+			],
+			"translation":[
+				-62.55365753173828,
+				10.095248222351074,
+				-398.70977783203125
 			]
 		}
 	],
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Road",
+			"name":"Material",
+			"normalTexture":{
+				"index":0
+			},
 			"pbrMetallicRoughness":{
-				"baseColorFactor":[
-					0.119111068546772,
-					0.119111068546772,
-					0.119111068546772,
-					1
-				],
+				"baseColorTexture":{
+					"index":1
+				},
 				"metallicFactor":0,
-				"roughnessFactor":0.8103448152542114
+				"roughnessFactor":0.6290323138237
 			}
 		},
 		{
 			"doubleSided":true,
 			"name":"Ground",
+			"normalTexture":{
+				"index":2
+			},
 			"pbrMetallicRoughness":{
-				"baseColorFactor":[
-					0.5561396479606628,
-					0.7064630389213562,
-					0.3739367723464966,
-					1
-				],
+				"baseColorTexture":{
+					"index":3
+				},
 				"metallicFactor":0,
-				"roughnessFactor":0.8045976758003235
+				"metallicRoughnessTexture":{
+					"index":4
+				}
 			}
 		}
 	],
@@ -138,6 +406,68 @@
 					"material":1
 				}
 			]
+		},
+		{
+			"name":"Cylinder",
+			"primitives":[
+				{
+					"attributes":{
+						"POSITION":8,
+						"NORMAL":9,
+						"TEXCOORD_0":10
+					},
+					"indices":11
+				}
+			]
+		}
+	],
+	"textures":[
+		{
+			"sampler":0,
+			"source":0
+		},
+		{
+			"sampler":0,
+			"source":1
+		},
+		{
+			"sampler":0,
+			"source":2
+		},
+		{
+			"sampler":0,
+			"source":3
+		},
+		{
+			"sampler":0,
+			"source":4
+		}
+	],
+	"images":[
+		{
+			"mimeType":"image/png",
+			"name":"road_normal.png",
+			"uri":"road_normal_png.png"
+		},
+		{
+			"mimeType":"image/png",
+			"name":"road_bright.png",
+			"uri":"road_bright_png.png"
+		},
+		{
+			"mimeType":"image/png",
+			"name":"dirtgrass_normals",
+			"uri":"dirtgrass_normals.png"
+		},
+		{
+			"mimeType":"image/png",
+			"name":"dirtgrass_noshadow",
+			"uri":"dirtgrass_noshadow.png"
+		},
+		{
+			"mimeType":"image/png",
+			"name":"dirtgrass_roughness",
+			"uri":"dirtgrass_roughness.png"
 		}
 	],
 	"accessors":[
@@ -208,6 +538,40 @@
 			"componentType":5123,
 			"count":12867,
 			"type":"SCALAR"
+		},
+		{
+			"bufferView":8,
+			"componentType":5126,
+			"count":336,
+			"max":[
+				4.8708062171936035,
+				6.016096591949463,
+				0.36327943205833435
+			],
+			"min":[
+				-0.20000000298023224,
+				-5.5,
+				-0.36327943205833435
+			],
+			"type":"VEC3"
+		},
+		{
+			"bufferView":9,
+			"componentType":5126,
+			"count":336,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":10,
+			"componentType":5126,
+			"count":336,
+			"type":"VEC2"
+		},
+		{
+			"bufferView":11,
+			"componentType":5123,
+			"count":1116,
+			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
@@ -258,11 +622,41 @@
 			"byteLength":25734,
 			"byteOffset":164632,
 			"target":34963
+		},
+		{
+			"buffer":0,
+			"byteLength":4032,
+			"byteOffset":190368,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":4032,
+			"byteOffset":194400,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":2688,
+			"byteOffset":198432,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":2232,
+			"byteOffset":201120,
+			"target":34963
+		}
+	],
+	"samplers":[
+		{
+			"magFilter":9729,
+			"minFilter":9987
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":190368,
+			"byteLength":203352,
 			"uri":"map1.bin"
 		}
 	]

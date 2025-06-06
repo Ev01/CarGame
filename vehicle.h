@@ -12,7 +12,22 @@
 // Forward Declarations
 namespace Audio {
     struct Sound;
-}
+};
+
+struct VehicleSettings
+{
+    float mass;
+    float frontCamber;
+    float frontToe;
+    float frontCaster;
+    float frontKingPin;
+    float rearCamber;
+    float rearToe;
+    float rearCaster;
+    float longGrip;
+    float latGrip;
+    float maxTorque;
+};
 
 struct Vehicle
 {
@@ -24,12 +39,16 @@ struct Vehicle
     void Init();
     void Destroy();
 
-    float mForward, mBrake, mSteer, mSteerTarget;
+    float mForward, mBrake, mSteer, mSteerTarget, mHandbrake;
     float mDrivingDir = 1.0f;
 
     JPH::RMat44 GetWheelTransform(int wheelNum);
     JPH::RVec3 GetPos();
     JPH::Quat GetRotation();
+    JPH::WheelSettings* GetWheelFR();
+    JPH::WheelSettings* GetWheelFL();
+    JPH::WheelSettings* GetWheelRR();
+    JPH::WheelSettings* GetWheelRL();
 
     Audio::Sound *engineSnd;
     Audio::Sound *driftSnd;

@@ -17,8 +17,6 @@
 #include <Jolt/Physics/Vehicle/VehicleConstraint.h>
 #include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
 
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
 
 #include <SDL3/SDL.h>
 

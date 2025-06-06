@@ -10,18 +10,22 @@
 #include <Jolt/Physics/Vehicle/VehicleConstraint.h>
 #include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
 
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
 #include <SDL3/SDL.h>
 
 
 static void VehiclePostCollideCallback(JPH::VehicleConstraint &inVehicle, const JPH::PhysicsStepListenerContext &inContext)
 {
+    // TODO: Make this work for more than one car
     Vehicle &car = Phys::GetCar();
     // Audio stuff
     JPH::WheeledVehicleController *controller = static_cast<JPH::WheeledVehicleController*>
         (inVehicle.GetController());
     JPH::VehicleEngine &engine = controller->GetEngine();
     float rpm = engine.GetCurrentRPM();
-    SDL_SetAudioStreamFrequencyRatio(car.engineSnd->stream, rpm / 4000.0f);
+    SDL_SetAudioStreamFrequencyRatio(car.engineSnd->stream, rpm / 2000.0f + 0.5);
 
     float averageSlip = 0;
     float slipLong;
@@ -58,6 +62,27 @@ static void VehiclePostCollideCallback(JPH::VehicleConstraint &inVehicle, const 
 }
 
 
+static VehicleSettings GetVehicleSettingsFromFile(const char* filename)
+{
+    SDL_Log("Loading vehicle settings from file %s", filename);
+    char* fileData = (char*) SDL_LoadFile(filename, NULL);
+    json j = json::parse(fileData);
+
+    VehicleSettings vs;
+    vs.mass         = j["mass"];
+    vs.frontCamber  = glm::radians((float) j["front_camber"]);
+    vs.frontToe     = glm::radians((float) j["front_toe"]);
+    vs.frontCaster  = glm::radians((float) j["front_caster"]);
+    vs.frontKingPin = glm::radians((float) j["front_king_pin"]);
+    vs.rearCamber   = glm::radians((float) j["rear_camber"]);
+    vs.rearToe      = glm::radians((float) j["rear_toe"]);
+    vs.longGrip     = j["long_grip"];
+    vs.latGrip      = j["lat_grip"];
+    vs.maxTorque    = j["max_torque"];
+    return vs;
+}
+
+
 void Vehicle::AddWheel(JPH::Vec3 position, bool isSteering)
 {
     SDL_Log("Add Wheel with position %f, %f, %f", 
@@ -66,7 +91,7 @@ void Vehicle::AddWheel(JPH::Vec3 position, bool isSteering)
 	const float wheel_width = 0.2f;
     JPH::WheelSettingsWV *wheel = new JPH::WheelSettingsWV;
 	wheel->mPosition = position;
-    wheel->mMaxSteerAngle = isSteering ? SDL_PI_F / 5.0 : 0;
+    wheel->mMaxSteerAngle = isSteering ? SDL_PI_F / 8.0 : 0;
     wheel->mRadius = wheel_radius;
     wheel->mWidth = wheel_width;
     wheel->mSuspensionMinLength = 0.1f;
@@ -103,10 +128,80 @@ bool Vehicle::IsWheelFlipped(int wheelIndex)
 }
 
 
+JPH::WheelSettings* Vehicle::GetWheelFR()
+{
+    for (JPH::WheelSettings* wheel : mWheels) {
+        if (wheel->mPosition.GetX() < 0.0f && wheel->mPosition.GetZ() > 0.0) {
+            return wheel;
+        }
+    }
+    return nullptr;
+}
+JPH::WheelSettings* Vehicle::GetWheelFL()
+{
+    for (JPH::WheelSettings* wheel : mWheels) {
+        if (wheel->mPosition.GetX() > 0.0f && wheel->mPosition.GetZ() > 0.0) {
+            return wheel;
+        }
+    }
+    return nullptr;
+}
+JPH::WheelSettings* Vehicle::GetWheelRR()
+{
+    for (JPH::WheelSettings* wheel : mWheels) {
+        if (wheel->mPosition.GetX() < 0.0f && wheel->mPosition.GetZ() < 0.0) {
+            return wheel;
+        }
+    }
+    return nullptr;
+}
+JPH::WheelSettings* Vehicle::GetWheelRL()
+{
+    for (JPH::WheelSettings* wheel : mWheels) {
+        if (wheel->mPosition.GetX() > 0.0f && wheel->mPosition.GetZ() < 0.0) {
+            return wheel;
+        }
+    }
+    return nullptr;
+}
+
+
 void Vehicle::Init()
 {
     JPH::PhysicsSystem &physicsSystem = Phys::GetPhysicsSystem();
     JPH::BodyInterface &bodyInterface = physicsSystem.GetBodyInterface();
+
+    static VehicleSettings settings = GetVehicleSettingsFromFile("data/car.json");
+
+    JPH::Vec3 frontWheelUp = JPH::Vec3(SDL_sin(settings.frontCamber), SDL_cos(settings.frontCamber), 0.0);
+    JPH::Vec3 rearWheelUp = JPH::Vec3(SDL_sin(settings.rearCamber), SDL_cos(settings.rearCamber), 0.0);
+    JPH::Vec3 frontSteeringAxis = JPH::Vec3(-SDL_tan(settings.frontKingPin), 1, -SDL_tan(settings.frontCaster)).Normalized();
+    JPH::Vec3 frontWheelForward = JPH::Vec3(-SDL_sin(settings.frontToe), 0, SDL_cos(settings.frontToe));
+    JPH::Vec3 rearWheelForward = JPH::Vec3(-SDL_sin(settings.rearToe), 0, SDL_cos(settings.rearToe));
+            
+    JPH::Vec3 flipX = JPH::Vec3(-1, 1, 1);
+
+    JPH::Vec3 frontSuspensionDir = frontSteeringAxis * JPH::Vec3(-1, -1, -1);
+
+    JPH::WheelSettings *fr = GetWheelFR();
+    JPH::WheelSettings *fl = GetWheelFL();
+    JPH::WheelSettings *rr = GetWheelRR();
+    JPH::WheelSettings *rl = GetWheelRL();
+    fr->mWheelUp = frontWheelUp * flipX;
+    fl->mWheelUp = frontWheelUp;
+    rr->mWheelUp = rearWheelUp * flipX;
+    rl->mWheelUp = rearWheelUp;
+
+    fr->mWheelForward = frontWheelForward * flipX;
+    fl->mWheelForward = frontWheelForward;
+    fr->mSuspensionDirection = frontSuspensionDir * flipX;
+    fl->mSuspensionDirection = frontSuspensionDir;
+    fr->mSteeringAxis = frontSteeringAxis * flipX;
+    fl->mSteeringAxis = frontSteeringAxis;
+
+    rr->mWheelForward = rearWheelForward * flipX;
+    rl->mWheelForward = rearWheelForward;
+
 
     // Create collision tester
 	//colTester = new VehicleCollisionTesterCastSphere(Layers::MOVING, 0.5f * wheel_width);
@@ -115,9 +210,12 @@ void Vehicle::Init()
     
 	// Create vehicle body
     JPH::RVec3 position(6, 3, 12);
-    JPH::BodyCreationSettings carBodySettings(mCompoundShape, position, JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), 0.0f), JPH::EMotionType::Dynamic, Phys::Layers::MOVING);
+    JPH::BodyCreationSettings carBodySettings(mCompoundShape, position, 
+                                              JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), 0.0f),
+                                              JPH::EMotionType::Dynamic, Phys::Layers::MOVING);
+
 	carBodySettings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
-	carBodySettings.mMassPropertiesOverride.mMass = 1500.0f;
+	carBodySettings.mMassPropertiesOverride.mMass = settings.mass;
 	mBody = bodyInterface.CreateBody(carBodySettings);
 	bodyInterface.AddBody(mBody->GetID(), JPH::EActivation::Activate);
 
@@ -128,6 +226,7 @@ void Vehicle::Init()
 
     JPH::WheeledVehicleControllerSettings *controller = new JPH::WheeledVehicleControllerSettings;
 	constraintSettings.mController = controller;
+    controller->mEngine.mMaxTorque = settings.maxTorque;
 
 	controller->mDifferentials.resize(1);
     for (unsigned int i = 0; i < mWheels.size(); i++) {
@@ -153,12 +252,16 @@ void Vehicle::Init()
 	mVehicleConstraint->SetVehicleCollisionTester(mColTester);
     mVehicleConstraint->SetPostCollideCallback(VehiclePostCollideCallback);
 
-    // TODO: remove and re-tweak car settings
 	static_cast<JPH::WheeledVehicleController *>(mVehicleConstraint->GetController())->SetTireMaxImpulseCallback(
 		[](JPH::uint, float &outLongitudinalImpulse, float &outLateralImpulse, float inSuspensionImpulse, float inLongitudinalFriction, float inLateralFriction, float, float, float)
 		{
-			outLongitudinalImpulse = 10.0f * inLongitudinalFriction * inSuspensionImpulse;
-			outLateralImpulse = inLateralFriction * inSuspensionImpulse;
+            JPH::uint velSteps = Phys::GetPhysicsSystem().GetPhysicsSettings()
+                                                         .mNumVelocitySteps;
+			outLongitudinalImpulse = velSteps * inLongitudinalFriction 
+                                     * inSuspensionImpulse
+                                     * settings.longGrip;
+			outLateralImpulse = inLateralFriction * inSuspensionImpulse
+                                * settings.latGrip;
 		});
 
     //RVec3 com = Phys::GetCarPos();
@@ -173,6 +276,10 @@ void Vehicle::Init()
 void Vehicle::Update(float delta)
 {
     JPH::BodyInterface &bodyInterface = Phys::GetPhysicsSystem().GetBodyInterface();
+
+    // Longitudinal velocity local to the car
+    float longVelocity = (mBody->GetRotation().Conjugated() * mBody->GetLinearVelocity()).GetZ();
+
     //mSteer = mSteer + (mSteerTarget - mSteer) * 0.1f;
     if (!Input::GetGamepad()) {
         mSteer += glm::sign(mSteerTarget - mSteer) * 0.1f;
@@ -180,6 +287,17 @@ void Vehicle::Update(float delta)
     } else {
         mSteer = mSteerTarget;
     }
+
+    // Limit steering angle based on velocity
+    const float limitVelStart = 20.0;
+    const float limitVelEnd = 40.0;
+    const float minSteerLimitFactor = 0.7;
+    //mSteer *= SDL_clamp(longVelocity, limitVelStart, limitVelEnd)
+    float steerLimitFactor = -(1.0 - minSteerLimitFactor) 
+                             * (longVelocity - limitVelStart) 
+                             / (limitVelEnd - limitVelStart) + 1.0;
+    steerLimitFactor = SDL_clamp(steerLimitFactor, minSteerLimitFactor, 1.0);
+    mSteer *= steerLimitFactor;
 
     //RVec3 com = Phys::GetCarPos();
     //SDL_Log("car com (%f, %f, %f)", com.GetX(), com.GetY(), com.GetZ());
@@ -199,8 +317,6 @@ void Vehicle::Update(float delta)
     float rpm = engine.GetCurrentRPM();
     controller->GetTransmission().Update(delta, rpm, mForward, true);
 
-    // Longitudinal velocity local to the car
-    float longVelocity = (mBody->GetRotation().Conjugated() * mBody->GetLinearVelocity()).GetZ();
 
     if (longVelocity < 0.1f && mDrivingDir > 0.0f && mBrake > 0.0f) {
         // Braked to a stop when going forward, switch to going backward
@@ -222,7 +338,14 @@ void Vehicle::Update(float delta)
         }
     }
 
-    controller->SetDriverInput(mForward, mSteer, mBrake, 0.0f);
+    /*
+    if (mHandbrake) {
+        mForward = 0.0;
+    }
+    */
+
+
+    controller->SetDriverInput(mForward, mSteer, mBrake, mHandbrake);
 }
 
 
@@ -232,6 +355,7 @@ void Vehicle::ProcessInput()
         mForward = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
         mBrake = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER);
         mSteerTarget = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_LEFTX);
+        mHandbrake = (float) Input::GetGamepadButton(SDL_GAMEPAD_BUTTON_SOUTH);
     }
     else {
         mSteerTarget = Input::GetScanAxis(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT);

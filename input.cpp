@@ -2,8 +2,11 @@
 
 #include <SDL3/SDL.h>
 
+#define DEADZONE 0.10
+
 bool scancodesDown[SDL_SCANCODE_COUNT];
 SDL_Gamepad *gamepad;
+
 
 bool Input::IsScanDown(SDL_Scancode scancode)
 {
@@ -50,6 +53,9 @@ float Input::GetGamepadAxis(SDL_GamepadAxis axis)
     // slightly below -1.0f.
     float normAmount = (float) amount / SDL_JOYSTICK_AXIS_MAX;
     normAmount = normAmount < -1.0f ? -1.0f : normAmount;
+    if (SDL_fabsf(normAmount) < DEADZONE) {
+        normAmount = 0.0;
+    }
     return normAmount;
 }
 
@@ -58,3 +64,10 @@ SDL_Gamepad* Input::GetGamepad()
 {
     return gamepad;
 }
+
+
+bool Input::GetGamepadButton(SDL_GamepadButton button)
+{
+    return SDL_GetGamepadButton(gamepad, button);
+}
+
