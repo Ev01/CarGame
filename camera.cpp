@@ -47,6 +47,9 @@ void Camera::SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ,
     // Do an angular lerp. 
     // This could be a more simple solution: 
     // https://stackoverflow.com/a/30129248/20829099
+
+    angleSmoothing = SDL_min(angleSmoothing, 1.0);
+    distSmoothing = SDL_min(distSmoothing, 1.0);
     
     float max = SDL_PI_F * 2.0f;
     float da = SDL_fmodf(yaw - currYaw, max);

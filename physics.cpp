@@ -11,6 +11,8 @@
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayerInterfaceTable.h>
 #include <Jolt/Physics/Collision/BroadPhase/ObjectVsBroadPhaseLayerFilterTable.h>
 #include <Jolt/Physics/Collision/ObjectLayerPairFilterTable.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
@@ -190,6 +192,17 @@ void Phys::LoadMap(const Model &mapModel)
     bodyInterface.AddBodiesFinalize(
             &bodyIds[0], bodyIds.size(),
             state, EActivation::DontActivate);
+}
+
+
+bool Phys::CastRay(JPH::Vec3 start, JPH::Vec3 direction, JPH::Vec3 &outPos, const JPH::BodyFilter &inBodyFilter)
+{
+    JPH::RRayCast ray {start, direction};
+    JPH::RayCastResult hit;
+
+    bool hadHit = physics_system.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, inBodyFilter);
+    outPos = ray.GetPointOnRay(hit.mFraction);
+    return hadHit;
 }
 
 

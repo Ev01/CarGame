@@ -54,8 +54,16 @@
 3/06
 - PBR Materials (roughness and metallic)
 
+6/06
+- [x] Load car parameters at runtime from a file (json?)
 
-- [ ] Load car parameters at runtime from a file (json?)
+7/06
+- [x] Prevent camera from going inside objects
+
+
 - [ ] Fix weird jitter problem
-- [ ] Prevent camera from going inside objects
+- [ ] Car headlights
+- [ ] Edit car paramters with GUI (Dear ImGUI)
+- [ ] Two cars
+- [ ] 
 

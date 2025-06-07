@@ -204,12 +204,17 @@ void Render::AssimpAddLight(const aiLight *aLight, const aiNode *aNode, aiMatrix
             break;
 
         case aiLightSource_SPOT:
-            SDL_Log("Adding Spot light...");
+            SDL_Log("Adding Spot light %s...", aNode->mName.C_Str());
             SpotLight spotLight;
 
             aTransform.DecomposeNoScaling(rotation, position);
+            glm::vec3 position2;
+            position2 = glm::vec3(glmTransform * glm::vec4(ToGlmVec3(aLight->mPosition), 1.0));
 
-            spotLight.mPosition = ToGlmVec3(position);
+            SDL_Log("light pos (%f, %f, %f)", aLight->mPosition.x, aLight->mPosition.y, aLight->mPosition.z);
+
+            //spotLight.mPosition = ToGlmVec3(position);
+            spotLight.mPosition = position2;
             glm::vec3 dir;
             dir = ToGlmVec3(aLight->mDirection);
             spotLight.mDirection = glm::vec3(glmTransform * glm::vec4(dir, 0.0));

@@ -238,6 +238,7 @@ void Model::ProcessNode(const aiNode *node, aiMatrix4x4 accTransform, const aiSc
             if (light->mName == node->mName) {
                 LightCallback(light, node, transform);
             }
+            SDL_Log("light name: %s", light->mName.C_Str());
         }
     }
 

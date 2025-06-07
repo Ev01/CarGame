@@ -28,13 +28,97 @@
 						1,
 						1
 					],
-					"intensity":900,
+					"intensity":1000,
 					"spot":{
-						"innerConeAngle":0.6186319307815893,
+						"innerConeAngle":0.35456198971746744,
 						"outerConeAngle":0.7278022766113281
 					},
 					"type":"spot",
-					"name":"Spot"
+					"name":"Spot.003"
+				},
+				{
+					"color":[
+						1,
+						1,
+						1
+					],
+					"intensity":1000,
+					"spot":{
+						"innerConeAngle":0.35456198971746744,
+						"outerConeAngle":0.7278022766113281
+					},
+					"type":"spot",
+					"name":"Spot.001"
+				},
+				{
+					"color":[
+						1,
+						1,
+						1
+					],
+					"intensity":1000,
+					"spot":{
+						"innerConeAngle":0.35456198971746744,
+						"outerConeAngle":0.7278022766113281
+					},
+					"type":"spot",
+					"name":"Spot.007"
+				},
+				{
+					"color":[
+						1,
+						1,
+						1
+					],
+					"intensity":1000,
+					"spot":{
+						"innerConeAngle":0.35456198971746744,
+						"outerConeAngle":0.7278022766113281
+					},
+					"type":"spot",
+					"name":"Spot.006"
+				},
+				{
+					"color":[
+						1,
+						1,
+						1
+					],
+					"intensity":1000,
+					"spot":{
+						"innerConeAngle":0.35456198971746744,
+						"outerConeAngle":0.7278022766113281
+					},
+					"type":"spot",
+					"name":"Spot.005"
+				},
+				{
+					"color":[
+						1,
+						1,
+						1
+					],
+					"intensity":1000,
+					"spot":{
+						"innerConeAngle":0.35456198971746744,
+						"outerConeAngle":0.7278022766113281
+					},
+					"type":"spot",
+					"name":"Spot.004"
+				},
+				{
+					"color":[
+						1,
+						1,
+						1
+					],
+					"intensity":1000,
+					"spot":{
+						"innerConeAngle":0.35456198971746744,
+						"outerConeAngle":0.7278022766113281
+					},
+					"type":"spot",
+					"name":"Spot.002"
 				}
 			]
 		}
@@ -108,6 +192,63 @@
 			]
 		},
 		{
+			"extensions":{
+				"KHR_lights_punctual":{
+					"light":1
+				}
+			},
+			"name":"Spot.003",
+			"rotation":[
+				-0.004136818926781416,
+				0.7910155653953552,
+				0.6117587089538574,
+				0.005348985083401203
+			],
+			"translation":[
+				-76.79946899414062,
+				10.223376274108887,
+				-413.3019104003906
+			]
+		},
+		{
+			"extensions":{
+				"KHR_lights_punctual":{
+					"light":2
+				}
+			},
+			"name":"Spot.001",
+			"rotation":[
+				-0.6117727160453796,
+				0,
+				0,
+				0.7910336256027222
+			],
+			"translation":[
+				-93.60814666748047,
+				10.223376274108887,
+				-398.9171447753906
+			]
+		},
+		{
+			"extensions":{
+				"KHR_lights_punctual":{
+					"light":3
+				}
+			},
+			"name":"Spot.007",
+			"rotation":[
+				-0.565663754940033,
+				-0.3012770712375641,
+				-0.23300281167030334,
+				0.7314139604568481
+			],
+			"translation":[
+				-23.61473846435547,
+				10.223376274108887,
+				-385.667724609375
+			]
+		},
+		{
 			"mesh":2,
 			"name":"StreetLight",
 			"rotation":[
@@ -123,25 +264,6 @@
 			]
 		},
 		{
-			"extensions":{
-				"KHR_lights_punctual":{
-					"light":1
-				}
-			},
-			"name":"Spot",
-			"rotation":[
-				-0.6117727160453796,
-				0,
-				0,
-				0.7910336256027222
-			],
-			"translation":[
-				-93.60814666748047,
-				10.223376274108887,
-				-398.9171447753906
-			]
-		},
-		{
 			"mesh":2,
 			"name":"StreetLight.002",
 			"rotation":[
@@ -154,25 +276,6 @@
 				-26.720806121826172,
 				4.820512771606445,
 				-382.58001708984375
-			]
-		},
-		{
-			"extensions":{
-				"KHR_lights_punctual":{
-					"light":1
-				}
-			},
-			"name":"Spot.002",
-			"rotation":[
-				-0.565663754940033,
-				-0.3012770712375641,
-				-0.23300281167030334,
-				0.7314139604568481
-			],
-			"translation":[
-				-23.61473846435547,
-				10.223376274108887,
-				-385.667724609375
 			]
 		},
 		{
@@ -193,7 +296,7 @@
 		{
 			"extensions":{
 				"KHR_lights_punctual":{
-					"light":1
+					"light":4
 				}
 			},
 			"name":"Spot.006",
@@ -227,7 +330,7 @@
 		{
 			"extensions":{
 				"KHR_lights_punctual":{
-					"light":1
+					"light":5
 				}
 			},
 			"name":"Spot.005",
@@ -261,7 +364,7 @@
 		{
 			"extensions":{
 				"KHR_lights_punctual":{
-					"light":1
+					"light":6
 				}
 			},
 			"name":"Spot.004",
@@ -293,25 +396,6 @@
 			]
 		},
 		{
-			"extensions":{
-				"KHR_lights_punctual":{
-					"light":1
-				}
-			},
-			"name":"Spot.003",
-			"rotation":[
-				-0.004136818926781416,
-				0.7910155653953552,
-				0.6117587089538574,
-				0.005348985083401203
-			],
-			"translation":[
-				-76.79946899414062,
-				10.223376274108887,
-				-413.3019104003906
-			]
-		},
-		{
 			"mesh":2,
 			"name":"StreetLight.001",
 			"rotation":[
@@ -329,10 +413,10 @@
 		{
 			"extensions":{
 				"KHR_lights_punctual":{
-					"light":1
+					"light":7
 				}
 			},
-			"name":"Spot.001",
+			"name":"Spot.002",
 			"rotation":[
 				-0.6117727160453796,
 				0,

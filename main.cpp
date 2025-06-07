@@ -112,8 +112,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     cylinderModel = LoadModel("models/cylinder.obj");
     carModel = LoadModel("models/mycar.gltf", CarNodeCallback);
     wheelModel = LoadModel("models/wheel.gltf");
-    //mapModel = LoadModel("models/simple_map.gltf", NULL, Render::AssimpAddLight);
-    mapModel = LoadModel("models/map1.gltf", NULL, Render::AssimpAddLight);
+    mapModel = LoadModel("models/simple_map.gltf", NULL, Render::AssimpAddLight);
+    //mapModel = LoadModel("models/map1.gltf", NULL, Render::AssimpAddLight);
 
     cam.pos.z = 6.0f;
     cam.SetYawPitch(yaw, pitch);
@@ -183,7 +183,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     // Audio
     Audio::Update();
 
-    glm::vec3 carPos = ToGlmVec3(Phys::GetCar().GetPos());
+    JPH::Vec3 carPosJolt = Phys::GetCar().GetPos();
+    glm::vec3 carPos = ToGlmVec3(carPosJolt);
     JPH::Quat carRot = Phys::GetCar().GetRotation();
     JPH::Vec3 carDir = carRot.RotateAxisX();
     float carYaw = SDL_PI_F - SDL_atan2f(carDir.GetX(), carDir.GetZ());
@@ -193,6 +194,22 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     }
     //SDL_Log("Car yaw: %f, x: %f, z: %f", carYaw, carDir.GetX(), carDir.GetZ());
     cam.SetFollowSmooth(carYaw + yawOffset, -0.2f, 14.0f, carPos, 3.0f * delta, 10.0f * delta);
+    // Cast ray for camera
+    // Doing it this way still makes the camera clip through a little bit. To
+    // fix this, a spherecast could be used with a radius equal to the camera's
+    // near-plane clipping distance. This code should also be moved to the
+    // camera and applied before smoothing. For this, the camera's target
+    // position may need to be stored to separate this code from smoothing.
+    JPH::Vec3 newCamPos;
+    JPH::Vec3 camPosJolt = ToJoltVec3(cam.pos);
+    JPH::Vec3 camToCar = carPosJolt - camPosJolt;
+    JPH::IgnoreSingleBodyFilter carBodyFilter = JPH::IgnoreSingleBodyFilter(Phys::GetCar().mBody->GetID());
+    bool hadHit = Phys::CastRay(carPosJolt - camToCar/2.0,  -camToCar/2.0,  newCamPos, carBodyFilter);
+    if (hadHit) {
+        cam.pos = ToGlmVec3(newCamPos);
+    }
+
+
     //cam.SetOrbit(14.0f, 4.0f, carPos);
     // Move Camera
     /*
