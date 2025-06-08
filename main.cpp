@@ -6,6 +6,11 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include "vendor/imgui/imgui.h"
+#include "vendor/imgui/backends/imgui_impl_opengl3.h"
+#include "vendor/imgui/backends/imgui_impl_sdl3.h"
+
 #include <string>
 
 #include "physics.h"
@@ -99,6 +104,20 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     if (!Render::Init()) {
         return SDL_APP_FAILURE;
     }
+
+    // Setup ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL3_InitForOpenGL(Render::GetWindow(), Render::GetGLContext());
+    ImGui_ImplOpenGL3_Init(nullptr);
+
     InitDefaultTexture();
 
     // Audio
@@ -123,7 +142,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     glViewport(0, 0, 800, 600);
 
-    SDL_SetWindowRelativeMouseMode(Render::Window(), true);
+    //SDL_SetWindowRelativeMouseMode(Render::GetWindow(), true);
     /*
     if (!SDL_SetWindowSurfaceVSync(window, 1)) {
         SDL_Log("Couldn't set VSync: %s", SDL_GetError());
@@ -139,13 +158,28 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 {
-    Input::HandleEvent(event);
-    Render::HandleEvent(event);
-
     if (event->type == SDL_EVENT_QUIT) {
         return SDL_APP_SUCCESS;
     }
-    else if (event->type == SDL_EVENT_MOUSE_MOTION) {
+
+    ImGuiIO &io = ImGui::GetIO(); (void)io;
+    ImGui_ImplSDL3_ProcessEvent(event);
+    // Do not propogate events to engine when captured by ImGui.
+    if ((event->type == SDL_EVENT_KEY_DOWN || event->type == SDL_EVENT_KEY_UP)
+            && io.WantCaptureKeyboard) {
+        return SDL_APP_CONTINUE;
+    }
+    else if ((event->type == SDL_EVENT_MOUSE_BUTTON_DOWN
+            || event->type == SDL_EVENT_MOUSE_BUTTON_UP
+            || event->type == SDL_EVENT_MOUSE_MOTION)
+            && io.WantCaptureMouse) {
+        return SDL_APP_CONTINUE;
+    }
+
+    Input::HandleEvent(event);
+    Render::HandleEvent(event);
+
+    if (event->type == SDL_EVENT_MOUSE_MOTION) {
         yaw += event->motion.xrel * MOUSE_SENSITIVITY;
         pitch -= event->motion.yrel * MOUSE_SENSITIVITY;
         pitch = SDL_clamp(pitch, -SDL_PI_F / 2.0 + 0.1, SDL_PI_F / 2.0 - 0.1);
@@ -153,12 +187,14 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     else if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_F) {
         SDL_Log("FPS: %f", 1.0/delta);
     }
+    /*
     else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_TAB) {
-        SDL_SetWindowRelativeMouseMode(Render::Window(), false);
+        SDL_SetWindowRelativeMouseMode(Render::GetWindow(), false);
     }
     else if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN && event->button.button == 1) {
-        SDL_SetWindowRelativeMouseMode(Render::Window(), true);
+        SDL_SetWindowRelativeMouseMode(Render::GetWindow(), true);
     }
+    */
 
 
     return SDL_APP_CONTINUE;
@@ -167,6 +203,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
+
     delta = GetSeconds() - lastFrame;
     lastFrame = GetSeconds();
 
@@ -229,6 +266,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     
     Render::RenderFrame(cam, mapModel, carModel, wheelModel);
 
+
     double delta2 = GetSeconds() - lastFrame;
 
     constexpr double sfp = 1.0 / 300.0;
@@ -246,7 +284,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
 void SDL_AppQuit(void *appstate, SDL_AppResult result)
 {
-    Phys::PhysicsCleanup();
+    Phys::CleanUp();
+    Render::CleanUp();
 }
     
 

@@ -8,9 +8,14 @@
 #include "physics.h"
 #include "vehicle.h"
 
+#include "vendor/imgui/imgui.h"
+#include "vendor/imgui/backends/imgui_impl_opengl3.h"
+#include "vendor/imgui/backends/imgui_impl_sdl3.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
 #include <SDL3/SDL.h>
 
 static std::vector<Render::Light> lights;
@@ -363,6 +368,17 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
     glBindTexture(GL_TEXTURE_2D, textureColourBuffer);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindTexture(GL_TEXTURE_2D, 0);
+
+
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
+    static bool showDemoWindow = true;
+    ImGui::ShowDemoWindow(&showDemoWindow);
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     
     SDL_GL_SwapWindow(window);
 }
@@ -512,5 +528,7 @@ void Render::CleanUp()
 }
 
 
-SDL_Window* Render::Window()    { return window; }
+SDL_Window* Render::GetWindow()            { return window; }
+SDL_GLContext& Render::GetGLContext()      { return context; }
+
 

@@ -58,7 +58,7 @@ namespace Phys {
     void LoadMap(const Model &mapModel);
     bool CastRay(JPH::Vec3 start, JPH::Vec3 direction, JPH::Vec3 &outPos, const JPH::BodyFilter &inBodyFilter = { });
 
-    void PhysicsCleanup();
+    void CleanUp();
     void ProcessInput();
     void SetForwardDir(JPH::Vec3 dir);
     Vehicle& GetCar();

@@ -4,3 +4,6 @@ tags
 *.blend1
 *.kra
 *~
+imgui.ini
+vendor/imgui/examples/*
+vendor/imgui/.github/*

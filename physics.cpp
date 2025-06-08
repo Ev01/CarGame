@@ -304,7 +304,7 @@ void Phys::SetForwardDir(Vec3 dir)
 }
 
 
-void Phys::PhysicsCleanup()
+void Phys::CleanUp()
 {
 	// Unregisters all types with the factory and cleans up the default material
     UnregisterTypes();

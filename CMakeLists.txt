@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
-project(physics_test C CXX)
+project(car C CXX)
 
 set(CMAKE_PREFIX_PATH "~/cmake/")
 
@@ -14,6 +14,8 @@ find_package(SDL3_image REQUIRED)
 find_package(assimp REQUIRED)
 find_package(Jolt CONFIG REQUIRED)
 
+add_library(imgui)
+add_subdirectory(vendor/imgui)
 
 #add_subdirectory(../assimp-src assimp)
 #add_subdirectory(C:/Users/Ev/SDL_image SDL_image EXCLUDE_FROM_ALL)
@@ -39,5 +41,5 @@ PRIVATE
 )
 
 #target_include_directories(car PUBLIC ../JoltPhysics)
-target_link_libraries(car PRIVATE SDL3::SDL3 SDL3_image::SDL3_image assimp::assimp Jolt::Jolt -static-libgcc -static-libstdc++)
+target_link_libraries(car PRIVATE SDL3::SDL3 SDL3_image::SDL3_image assimp::assimp Jolt::Jolt imgui -static-libgcc -static-libstdc++)
 #target_link_libraries(physics_test PRIVATE SDL3::SDL3)
