@@ -36,10 +36,12 @@ namespace Render {
         
 
     bool Init();
+    Camera& GetCamera();
     void AssimpAddLight(const aiLight *light, const aiNode *node, aiMatrix4x4 transform);
-    void RenderFrame(const Camera &cam, const Model &mapModel,
+    void Update(float delta);
+    void RenderFrame(const Model &mapModel,
                      const Model &carModel, const Model &wheelModel);
-    void RenderScene(const Camera &cam, const Model &mapModel,
+    void RenderScene(const Model &mapModel,
                      const Model &carModel, const Model &wheelModel);
     void HandleEvent(SDL_Event *event);
     SDL_Window* GetWindow();

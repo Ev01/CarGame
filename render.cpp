@@ -2,6 +2,7 @@
 
 #include "convert.h"
 #include "camera.h"
+#include "input.h"
 #include "model.h"
 #include "shader.h"
 #include "glad/glad.h"
@@ -31,6 +32,7 @@ static glm::mat4 projection;
 static Texture skyboxTex;
 
 static Model cubeModel;
+static Camera cam;
 
 static float skyboxVertices[] = {
     // positions          
@@ -297,10 +299,6 @@ bool Render::Init()
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
-    projection = glm::perspective(SDL_PI_F / 4.0f,
-                                  800.0f / 600.0f,
-                                  0.1f, 1000.0f);
-
     //glDisableVertexAttribArray(1);
     //glDisableVertexAttribArray(2);
     skyboxTex = CreateCubemapFromFiles("texture/Lycksele/posx.jpg",
@@ -321,6 +319,11 @@ bool Render::Init()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glBindVertexArray(0);
 
+    // Camera
+    cam.Init(SDL_PI_F / 4.0, 800.0f / 600.0f, 0.1f, 1000.0f);
+    cam.pos.z = 6.0f;
+    cam.SetYawPitch(-SDL_PI_F / 2.0, 0);
+
 
     // ----- Framebuffer -----
     CreateFramebuffer(&fbo, &textureColourBuffer, &rbo);
@@ -333,9 +336,70 @@ bool Render::Init()
 }
 
 
-void Render::RenderFrame(const Camera &cam, const Model &mapModel,
+Camera& Render::GetCamera()
+{
+    return cam;
+}
+
+
+void Render::Update(float delta)
+{
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
+    // Update Camera
+    static float camPitch = -0.2f;
+    static float camDist = 14.0f;
+    static float angleSmooth = 3.0f;
+    static float distSmooth = 10.0f;
+
+    ImGui::Begin("Cool window");
+    float fovDegrees = glm::degrees(cam.fov);
+    ImGui::SliderFloat("FOV", &fovDegrees, 20.0f, 140.0f);
+    cam.SetFovAndRecalcProjection(glm::radians(fovDegrees));
+    ImGui::SliderFloat("Camera Pitch", &camPitch,
+                       -SDL_PI_F / 2.0f, SDL_PI_F / 2.0);
+    ImGui::SliderFloat("Camera Distance", &camDist, 0.0f, 30.0f);
+    ImGui::SliderFloat("Camera Angle Smoothing", &angleSmooth, 0.0f, 20.0f);
+    ImGui::SliderFloat("Camera Distance Smoothing", &distSmooth, 0.0f, 20.0f);
+    ImGui::End();
+
+    JPH::Vec3 carPosJolt = Phys::GetCar().GetPos();
+    glm::vec3 carPos = ToGlmVec3(carPosJolt);
+    JPH::Quat carRot = Phys::GetCar().GetRotation();
+    JPH::Vec3 carDir = carRot.RotateAxisX();
+    float carYaw = SDL_PI_F - SDL_atan2f(carDir.GetX(), carDir.GetZ());
+    float yawOffset;
+    if (Input::GetGamepad()) {
+        yawOffset = SDL_PI_F / 2.0f * Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHTX);
+    }
+    //SDL_Log("Car yaw: %f, x: %f, z: %f", carYaw, carDir.GetX(), carDir.GetZ());
+    cam.SetFollowSmooth(carYaw + yawOffset, camPitch, camDist, carPos, 
+                        angleSmooth * delta, distSmooth * delta);
+    // Cast ray for camera
+    // Doing it this way still makes the camera clip through a little bit. To
+    // fix this, a spherecast could be used with a radius equal to the camera's
+    // near-plane clipping distance. This code should also be moved to the
+    // camera and applied before smoothing. For this, the camera's target
+    // position may need to be stored to separate this code from smoothing.
+    JPH::Vec3 newCamPos;
+    JPH::Vec3 camPosJolt = ToJoltVec3(cam.pos);
+    JPH::Vec3 camToCar = carPosJolt - camPosJolt;
+    JPH::IgnoreSingleBodyFilter carBodyFilter = JPH::IgnoreSingleBodyFilter(Phys::GetCar().mBody->GetID());
+    bool hadHit = Phys::CastRay(carPosJolt - camToCar/2.0,  -camToCar/2.0,  newCamPos, carBodyFilter);
+    if (hadHit) {
+        cam.pos = ToGlmVec3(newCamPos);
+    }
+}
+
+
+
+void Render::RenderFrame(const Model &mapModel,
                          const Model &carModel, const Model &wheelModel)
 {
+
+
     int screenWidth, screenHeight;
     bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
     glViewport(0, 0, fbWidth, fbHeight);
@@ -346,7 +410,7 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
     glClearDepth(1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    RenderScene(cam, mapModel, carModel, wheelModel);
+    RenderScene(mapModel, carModel, wheelModel);
 
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, msFBO);
@@ -370,12 +434,11 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
     glBindTexture(GL_TEXTURE_2D, 0);
 
 
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
 
-    static bool showDemoWindow = true;
-    ImGui::ShowDemoWindow(&showDemoWindow);
+    //static bool showDemoWindow = true;
+    //ImGui::ShowDemoWindow(&showDemoWindow);
+
+    
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -384,7 +447,7 @@ void Render::RenderFrame(const Camera &cam, const Model &mapModel,
 }
 
 
-void Render::RenderScene(const Camera &cam, const Model &mapModel,
+void Render::RenderScene(const Model &mapModel,
                          const Model &carModel, const Model &wheelModel)
 {
     glm::mat4 model = glm::mat4(1.0f);
@@ -399,7 +462,7 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel,
 
     glUseProgram(shader.id);
 
-    shader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
+    shader.SetMat4fv((char*)"projection", glm::value_ptr(cam.projection));
     shader.SetMat4fv((char*)"view", glm::value_ptr(view));
 
     glm::vec3 sunCol = sunLight.mColour / glm::vec3(1.0);
@@ -493,7 +556,7 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel,
     glm::mat4 skyboxView = glm::mat4(glm::mat3(view));
     glUseProgram(skyboxShader.id);
 
-    skyboxShader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
+    skyboxShader.SetMat4fv((char*)"projection", glm::value_ptr(cam.projection));
     skyboxShader.SetMat4fv((char*)"view", glm::value_ptr(skyboxView));
     skyboxShader.SetInt((char*)"skybox", 0);
 
@@ -512,9 +575,9 @@ void Render::HandleEvent(SDL_Event *event)
         int width = event->window.data1;
         int height = event->window.data2;
         glViewport(0, 0, width, height);
-        projection = glm::perspective(SDL_PI_F / 4.0f,
-                                      (float) width / height,
-                                      0.1f, 1000.0f);
+
+        cam.aspect = (float) width / height;
+        cam.CalcProjection();
     }
     else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_F11) {
         SDL_SetWindowFullscreen(window, !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN));

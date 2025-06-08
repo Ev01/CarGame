@@ -2,11 +2,22 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <SDL3/SDL.h>
+
 
 struct Camera {
     glm::vec3 pos;
     // May not be normalised
     glm::vec3 dir;
+    float fov;
+    float near;
+    float far;
+    float aspect;
+    glm::mat4 projection = glm::mat4(1.0);
+
+    void Init(float aFov, float aAspect, float aNear, float aFar);
+    void CalcProjection();
+    void SetFovAndRecalcProjection(float fov);
 
     glm::vec3 Target() const;
     glm::vec3 Right(glm::vec3 up) const;

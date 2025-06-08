@@ -35,7 +35,6 @@ Model cylinderModel;
 Model carModel;
 Model wheelModel;
 Model mapModel;
-Camera cam;
 
 const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -134,8 +133,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     mapModel = LoadModel("models/simple_map.gltf", NULL, Render::AssimpAddLight);
     //mapModel = LoadModel("models/map1.gltf", NULL, Render::AssimpAddLight);
 
-    cam.pos.z = 6.0f;
-    cam.SetYawPitch(yaw, pitch);
 
     Phys::SetupSimulation();
     Phys::LoadMap(mapModel);
@@ -207,6 +204,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     delta = GetSeconds() - lastFrame;
     lastFrame = GetSeconds();
 
+    Camera &cam = Render::GetCamera();
 
     // Do physics step
     physicsTime += delta;
@@ -220,51 +218,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     // Audio
     Audio::Update();
 
-    JPH::Vec3 carPosJolt = Phys::GetCar().GetPos();
-    glm::vec3 carPos = ToGlmVec3(carPosJolt);
-    JPH::Quat carRot = Phys::GetCar().GetRotation();
-    JPH::Vec3 carDir = carRot.RotateAxisX();
-    float carYaw = SDL_PI_F - SDL_atan2f(carDir.GetX(), carDir.GetZ());
-    float yawOffset;
-    if (Input::GetGamepad()) {
-        yawOffset = SDL_PI_F / 2.0f * Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHTX);
-    }
-    //SDL_Log("Car yaw: %f, x: %f, z: %f", carYaw, carDir.GetX(), carDir.GetZ());
-    cam.SetFollowSmooth(carYaw + yawOffset, -0.2f, 14.0f, carPos, 3.0f * delta, 10.0f * delta);
-    // Cast ray for camera
-    // Doing it this way still makes the camera clip through a little bit. To
-    // fix this, a spherecast could be used with a radius equal to the camera's
-    // near-plane clipping distance. This code should also be moved to the
-    // camera and applied before smoothing. For this, the camera's target
-    // position may need to be stored to separate this code from smoothing.
-    JPH::Vec3 newCamPos;
-    JPH::Vec3 camPosJolt = ToJoltVec3(cam.pos);
-    JPH::Vec3 camToCar = carPosJolt - camPosJolt;
-    JPH::IgnoreSingleBodyFilter carBodyFilter = JPH::IgnoreSingleBodyFilter(Phys::GetCar().mBody->GetID());
-    bool hadHit = Phys::CastRay(carPosJolt - camToCar/2.0,  -camToCar/2.0,  newCamPos, carBodyFilter);
-    if (hadHit) {
-        cam.pos = ToGlmVec3(newCamPos);
-    }
-
-
-    //cam.SetOrbit(14.0f, 4.0f, carPos);
-    // Move Camera
-    /*
-    if (Input::IsScanDown(SDL_SCANCODE_A)) {
-        cam.pos -= cam.Right(up) * CAM_SPEED * (float)delta;
-    }
-    if (Input::IsScanDown(SDL_SCANCODE_D)) {
-        cam.pos += cam.Right(up) * CAM_SPEED * (float)delta;
-    }
-    if (Input::IsScanDown(SDL_SCANCODE_W)) {
-        cam.pos += cam.dir * CAM_SPEED * (float)delta;
-    }
-    if (Input::IsScanDown(SDL_SCANCODE_S)) {
-        cam.pos -= cam.dir * CAM_SPEED * (float)delta;
-    }
-    */
-    
-    Render::RenderFrame(cam, mapModel, carModel, wheelModel);
+    Render::Update(delta);
+    Render::RenderFrame(mapModel, carModel, wheelModel);
 
 
     double delta2 = GetSeconds() - lastFrame;

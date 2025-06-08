@@ -1,7 +1,45 @@
+#include "camera.h"
+
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
 
-#include "camera.h"
+
+
+void Camera::Init(float aFov, float aAspect, float aNear, float aFar)
+{
+    fov = aFov;
+    aspect = aAspect;
+    near = aNear;
+    far = aFar;
+    CalcProjection();
+}
+    
+
+void Camera::CalcProjection()
+{
+    // If fails, has Init been called?
+    SDL_assert(fov != 0.0 && aspect != 0.0 && near != 0.0 && far != 0.0);
+    projection = glm::perspective(fov, aspect, near, far);
+}
+
+void Camera::SetFovAndRecalcProjection(float aFov)
+{
+    if (aFov != fov) {
+        fov = aFov;
+        CalcProjection();
+    }
+}
+
+
+/*
+void Camera::SetFov(float aFov)
+{
+    if (aFov != fov) {
+        fov = aFov;
+        CalcProjection(
+*/
+
+
 
 glm::vec3 Camera::Target() const
 {
