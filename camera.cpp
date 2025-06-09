@@ -74,7 +74,7 @@ void Camera::SetFollow(float yaw, float pitch, float dist, glm::vec3 targ)
 }
 
 
-void Camera::SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, float angleSmoothing, float distSmoothing)
+void Camera::SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, double angleSmoothing, double distSmoothing)
 {
     glm::vec3 hDir = dir;
     hDir.y = 0;
@@ -93,14 +93,13 @@ void Camera::SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ,
     float da = SDL_fmodf(yaw - currYaw, max);
     float angleDist = SDL_fmodf(2*da, max) - da;
     float newYaw = currYaw + angleDist * angleSmoothing;
-    //SDL_Log("currYaw: %f, newYaw: %f, x: %f, z: %f", currYaw, newYaw, hDir.x, hDir.z);
 
-    float currDist = glm::length(pos - targ);
+    float currDist = glm::length(targ - pos);
     float newDist = currDist + (dist - currDist) * distSmoothing;
     SetFollow(newYaw, pitch, newDist, targ);
 }
 
-void Camera::SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, float smoothing)
+void Camera::SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, double smoothing)
 {
     SetFollowSmooth(yaw, pitch, dist, targ, smoothing, smoothing);
 }

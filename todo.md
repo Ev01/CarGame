@@ -60,10 +60,16 @@
 7/06
 - [x] Prevent camera from going inside objects
 
+9/06
+- [x] Fix weird jitter problem
+NOTE: Camera Jitter was caused by not updating in Physics Frame. On some frames,
+the physics frame doesn't run. This makes the game look laggy and should be
+fixed later.
 
-- [ ] Fix weird jitter problem
 - [ ] Car headlights
 - [ ] Edit car paramters with GUI (Dear ImGUI)
 - [ ] Two cars
+- [ ] Change maps at runtime
+- [ ] Split screen
 - [ ] 
 

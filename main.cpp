@@ -204,6 +204,10 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     delta = GetSeconds() - lastFrame;
     lastFrame = GetSeconds();
 
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
     Camera &cam = Render::GetCamera();
 
     // Do physics step
@@ -212,13 +216,14 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         Phys::SetForwardDir(ToJoltVec3(cam.dir));
         Phys::ProcessInput();
         Phys::PhysicsStep(PHYSICS_STEP_TIME);
+        Render::PhysicsUpdate(PHYSICS_STEP_TIME);
         physicsTime -= PHYSICS_STEP_TIME;
     }
 
     // Audio
     Audio::Update();
-
     Render::Update(delta);
+
     Render::RenderFrame(mapModel, carModel, wheelModel);
 
 

@@ -23,8 +23,8 @@ struct Camera {
     glm::vec3 Right(glm::vec3 up) const;
     void SetYawPitch(float yaw, float pitch);
     void SetFollow(float yaw, float pitch, float dist, glm::vec3 targ);
-    void SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, float smoothing);
-    void SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, float angleSmoothing, float distSmoothing);
+    void SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, double smoothing);
+    void SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, double angleSmoothing, double distSmoothing);
     void SetOrbit(float dist, float height, glm::vec3 targ);
     glm::mat4 LookAtMatrix(glm::vec3 up) const;
     //void rotate(float angle, glm::vec3 axis);

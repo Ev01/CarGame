@@ -33,6 +33,11 @@ static Texture skyboxTex;
 
 static Model cubeModel;
 static Camera cam;
+// Camera Settings
+static float camPitch = -0.2f;
+static float camDist = 14.0f;
+static float angleSmooth = 3.0f;
+static float distSmooth = 10.0f;
 
 static float skyboxVertices[] = {
     // positions          
@@ -342,29 +347,8 @@ Camera& Render::GetCamera()
 }
 
 
-void Render::Update(float delta)
+void Render::PhysicsUpdate(double delta)
 {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
-
-    // Update Camera
-    static float camPitch = -0.2f;
-    static float camDist = 14.0f;
-    static float angleSmooth = 3.0f;
-    static float distSmooth = 10.0f;
-
-    ImGui::Begin("Cool window");
-    float fovDegrees = glm::degrees(cam.fov);
-    ImGui::SliderFloat("FOV", &fovDegrees, 20.0f, 140.0f);
-    cam.SetFovAndRecalcProjection(glm::radians(fovDegrees));
-    ImGui::SliderFloat("Camera Pitch", &camPitch,
-                       -SDL_PI_F / 2.0f, SDL_PI_F / 2.0);
-    ImGui::SliderFloat("Camera Distance", &camDist, 0.0f, 30.0f);
-    ImGui::SliderFloat("Camera Angle Smoothing", &angleSmooth, 0.0f, 20.0f);
-    ImGui::SliderFloat("Camera Distance Smoothing", &distSmooth, 0.0f, 20.0f);
-    ImGui::End();
-
     JPH::Vec3 carPosJolt = Phys::GetCar().GetPos();
     glm::vec3 carPos = ToGlmVec3(carPosJolt);
     JPH::Quat carRot = Phys::GetCar().GetRotation();
@@ -377,6 +361,7 @@ void Render::Update(float delta)
     //SDL_Log("Car yaw: %f, x: %f, z: %f", carYaw, carDir.GetX(), carDir.GetZ());
     cam.SetFollowSmooth(carYaw + yawOffset, camPitch, camDist, carPos, 
                         angleSmooth * delta, distSmooth * delta);
+    //cam.SetFollow(carYaw + yawOffset, camPitch, camDist, carPos);
     // Cast ray for camera
     // Doing it this way still makes the camera clip through a little bit. To
     // fix this, a spherecast could be used with a radius equal to the camera's
@@ -395,11 +380,26 @@ void Render::Update(float delta)
 
 
 
+void Render::Update(double delta)
+{
+    // Update Camera
+    ImGui::Begin("Cool window");
+    float fovDegrees = glm::degrees(cam.fov);
+    ImGui::SliderFloat("FOV", &fovDegrees, 20.0f, 140.0f);
+    cam.SetFovAndRecalcProjection(glm::radians(fovDegrees));
+    ImGui::SliderFloat("Camera Pitch", &camPitch,
+                       -SDL_PI_F / 2.0f, SDL_PI_F / 2.0);
+    ImGui::SliderFloat("Camera Distance", &camDist, 0.0f, 30.0f);
+    ImGui::SliderFloat("Camera Angle Smoothing", &angleSmooth, 0.0f, 20.0f);
+    ImGui::SliderFloat("Camera Distance Smoothing", &distSmooth, 0.0f, 20.0f);
+    ImGui::End();
+}
+
+
+
 void Render::RenderFrame(const Model &mapModel,
                          const Model &carModel, const Model &wheelModel)
 {
-
-
     int screenWidth, screenHeight;
     bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
     glViewport(0, 0, fbWidth, fbHeight);

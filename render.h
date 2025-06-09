@@ -38,7 +38,8 @@ namespace Render {
     bool Init();
     Camera& GetCamera();
     void AssimpAddLight(const aiLight *light, const aiNode *node, aiMatrix4x4 transform);
-    void Update(float delta);
+    void PhysicsUpdate(double delta);
+    void Update(double delta);
     void RenderFrame(const Model &mapModel,
                      const Model &carModel, const Model &wheelModel);
     void RenderScene(const Model &mapModel,
