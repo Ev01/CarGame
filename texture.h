@@ -3,6 +3,8 @@
 #include <SDL3/SDL.h>
 
 struct Texture {
+    Texture();
+    ~Texture();
     unsigned int id;
 };
 

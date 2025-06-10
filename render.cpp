@@ -223,7 +223,7 @@ void Render::AssimpAddLight(const aiLight *aLight, const aiNode *aNode, aiMatrix
             glm::vec3 position2;
             position2 = glm::vec3(glmTransform * glm::vec4(ToGlmVec3(aLight->mPosition), 1.0));
 
-            SDL_Log("light pos (%f, %f, %f)", aLight->mPosition.x, aLight->mPosition.y, aLight->mPosition.z);
+            //SDL_Log("light pos (%f, %f, %f)", aLight->mPosition.x, aLight->mPosition.y, aLight->mPosition.z);
 
             //spotLight.mPosition = ToGlmVec3(position);
             spotLight.mPosition = position2;
@@ -582,6 +582,15 @@ void Render::HandleEvent(SDL_Event *event)
     else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_F11) {
         SDL_SetWindowFullscreen(window, !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN));
     }
+}
+
+
+void Render::DeleteAllLights()
+{
+    lights.clear();
+    spotLights.clear();
+    sunLight.mDirection = glm::vec3(0.0);
+    sunLight.mColour = glm::vec3(0.0);
 }
 
 

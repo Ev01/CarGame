@@ -51,6 +51,8 @@ std::optional<ObjectVsBroadPhaseLayerFilterTable> object_vs_broadphase_layer_fil
 std::optional<TempAllocatorImpl> temp_allocator = std::nullopt;
 std::optional<JobSystemThreadPool> job_system = std::nullopt;
 
+std::vector<BodyID> mapBodyIds;
+
 // Audio
 Audio::Sound *engineSnd;
 Audio::Sound *driftSnd;
@@ -153,14 +155,15 @@ void Phys::SetupJolt()
 
 void Phys::LoadMap(const Model &mapModel)
 {
-    std::vector<BodyID> bodyIds;
     BodyInterface &bodyInterface = physics_system.GetBodyInterface();
-    for (const ModelNode &node : mapModel.nodes) {
+    for (size_t n = 0; n < mapModel.nodes.size(); n++) {
+        const ModelNode &node = *(mapModel.nodes[n]);
         RMat44 transform = ToJoltMat4(node.mTransform);
         for (int meshIdx : node.mMeshes) {
+            
             IndexedTriangleList triangleList;
             VertexList meshVertices;
-            const Mesh &mesh = mapModel.meshes[meshIdx];
+            const Mesh &mesh = *(mapModel.meshes[meshIdx]);
             for (size_t i = 0; i < mesh.vertices.size(); i++) {
                 Vec3 vertexV3 = ToJoltVec3(mesh.vertices[i].position);
                 vertexV3 = Vec3(transform * Vec4(vertexV3, 1.0f));
@@ -182,17 +185,28 @@ void Phys::LoadMap(const Model &mapModel)
                         Quat::sIdentity(),
                         EMotionType::Static,
                         Layers::NON_MOVING));
-            bodyIds.push_back(body->GetID());
+            mapBodyIds.push_back(body->GetID());
         }
     }
-    SDL_assert(bodyIds.size() > 0);
+    SDL_assert(mapBodyIds.size() > 0);
     BodyInterface::AddState state = bodyInterface.AddBodiesPrepare(
-            &bodyIds[0], bodyIds.size());
+            mapBodyIds.data(), mapBodyIds.size());
 
     bodyInterface.AddBodiesFinalize(
-            &bodyIds[0], bodyIds.size(),
+            mapBodyIds.data(), mapBodyIds.size(),
             state, EActivation::DontActivate);
 }
+
+
+void Phys::UnloadMap()
+{
+    SDL_assert(mapBodyIds.size() > 0); // Map was never loaded
+    BodyInterface &bodyInterface = physics_system.GetBodyInterface();
+    bodyInterface.RemoveBodies(mapBodyIds.data(), mapBodyIds.size());
+    bodyInterface.DestroyBodies(mapBodyIds.data(), mapBodyIds.size());
+    mapBodyIds.clear();
+}
+
 
 
 bool Phys::CastRay(JPH::Vec3 start, JPH::Vec3 direction, JPH::Vec3 &outPos, const JPH::BodyFilter &inBodyFilter)
@@ -326,5 +340,10 @@ Vehicle& Phys::GetCar()
 JPH::PhysicsSystem& Phys::GetPhysicsSystem()
 {
     return physics_system;
+}
+
+JPH::BodyInterface&  Phys::GetBodyInterface()
+{
+    return physics_system.GetBodyInterface();
 }
 

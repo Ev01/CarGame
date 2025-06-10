@@ -56,6 +56,7 @@ namespace Phys {
     void SetupSimulation();
     void PhysicsStep(float delta);
     void LoadMap(const Model &mapModel);
+    void UnloadMap();
     bool CastRay(JPH::Vec3 start, JPH::Vec3 direction, JPH::Vec3 &outPos, const JPH::BodyFilter &inBodyFilter = { });
 
     void CleanUp();
@@ -63,6 +64,7 @@ namespace Phys {
     void SetForwardDir(JPH::Vec3 dir);
     Vehicle& GetCar();
     JPH::PhysicsSystem& GetPhysicsSystem();
+    JPH::BodyInterface&  GetBodyInterface();
 }
 
 

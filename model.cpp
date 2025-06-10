@@ -11,8 +11,8 @@
 #include <assimp/postprocess.h>
 #include <assimp/DefaultLogger.hpp>
 
-std::vector<Material> loadedMaterials;
-std::vector<Mesh> loadedMeshes;
+#include <memory>
+
 
 void Mesh::Init(std::vector<Vertex> aVertices,
                 std::vector<unsigned int> aIndices,
@@ -58,14 +58,60 @@ void Mesh::Init(std::vector<Vertex> aVertices,
 
 
 
+Mesh::~Mesh()
+{
+    //SDL_Log("Deleting Mesh");
+    
+    if (vao) {
+        glDeleteVertexArrays(1, &vao);
+    }
+    if (vbo) {
+        glDeleteBuffers(1, &vbo);
+    }
+    if (ebo) {
+        glDeleteBuffers(1, &ebo);
+    }
+}
+
+Mesh::Mesh()
+{
+    //SDL_Log("Creating Mesh");
+}
+
+Model::~Model()
+{
+    //SDL_Log("Deleting Model");
+}
 
 
-void Mesh::Draw(ShaderProg shader, const std::vector<Material> &materials) const
+Material::~Material()
+{
+    glDeleteTextures(1, &(texture.id));
+    //SDL_Log("Deleting Material");
+}
+
+Material::Material()
+{
+    //SDL_Log("Creating Material");
+}
+
+ModelNode::~ModelNode()
+{
+    //SDL_Log("Deleting Node");
+}
+
+ModelNode::ModelNode()
+{
+    //SDL_Log("Creating Node");
+}
+
+
+void Mesh::Draw(ShaderProg shader, const std::vector<std::unique_ptr<Material>> &materials) const
 {
     glm::vec3 diffuseColour = glm::vec3(1.0f);
     float roughness = 1.0;
 
-    const Material &material = materials[materialIdx];
+    const Material &material = *materials[materialIdx];
     
     unsigned int texId = material.texture.id;
     unsigned int normalMapId = material.normalMap.id;
@@ -106,19 +152,19 @@ void Mesh::Draw(ShaderProg shader, const std::vector<Material> &materials) const
 }
 
 
-void ModelNode::Draw(ShaderProg shader, const std::vector<Mesh> &meshes, const std::vector<Material> &materials, glm::mat4 transform) const
+void ModelNode::Draw(ShaderProg shader, const std::vector<std::unique_ptr<Mesh>> &meshes, const std::vector<std::unique_ptr<Material>> &materials, glm::mat4 transform) const
 {
     glm::mat4 newTrans = transform * mTransform;
     newTrans = ToGlmMat4(ToJoltMat4(newTrans));
     shader.SetMat4fv((char*)"model", glm::value_ptr(newTrans));
 
     for (size_t i = 0; i < mMeshes.size(); i++) {
-        meshes[mMeshes[i]].Draw(shader, materials);
+        meshes[mMeshes[i]]->Draw(shader, materials);
     }
 }
 
 
-void ModelNode::Draw(ShaderProg shader, const std::vector<Mesh> &meshes, const std::vector<Material> &materials) const
+void ModelNode::Draw(ShaderProg shader, const std::vector<std::unique_ptr<Mesh>> &meshes, const std::vector<std::unique_ptr<Material>> &materials) const
 {
     Draw(shader, meshes, materials, glm::mat4(1.0f));
 }
@@ -127,7 +173,7 @@ void ModelNode::Draw(ShaderProg shader, const std::vector<Mesh> &meshes, const s
 void Model::Draw(ShaderProg shader, glm::mat4 transform) const
 {
     for (unsigned int i = 0; i < nodes.size(); i++) {
-        nodes[i].Draw(shader, meshes, materials, transform);
+        nodes[i]->Draw(shader, meshes, materials, transform);
     }
 }
 
@@ -135,7 +181,7 @@ void Model::Draw(ShaderProg shader, glm::mat4 transform) const
 void Model::Draw(ShaderProg shader) const
 {
     for (unsigned int i = 0; i < nodes.size(); i++) {
-        nodes[i].Draw(shader, meshes, materials);
+        nodes[i]->Draw(shader, meshes, materials);
     }
 }
 
@@ -147,10 +193,10 @@ void Model::LoadSceneMaterials(const aiScene *scene)
         //std::vector<Texture> diffuseMaps = LoadMaterialTextures(
         //        material, aiTextureType_DIFFUSE, "texture_diffuse");
         //textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-        Material newMat;
+        std::unique_ptr<Material> newMat = std::make_unique<Material>();
         // Prevent garbage values
-        newMat.texture.id = 0;
-        newMat.normalMap.id = 0;
+        newMat->texture.id = 0;
+        newMat->normalMap.id = 0;
 
         if (aiMat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
             aiString str;
@@ -160,7 +206,8 @@ void Model::LoadSceneMaterials(const aiScene *scene)
             SDL_snprintf(filepath, 256, "models/%s", str.C_Str());
             SDL_Log("Loading texture %s", filepath);
             Texture texture = CreateTextureFromFile(filepath);
-            newMat.texture = texture;
+            //Texture texture = gDefaultTexture;
+            newMat->texture = texture;
         }
         if (aiMat->GetTextureCount(aiTextureType_NORMALS) > 0) {
             aiString str;
@@ -170,8 +217,8 @@ void Model::LoadSceneMaterials(const aiScene *scene)
             SDL_snprintf(filepath, 256, "models/%s", str.C_Str());
             SDL_Log("Loading texture %s", filepath);
             Texture normalMap = CreateTextureFromFile(filepath, false);
-            newMat.normalMap = normalMap;
-            SDL_Log("Found normal map, id is %d", normalMap.id);
+            //Texture normalMap = gDefaultNormalMap;
+            newMat->normalMap = normalMap;
         }
         if (aiMat->GetTextureCount(aiTextureType_DIFFUSE_ROUGHNESS) > 0) {
             aiString str;
@@ -181,15 +228,15 @@ void Model::LoadSceneMaterials(const aiScene *scene)
             SDL_snprintf(filepath, 256, "models/%s", str.C_Str());
             SDL_Log("Loading texture %s", filepath);
             Texture roughnessMap = CreateTextureFromFile(filepath, false);
-            newMat.roughnessMap = roughnessMap;
-            SDL_Log("Found roughness map, id is %d", roughnessMap.id);
+            //Texture roughnessMap = gDefaultTexture;
+            newMat->roughnessMap = roughnessMap;
         }
 
         aiColor3D colour;
         aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
-        newMat.diffuseColour.x = colour.r;
-        newMat.diffuseColour.y = colour.g;
-        newMat.diffuseColour.z = colour.b;
+        newMat->diffuseColour.x = colour.r;
+        newMat->diffuseColour.y = colour.g;
+        newMat->diffuseColour.z = colour.b;
 
         float roughness;
         float metallic;
@@ -201,10 +248,10 @@ void Model::LoadSceneMaterials(const aiScene *scene)
             SDL_Log("Couldn't get metallic");
             metallic = 0.0;
         }
-        newMat.roughness = roughness;
-        newMat.metallic = metallic;
+        newMat->roughness = roughness;
+        newMat->metallic = metallic;
 
-        materials.push_back(newMat);
+        materials.push_back(std::move(newMat));
     }
 }
 
@@ -238,7 +285,6 @@ void Model::ProcessNode(const aiNode *node, aiMatrix4x4 accTransform, const aiSc
             if (light->mName == node->mName) {
                 LightCallback(light, node, transform);
             }
-            SDL_Log("light name: %s", light->mName.C_Str());
         }
     }
 
@@ -251,7 +297,7 @@ void Model::ProcessNode(const aiNode *node, aiMatrix4x4 accTransform, const aiSc
 
 
 
-    SDL_Log("Process Node %s", node->mName.C_Str());
+    //SDL_Log("Process Node %s", node->mName.C_Str());
     /*
     if (node->mMetaData != nullptr) {
         SDL_Log("Has metadata");
@@ -265,19 +311,19 @@ void Model::ProcessNode(const aiNode *node, aiMatrix4x4 accTransform, const aiSc
     }
     */
     
-    ModelNode modelNode;
+    std::unique_ptr<ModelNode> modelNode = std::make_unique<ModelNode>();
 
     // process all the node's meshes (if any)
     for (unsigned int i = 0; i < node->mNumMeshes; i++) {
         // index in Model mesh array should be same as index in aiScene's 
         // mesh array
-        modelNode.mMeshes.push_back(node->mMeshes[i]);
+        modelNode->mMeshes.push_back(node->mMeshes[i]);
     }
     
     // Only add the model node if it contains meshes
-    if (modelNode.mMeshes.size() > 0) {
-        modelNode.mTransform = ToGlmMat4(transform);
-        nodes.push_back(modelNode);
+    if (modelNode->mMeshes.size() > 0) {
+        modelNode->mTransform = ToGlmMat4(transform);
+        nodes.push_back(std::move(modelNode));
     }
     
     // then do the same for each of its children
@@ -294,8 +340,8 @@ void Model::ProcessMesh(aiMesh *mesh)
     std::vector<unsigned int> indices;
     //Material *meshMaterial = NULL;
     
-    SDL_Log("Mesh vertices size: %d", 
-            mesh->mNumVertices);
+    //SDL_Log("Mesh vertices size: %d", 
+    //        mesh->mNumVertices);
 
     // Process all vertices
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
@@ -350,27 +396,26 @@ void Model::ProcessMesh(aiMesh *mesh)
     // NOTE: There will always be at least one material
     SDL_assert(materials.size() > mesh->mMaterialIndex);
     
-    Mesh returnMesh;
-    returnMesh.Init(vertices, indices, mesh->mMaterialIndex);
-    meshes.push_back(returnMesh);
+    std::unique_ptr<Mesh> returnMesh = std::make_unique<Mesh>();
+    returnMesh->Init(vertices, indices, mesh->mMaterialIndex);
+    meshes.push_back(std::move(returnMesh));
 }
 
 
-Model LoadModel(std::string path, node_callback_t NodeCallback, light_callback_t LightCallback)
+Model* LoadModel(std::string path, node_callback_t NodeCallback, light_callback_t LightCallback)
 {
-    Assimp::Logger *logger = Assimp::DefaultLogger::create(
-            ASSIMP_DEFAULT_LOG_NAME, Assimp::Logger::NORMAL, 
-            aiDefaultLogStream_STDOUT, nullptr);
+    //Assimp::Logger *logger = Assimp::DefaultLogger::create(
+    //        ASSIMP_DEFAULT_LOG_NAME, Assimp::Logger::NORMAL, 
+    //        aiDefaultLogStream_STDOUT, nullptr);
 
 
-    Model model;
     Assimp::Importer importer;
     const aiScene *scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
         SDL_Log("Assimp Error: %s", importer.GetErrorString());
-        return model;
+        return nullptr;
     }
     /*
     if (!(scene->mFlags & AI_SCENE_FLAGS_VALIDATED)) {
@@ -378,9 +423,10 @@ Model LoadModel(std::string path, node_callback_t NodeCallback, light_callback_t
         return model;
     }
     */
+    Model *model = new Model;
 
-    model.LoadSceneMaterials(scene);
-    model.LoadSceneMeshes(scene);
+    model->LoadSceneMaterials(scene);
+    model->LoadSceneMeshes(scene);
 
     SDL_Log("Num lights: %d", scene->mNumLights);
     if (scene->mNumLights > 0) {
@@ -391,26 +437,29 @@ Model LoadModel(std::string path, node_callback_t NodeCallback, light_callback_t
         aiVector3D position;
         lightNode->mTransformation.DecomposeNoScaling(rotation, position);
 
+        /*
         float range;
         if (lightNode->mMetaData->Get("PBR_LightRange", range)) {
             SDL_Log("Range: %f", range);
         } else {
             SDL_Log("Couldn't get range");
         }
+        */
 
         aiColor3D col = scene->mLights[0]->mColorDiffuse;
+        /*
         SDL_Log("Colour: %f, %f, %f", col.r, col.b, col.g);
-
         SDL_Log("Name: %s", lightName.C_Str());
         SDL_Log("Pos x: %f", position.x);
         SDL_Log("Constant: %f", scene->mLights[0]->mAttenuationConstant);
         SDL_Log("Quadratic: %f", scene->mLights[0]->mAttenuationQuadratic);
         SDL_Log("Linear: %f", scene->mLights[0]->mAttenuationLinear);
+        */
     }
 
     // Global transform of root, which is identity matrix
     aiMatrix4x4 transform;
-    model.ProcessNode(scene->mRootNode, transform, scene, NodeCallback, LightCallback);
+    model->ProcessNode(scene->mRootNode, transform, scene, NodeCallback, LightCallback);
     return model;
 }
 

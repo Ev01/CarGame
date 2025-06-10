@@ -8,6 +8,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 # set(CMAKE_BUILD_TYPE Debug)
 set(Jolt_ROOT "../JoltPhysics/Build/Debug/")
 set(SDL3_ROOT "~/SDL/build/Debug/")
+set(SDL_image_ROOT "~/SDL/build/Debug/")
+set(assimp_ROOT "~../assimp-src/build/Debug/generated")
 
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)

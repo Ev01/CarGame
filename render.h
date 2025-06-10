@@ -45,6 +45,7 @@ namespace Render {
     void RenderScene(const Model &mapModel,
                      const Model &carModel, const Model &wheelModel);
     void HandleEvent(SDL_Event *event);
+    void DeleteAllLights();
     SDL_Window* GetWindow();
     SDL_GLContext& GetGLContext();
     void CleanUp();

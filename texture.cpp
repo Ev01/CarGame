@@ -52,7 +52,7 @@ Texture CreateTextureFromFile(const char* filename, bool isSRGB) {
                  format, GL_UNSIGNED_BYTE, surf->pixels);
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    SDL_free(surf);
+    SDL_DestroySurface(surf);
     texture.id = textureId;
     return texture;
 }
@@ -153,5 +153,14 @@ void InitDefaultTexture()
 {
     gDefaultTexture = CreateBlankTexture(0xFFFFFF);
     gDefaultNormalMap = CreateBlankTexture(0xFF7F7F);
-    SDL_Log("Default texture id = %d", gDefaultTexture.id);
+}
+
+Texture::Texture()
+{
+    //SDL_Log("Create Texture");
+}
+Texture::~Texture()
+{
+    //glDeleteTextures(1, &id);
+    //SDL_Log("Delete Texture");
 }

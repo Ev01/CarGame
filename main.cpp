@@ -12,6 +12,7 @@
 #include "vendor/imgui/backends/imgui_impl_sdl3.h"
 
 #include <string>
+#include <memory>
 
 #include "physics.h"
 #include "vehicle.h"
@@ -30,11 +31,16 @@
 
 
 
-Model monkeyModel;
-Model cylinderModel;
-Model carModel;
-Model wheelModel;
-Model mapModel;
+std::unique_ptr<Model> monkeyModel;
+std::unique_ptr<Model> cylinderModel;
+std::unique_ptr<Model> carModel;
+std::unique_ptr<Model> wheelModel;
+std::unique_ptr<Model> mapModel;
+//std::unique_ptr<Model> mapModel2;
+std::unique_ptr<Model> map1Model;
+std::unique_ptr<Model> *currentMap;
+
+static glm::vec3 mapSpawnPoint = glm::vec3(0.0f);
 
 const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -43,6 +49,7 @@ float physicsTime = 0;
 
 float yaw = -SDL_PI_F / 2.0;
 float pitch;
+
 
 
 double GetSeconds()
@@ -81,6 +88,24 @@ bool CarNodeCallback(const aiNode *node, aiMatrix4x4 transform)
     return true;
 }
 
+
+static bool MapNodeCallback(const aiNode *node, const aiMatrix4x4 transform)
+{
+    aiQuaternion aRotation;
+    aiVector3D aPosition;
+    aiVector3D aScale;
+    transform.Decompose(aScale, aRotation, aPosition);
+
+    JPH::RMat44 joltTransform = ToJoltMat4(transform);
+    JPH::Vec3 position = joltTransform.GetTranslation();
+
+    if (SDL_strcmp(node->mName.C_Str(), "SpawnPoint") == 0) {
+        mapSpawnPoint = ToGlmVec3(position);
+    }
+    return true;
+}
+
+
 /*
 static void GLAPIENTRY GLErrorCallback(GLenum source, GLenum type,
                                        GLuint, GLenum severity,
@@ -92,6 +117,14 @@ static void GLAPIENTRY GLErrorCallback(GLenum source, GLenum type,
             type, severity, message);
 }
 */
+
+
+static void AssimpTest()
+{
+    Assimp::Importer importer;
+    const aiScene *scene = importer.ReadFile("models/no_tex_map.gltf", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+}
+
 
 
 
@@ -126,16 +159,18 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
 
     // Load model
-    monkeyModel = LoadModel("models/monkey.obj");
-    cylinderModel = LoadModel("models/cylinder.obj");
-    carModel = LoadModel("models/mycar.gltf", CarNodeCallback);
-    wheelModel = LoadModel("models/wheel.gltf");
-    mapModel = LoadModel("models/simple_map.gltf", NULL, Render::AssimpAddLight);
-    //mapModel = LoadModel("models/map1.gltf", NULL, Render::AssimpAddLight);
+    //monkeyModel = LoadModel("models/monkey.obj");
+    cylinderModel = std::unique_ptr<Model>(LoadModel("models/cylinder.obj"));
+    carModel = std::unique_ptr<Model>(LoadModel("models/mycar.gltf", CarNodeCallback));
+    wheelModel = std::unique_ptr<Model>(LoadModel("models/wheel.gltf"));
+    mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, Render::AssimpAddLight));
+    //map1Model = LoadModel("models/map1.gltf", NULL, Render::AssimpAddLight);
+
+    //currentMap = &mapModel;
 
 
     Phys::SetupSimulation();
-    Phys::LoadMap(mapModel);
+    Phys::LoadMap(*mapModel);
 
     glViewport(0, 0, 800, 600);
 
@@ -208,6 +243,46 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
+    ImGui::Begin("Maps");
+    const char* items[] = {"Map01", "Map02", "simple_map"};
+    static int currentItem = 0;
+    ImGui::Combo("Map", &currentItem, items, 3);
+    if (ImGui::Button("Change map")) {
+        Render::DeleteAllLights();
+        mapSpawnPoint = glm::vec3(0.0f);
+        JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
+        Phys::UnloadMap();
+        switch(currentItem) {
+            case 0:
+                SDL_Log("sizeof: %lld", sizeof(*mapModel));
+                mapModel.reset(LoadModel("models/no_tex_map.gltf",
+                               MapNodeCallback, Render::AssimpAddLight));
+                Phys::LoadMap(*mapModel);
+                break;
+            case 1:
+                mapModel.reset(LoadModel("models/map1.gltf",
+                               MapNodeCallback, Render::AssimpAddLight));
+                Phys::LoadMap(*mapModel);
+                break;
+            case 2:
+                mapModel.reset(LoadModel("models/simple_map.gltf",
+                               MapNodeCallback, Render::AssimpAddLight));
+                Phys::LoadMap(*mapModel);
+                break;
+
+        }
+        bodyInterface.SetPosition(Phys::GetCar().mBody->GetID(), ToJoltVec3(mapSpawnPoint), JPH::EActivation::Activate);
+    }
+    if (ImGui::Button("Assimp Test")) {
+        AssimpTest();
+    }
+    if (ImGui::Button("Map load test")) {
+        Model *testMap = LoadModel("models/no_tex_map.gltf");
+        delete testMap;
+    }
+    ImGui::End();
+        
+
     Camera &cam = Render::GetCamera();
 
     // Do physics step
@@ -224,7 +299,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     Audio::Update();
     Render::Update(delta);
 
-    Render::RenderFrame(mapModel, carModel, wheelModel);
+    Render::RenderFrame(*mapModel, *carModel, *wheelModel);
 
 
     double delta2 = GetSeconds() - lastFrame;
