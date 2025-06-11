@@ -81,12 +81,16 @@ Mesh::Mesh()
 Model::~Model()
 {
     //SDL_Log("Deleting Model");
+    // Unload all textures
+    for (size_t i = 0; i < materials.size(); i++) {
+        materials[i]->Destroy();
+    }
 }
 
 
 Material::~Material()
 {
-    glDeleteTextures(1, &(texture.id));
+    //glDeleteTextures(1, &(texture.id));
     //SDL_Log("Deleting Material");
 }
 
@@ -94,6 +98,14 @@ Material::Material()
 {
     //SDL_Log("Creating Material");
 }
+
+void Material::Destroy()
+{
+    texture.Destroy();
+    normalMap.Destroy();
+    roughnessMap.Destroy();
+}
+
 
 ModelNode::~ModelNode()
 {

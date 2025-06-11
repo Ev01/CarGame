@@ -5,7 +5,8 @@
 struct Texture {
     Texture();
     ~Texture();
-    unsigned int id;
+    void Destroy();
+    unsigned int id = 0;
 };
 
 extern Texture gDefaultTexture;

@@ -79,7 +79,7 @@ Texture CreateBlankTexture(Uint32 colour)
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE,
                  surf->pixels);
-    SDL_free(surf);
+    SDL_DestroySurface(surf);
     Texture texture;
     texture.id = textureId;
     return texture;
@@ -116,7 +116,7 @@ static void LoadTextureToCubemap(const char* filename, int target)
 
     glTexImage2D(target, 0, GL_RGBA, surf->w, surf->h, 0,
                  format, GL_UNSIGNED_BYTE, surf->pixels);
-    SDL_free(surf);
+    SDL_DestroySurface(surf);
 }
 
 
@@ -163,4 +163,9 @@ Texture::~Texture()
 {
     //glDeleteTextures(1, &id);
     //SDL_Log("Delete Texture");
+}
+
+void Texture::Destroy()
+{
+    glDeleteTextures(1, &id);
 }

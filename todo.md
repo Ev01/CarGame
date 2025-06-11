@@ -66,10 +66,20 @@ NOTE: Camera Jitter was caused by not updating in Physics Frame. On some frames,
 the physics frame doesn't run. This makes the game look laggy and should be
 fixed later.
 
+10/06
+- [x] Change maps at runtime
+
+11/06
+- [x] Properly delete OpenGl textures
+
+
+
 - [ ] Car headlights
 - [ ] Edit car paramters with GUI (Dear ImGUI)
 - [ ] Two cars
-- [ ] Change maps at runtime
 - [ ] Split screen
-- [ ] 
+- [ ] Fix materials not loading properly when switching maps sometimes
+- [ ] Refactor with world struct/class
+- [ ] Get model from filename anywhere without loading it twice
+- [ ] Time trial with checkpoints
 

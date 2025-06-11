@@ -27,6 +27,7 @@ struct Material
 {
     Material();
     ~Material();
+    void Destroy();
     Texture texture;
     Texture normalMap;
     Texture roughnessMap;
