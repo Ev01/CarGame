@@ -538,6 +538,7 @@ void Render::RenderScene(const Model &mapModel,
 
     carModel.Draw(shader, carTrans);
 
+
     // Draw car wheels
     for (int i = 0; i < 4; i++) {
         glm::mat4 wheelTrans = ToGlmMat4(Phys::GetCar().GetWheelTransform(i));
@@ -547,6 +548,22 @@ void Render::RenderScene(const Model &mapModel,
         wheelModel.Draw(shader, wheelTrans);
     }
 
+    // Draw Car 2
+    carPos = ToGlmVec3(Phys::GetCar2().GetPos());
+    carTrans = glm::mat4(1.0f);
+    carTrans = glm::translate(carTrans, carPos);
+    carTrans = carTrans * QuatToMatrix(Phys::GetCar2().GetRotation());
+
+    carModel.Draw(shader, carTrans);
+    
+    // Draw car 2 wheels
+    for (int i = 0; i < 4; i++) {
+        glm::mat4 wheelTrans = ToGlmMat4(Phys::GetCar2().GetWheelTransform(i));
+        if (Phys::GetCar2().IsWheelFlipped(i)) {
+            wheelTrans = glm::rotate(wheelTrans, SDL_PI_F, glm::vec3(1.0f, 0.0f, 0.0f));
+        }
+        wheelModel.Draw(shader, wheelTrans);
+    }
 
     // Draw skybox
     

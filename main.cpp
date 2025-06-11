@@ -50,6 +50,7 @@ float physicsTime = 0;
 float yaw = -SDL_PI_F / 2.0;
 float pitch;
 
+VehicleSettings carSettings;
 
 
 double GetSeconds()
@@ -69,21 +70,21 @@ bool CarNodeCallback(const aiNode *node, aiMatrix4x4 transform)
     if (SDL_strcmp(node->mName.C_Str(), "WheelPosFR") == 0) {
         //SDL_Log("FR, %s", node->mName.C_Str());
 
-        Phys::GetCar().AddWheel(position, true);
+        carSettings.AddWheel(position, true);
     }
     else if (SDL_strcmp(node->mName.C_Str(), "WheelPosFL") == 0) {
         //SDL_Log("FL");
-        Phys::GetCar().AddWheel(position, true);
+        carSettings.AddWheel(position, true);
     }
     else if (SDL_strcmp(node->mName.C_Str(), "WheelPosRR") == 0) {
         //SDL_Log("RR");
-        Phys::GetCar().AddWheel(position, false);
+        carSettings.AddWheel(position, false);
     }
     else if (SDL_strcmp(node->mName.C_Str(), "WheelPosRL") == 0) {
-        Phys::GetCar().AddWheel(position, false);
+        carSettings.AddWheel(position, false);
     }
     else if (SDL_strncmp(node->mName.C_Str(), "CollisionBox", 12) == 0) {
-        Phys::GetCar().AddCollisionBox(ToJoltVec3(aPosition), ToJoltVec3(aScale));
+        carSettings.AddCollisionBox(ToJoltVec3(aPosition), ToJoltVec3(aScale));
     }
     return true;
 }
@@ -156,7 +157,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     Audio::Init();
 
     Phys::SetupJolt();
+    Phys::CreateCars();
 
+    carSettings = GetVehicleSettingsFromFile("data/car.json");
 
     // Load model
     //monkeyModel = LoadModel("models/monkey.obj");
@@ -168,8 +171,11 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     //currentMap = &mapModel;
 
-
     Phys::SetupSimulation();
+    Phys::GetCar().Init(carSettings);
+    Phys::GetCar2().Init(carSettings);
+    Phys::GetBodyInterface().SetPosition(Phys::GetCar2().mBody->GetID(), JPH::Vec3(6.0, 0, 0), JPH::EActivation::Activate);
+    
     Phys::LoadMap(*mapModel);
 
     glViewport(0, 0, 800, 600);
@@ -272,6 +278,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
         }
         bodyInterface.SetPosition(Phys::GetCar().mBody->GetID(), ToJoltVec3(mapSpawnPoint), JPH::EActivation::Activate);
+        bodyInterface.SetPosition(Phys::GetCar2().mBody->GetID(), ToJoltVec3(mapSpawnPoint) + JPH::Vec3(6.0, 0, 0), JPH::EActivation::Activate);
     }
     if (ImGui::Button("Assimp Test")) {
         AssimpTest();

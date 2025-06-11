@@ -14,18 +14,22 @@
 using json = nlohmann::json;
 
 #include <SDL3/SDL.h>
+#include <vector>
+
+std::vector<Vehicle*> existingVehicles;
 
 
 static void VehiclePostCollideCallback(JPH::VehicleConstraint &inVehicle, const JPH::PhysicsStepListenerContext &inContext)
 {
-    // TODO: Make this work for more than one car
-    Vehicle &car = Phys::GetCar();
+    Vehicle *car = GetVehicleFromVehicleConstraint(&inVehicle);
+    SDL_assert(car != nullptr); // Have all vehicles been created with
+                                // CreateVehicle()?
     // Audio stuff
     JPH::WheeledVehicleController *controller = static_cast<JPH::WheeledVehicleController*>
         (inVehicle.GetController());
     JPH::VehicleEngine &engine = controller->GetEngine();
     float rpm = engine.GetCurrentRPM();
-    SDL_SetAudioStreamFrequencyRatio(car.engineSnd->stream, rpm / 2000.0f + 0.5);
+    SDL_SetAudioStreamFrequencyRatio(car->engineSnd->stream, rpm / 2000.0f + 0.5);
 
     float averageSlip = 0;
     float slipLong;
@@ -35,8 +39,8 @@ static void VehiclePostCollideCallback(JPH::VehicleConstraint &inVehicle, const 
         if (!wheel->HasContact()) {
             continue;
         }
-        JPH::Vec3 wPos = JPH::Vec3(car.mBody->GetWorldTransform() * JPH::Vec4(wheel->GetSettings()->mPosition, 1.0f));
-        JPH::Vec3 wVel = car.mBody->GetPointVelocity(wPos);
+        JPH::Vec3 wPos = JPH::Vec3(car->mBody->GetWorldTransform() * JPH::Vec4(wheel->GetSettings()->mPosition, 1.0f));
+        JPH::Vec3 wVel = car->mBody->GetPointVelocity(wPos);
         float wheelLongVel = wheel->GetAngularVelocity() * wheel->GetSettings()->mRadius;
         slipLong = SDL_fabsf(wheelLongVel) - SDL_fabsf(wVel.Dot(wheel->GetContactLongitudinal()));
         slipLong = SDL_fabsf(slipLong);
@@ -56,13 +60,24 @@ static void VehiclePostCollideCallback(JPH::VehicleConstraint &inVehicle, const 
 
 
     float driftGain = SDL_min(averageSlip / 130.0f, 1.0f);
-    float driftPitch = car.mBody->GetLinearVelocity().Length() / 30.0f + 0.6;
-    SDL_SetAudioStreamFrequencyRatio(car.driftSnd->stream, driftPitch);
-    SDL_SetAudioStreamGain(car.driftSnd->stream, driftGain);
+    float driftPitch = car->mBody->GetLinearVelocity().Length() / 30.0f + 0.6;
+    SDL_SetAudioStreamFrequencyRatio(car->driftSnd->stream, driftPitch);
+    SDL_SetAudioStreamGain(car->driftSnd->stream, driftGain);
 }
 
 
-static VehicleSettings GetVehicleSettingsFromFile(const char* filename)
+Vehicle* GetVehicleFromVehicleConstraint(const JPH::VehicleConstraint *constraint)
+{
+    for (size_t i = 0; i < existingVehicles.size(); i++) {
+        if (constraint == existingVehicles[i]->mVehicleConstraint) {
+            return existingVehicles[i];
+        }
+    }
+    return nullptr;
+}
+
+
+ VehicleSettings GetVehicleSettingsFromFile(const char* filename)
 {
     SDL_Log("Loading vehicle settings from file %s", filename);
     char* fileData = (char*) SDL_LoadFile(filename, NULL);
@@ -105,9 +120,40 @@ void Vehicle::AddWheel(JPH::Vec3 position, bool isSteering)
 }
 
 
+void VehicleSettings::AddWheel(JPH::Vec3 position, bool isSteering)
+{
+    SDL_Log("Add Wheel with position %f, %f, %f", 
+            position.GetX(), position.GetY(), position.GetZ());
+	const float wheel_radius = 0.45f;
+	const float wheel_width = 0.2f;
+    JPH::WheelSettingsWV *wheel = new JPH::WheelSettingsWV;
+	wheel->mPosition = position;
+    wheel->mMaxSteerAngle = isSteering ? SDL_PI_F / 8.0 : 0;
+    wheel->mRadius = wheel_radius;
+    wheel->mWidth = wheel_width;
+    wheel->mSuspensionMinLength = 0.1f;
+    wheel->mSuspensionMaxLength = 0.3f;
+
+    mWheels.push_back(wheel);
+}
+
+
 void Vehicle::AddCollisionBox(JPH::Vec3 position, JPH::Vec3 scale)
 {
+    SDL_Log("Adding collision box with size (%f, %f, %f) and pos (%f, %f, %f",
+            scale.GetX(), scale.GetY(), scale.GetZ(),
+            position.GetX(), position.GetY(), position.GetZ());
+    if (!mCompoundShape) {
+        mCompoundShape = new JPH::StaticCompoundShapeSettings;
+    }
 
+    JPH::Ref<JPH::Shape> shape = JPH::OffsetCenterOfMassShapeSettings(-position, new JPH::BoxShape(scale)).Create().Get();
+    mCompoundShape->AddShape(position, JPH::Quat::sIdentity(), shape);
+}
+
+
+void VehicleSettings::AddCollisionBox(JPH::Vec3 position, JPH::Vec3 scale)
+{
     SDL_Log("Adding collision box with size (%f, %f, %f) and pos (%f, %f, %f",
             scale.GetX(), scale.GetY(), scale.GetZ(),
             position.GetX(), position.GetY(), position.GetZ());
@@ -166,12 +212,14 @@ JPH::WheelSettings* Vehicle::GetWheelRL()
 }
 
 
-void Vehicle::Init()
+void Vehicle::Init(VehicleSettings &settings)
 {
     JPH::PhysicsSystem &physicsSystem = Phys::GetPhysicsSystem();
     JPH::BodyInterface &bodyInterface = physicsSystem.GetBodyInterface();
 
-    static VehicleSettings settings = GetVehicleSettingsFromFile("data/car.json");
+    //static VehicleSettings settings = GetVehicleSettingsFromFile("data/car.json");
+    mWheels = settings.mWheels;
+    mCompoundShape = settings.mCompoundShape;
 
     JPH::Vec3 frontWheelUp = JPH::Vec3(SDL_sin(settings.frontCamber), SDL_cos(settings.frontCamber), 0.0);
     JPH::Vec3 rearWheelUp = JPH::Vec3(SDL_sin(settings.rearCamber), SDL_cos(settings.rearCamber), 0.0);
@@ -187,6 +235,7 @@ void Vehicle::Init()
     JPH::WheelSettings *fl = GetWheelFL();
     JPH::WheelSettings *rr = GetWheelRR();
     JPH::WheelSettings *rl = GetWheelRL();
+    SDL_assert(fr != nullptr && fl != nullptr && rr != nullptr && rl != nullptr);
     fr->mWheelUp = frontWheelUp * flipX;
     fl->mWheelUp = frontWheelUp;
     rr->mWheelUp = rearWheelUp * flipX;
@@ -210,6 +259,7 @@ void Vehicle::Init()
     
 	// Create vehicle body
     JPH::RVec3 position(6, 3, 12);
+    SDL_assert(mCompoundShape != nullptr);
     JPH::BodyCreationSettings carBodySettings(mCompoundShape, position, 
                                               JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), 0.0f),
                                               JPH::EMotionType::Dynamic, Phys::Layers::MOVING);
@@ -253,7 +303,7 @@ void Vehicle::Init()
     mVehicleConstraint->SetPostCollideCallback(VehiclePostCollideCallback);
 
 	static_cast<JPH::WheeledVehicleController *>(mVehicleConstraint->GetController())->SetTireMaxImpulseCallback(
-		[](JPH::uint, float &outLongitudinalImpulse, float &outLateralImpulse, float inSuspensionImpulse, float inLongitudinalFriction, float inLateralFriction, float, float, float)
+		[=](JPH::uint, float &outLongitudinalImpulse, float &outLateralImpulse, float inSuspensionImpulse, float inLongitudinalFriction, float inLateralFriction, float, float, float)
 		{
             JPH::uint velSteps = Phys::GetPhysicsSystem().GetPhysicsSettings()
                                                          .mNumVelocitySteps;
@@ -394,3 +444,25 @@ void Vehicle::Destroy()
     bodyInterface.RemoveBody(mBody->GetID());
     bodyInterface.DestroyBody(mBody->GetID());
 }
+
+
+Vehicle* CreateVehicle()
+{
+    Vehicle *newVehicle = new Vehicle;
+    existingVehicles.push_back(newVehicle);
+    return newVehicle;
+}
+
+void DestroyVehicle(Vehicle *toDestroy)
+{
+    for (size_t i = 0; i < existingVehicles.size(); i++) {
+        if (existingVehicles[i] == toDestroy) {
+            existingVehicles[i]->Destroy();
+            existingVehicles[i] = nullptr;
+        }
+    }
+    delete toDestroy;
+}
+
+    
+

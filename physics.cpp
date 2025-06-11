@@ -42,7 +42,8 @@ PhysicsSystem physics_system;
 Body *floorBody;
 Vec3 forwardDir;
 
-Vehicle car;
+Vehicle *car;
+Vehicle *car2;
 
 std::optional<BroadPhaseLayerInterfaceTable> broad_phase_layer_interface = std::nullopt;
 std::optional<ObjectLayerPairFilterTable> object_vs_object_layer_filter = std::nullopt;
@@ -52,14 +53,6 @@ std::optional<TempAllocatorImpl> temp_allocator = std::nullopt;
 std::optional<JobSystemThreadPool> job_system = std::nullopt;
 
 std::vector<BodyID> mapBodyIds;
-
-// Audio
-Audio::Sound *engineSnd;
-Audio::Sound *driftSnd;
-
-
-
-Array<Ref<WheelSettings>> carWheels;
 
 
 // Callback for traces, connect this to your own trace function if you have one
@@ -280,7 +273,7 @@ void Phys::SetupSimulation()
 	//BodyInterface &body_interface = physics_system.GetBodyInterface();
 
     //Phys::CreateCarBody();
-    car.Init();
+    //car->Init();
     
 
 	// Optional step: Before starting the physics simulation you can optimize the broad phase. This improves collision detection performance (it's pointless here because we only have 2 bodies).
@@ -292,7 +285,8 @@ void Phys::SetupSimulation()
 
 void Phys::PhysicsStep(float delta) 
 {
-    car.Update(delta);
+    car->Update(delta);
+    car2->Update(delta);
 
     // If you take larger steps than 1 / 60th of a second you need to do multiple collision steps in order to keep the simulation stable. Do 1 collision step per 1 / 60th of a second (round up).
     const int cCollisionSteps = 1;
@@ -306,7 +300,8 @@ void Phys::PhysicsStep(float delta)
 
 void Phys::ProcessInput()
 {
-    car.ProcessInput();
+    car->ProcessInput();
+    car2->ProcessInput();
 }
 
 
@@ -323,7 +318,8 @@ void Phys::CleanUp()
 	// Unregisters all types with the factory and cleans up the default material
     UnregisterTypes();
 
-    car.Destroy();
+    DestroyVehicle(car);
+    DestroyVehicle(car2);
 
 	// Destroy the factory
 	delete Factory::sInstance;
@@ -331,9 +327,21 @@ void Phys::CleanUp()
 }
 
 
+void Phys::CreateCars()
+{
+    car = CreateVehicle();
+    car2 = CreateVehicle();
+}
+
+
 Vehicle& Phys::GetCar()
 {
-    return car;
+    return *car;
+}
+
+Vehicle& Phys::GetCar2()
+{
+    return *car2;
 }
 
 

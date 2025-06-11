@@ -62,7 +62,9 @@ namespace Phys {
     void CleanUp();
     void ProcessInput();
     void SetForwardDir(JPH::Vec3 dir);
+    void CreateCars();
     Vehicle& GetCar();
+    Vehicle& GetCar2();
     JPH::PhysicsSystem& GetPhysicsSystem();
     JPH::BodyInterface&  GetBodyInterface();
 }

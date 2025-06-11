@@ -9,6 +9,8 @@
 #include <Jolt/RegisterTypes.h>
 
 
+
+
 // Forward Declarations
 namespace Audio {
     struct Sound;
@@ -16,6 +18,9 @@ namespace Audio {
 
 struct VehicleSettings
 {
+    void AddWheel(JPH::Vec3 position, bool isSteering);
+    void AddCollisionBox(JPH::Vec3 position, JPH::Vec3 scale);
+
     float mass;
     float frontCamber;
     float frontToe;
@@ -27,6 +32,8 @@ struct VehicleSettings
     float longGrip;
     float latGrip;
     float maxTorque;
+    JPH::Ref<JPH::StaticCompoundShapeSettings> mCompoundShape;
+    JPH::Array<JPH::Ref<JPH::WheelSettings>> mWheels;
 };
 
 struct Vehicle
@@ -36,7 +43,7 @@ struct Vehicle
     bool IsWheelFlipped(int wheelIndex);
     void Update(float delta);
     void ProcessInput();
-    void Init();
+    void Init(VehicleSettings &settings);
     void Destroy();
 
     float mForward, mBrake, mSteer, mSteerTarget, mHandbrake;
@@ -58,3 +65,9 @@ struct Vehicle
     JPH::Ref<JPH::VehicleConstraint> mVehicleConstraint;
     JPH::Ref<JPH::VehicleCollisionTester> mColTester;
 };
+
+VehicleSettings GetVehicleSettingsFromFile(const char* filename);
+Vehicle* GetVehicleFromVehicleConstraint(const JPH::VehicleConstraint *constraint);
+Vehicle* CreateVehicle();
+void DestroyVehicle(Vehicle *toDestroy);
+
