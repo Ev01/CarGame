@@ -27,7 +27,6 @@ static ShaderProg skyboxShader;
 static ShaderProg screenShader;
 static SDL_Window *window;
 static SDL_GLContext context;
-static glm::mat4 projection; 
 
 static Texture skyboxTex;
 
@@ -112,8 +111,8 @@ static unsigned int msTexColourBuffer;
 static unsigned int quadVAO;
 static unsigned int quadVBO;
 
-static const int fbWidth = 1080;
-static const int fbHeight = 720;
+static const int fbWidth = 1600;
+static const int fbHeight = 900;
 //static const int fbWidth = 800;
 //static const int fbHeight = 600;
 
@@ -331,8 +330,9 @@ bool Render::Init()
     /*
     cam.Init(SDL_PI_F / 4.0, 800.0f / 600.0f, 0.1f, 1000.0f);
     */
-    cam2.Init(SDL_PI_F / 4.0, 800.0f / 600.0f, 0.1f, 1000.0f);
-    cam3.Init(SDL_PI_F / 4.0, 800.0f / 600.0f, 0.1f, 1000.0f);
+    float aspect = ScreenAspect();
+    cam2.Init(SDL_PI_F / 4.0, aspect, 0.1f, 1000.0f);
+    cam3.Init(SDL_PI_F / 4.0, aspect, 0.1f, 1000.0f);
     
     //cam2.cam.pos.z = 6.0f;
     //cam2.cam.SetYawPitch(-SDL_PI_F / 2.0, 0);
@@ -346,6 +346,18 @@ bool Render::Init()
 
     return true;
 }
+
+float Render::ScreenAspect()
+{
+    int screenWidth, screenHeight;
+    bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
+    if (screenSuccess) {
+        // Divide aspect by 2.0 for split screen
+        return (float) screenWidth / (float) screenHeight / 2.0;
+    }
+    return 0.0;
+}
+
 
 
 Camera& Render::GetCamera()
@@ -372,7 +384,7 @@ void Render::PhysicsUpdate(double delta)
     //SDL_Log("Car yaw: %f, x: %f, z: %f", carYaw, carDir.GetX(), carDir.GetZ());
     //cam.SetFollowSmooth(carYaw + yawOffset, camPitch, camDist, carPos, 
     //                    angleSmooth * delta, distSmooth * delta);
-    cam2.SetFollowSmooth(yawOffset, camPitch, camDist, 
+    cam2.SetFollowSmooth(0, camPitch, camDist, 
                         angleSmooth * delta, distSmooth * delta);
     cam3.SetFollowSmooth(yawOffset, camPitch, camDist, 
                         angleSmooth * delta, distSmooth * delta);
@@ -406,7 +418,9 @@ void Render::RenderFrame(const Model &mapModel,
 {
     int screenWidth, screenHeight;
     bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
-    glViewport(0, 0, fbWidth, fbHeight);
+    if (screenSuccess) {
+        glViewport(0, 0, screenWidth, screenHeight);
+    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, msFBO);
     glEnable(GL_DEPTH_TEST);
@@ -414,19 +428,29 @@ void Render::RenderFrame(const Model &mapModel,
     glClearDepth(1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    RenderScene(mapModel, carModel, wheelModel);
+    // Render left screen
+    if (screenSuccess) {
+        glViewport(0, 0, screenWidth/2, screenHeight);
+    }
+    RenderScene(cam2.cam, mapModel, carModel, wheelModel);
+    
+    // Render right screen
+    if (screenSuccess) {
+        glViewport(screenWidth/2, 0, screenWidth/2, screenHeight);
+    }
+    RenderScene(cam3.cam, mapModel, carModel, wheelModel);
 
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, msFBO);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
-    glBlitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight,
+    glBlitFramebuffer(0, 0, screenWidth, screenHeight,
+                      0, 0, screenWidth, screenHeight,
                       GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
-    if (screenSuccess) {
-        glViewport(0, 0, screenWidth, screenHeight);
-    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glViewport(0, 0, fbWidth, fbHeight);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -451,11 +475,12 @@ void Render::RenderFrame(const Model &mapModel,
 }
 
 
-void Render::RenderScene(const Model &mapModel,
+void Render::RenderScene(const Camera &cam, const Model &mapModel,
                          const Model &carModel, const Model &wheelModel)
 {
     glm::mat4 view;
     glm::mat4 projection;
+    /*
     switch (currentCamNum) {
         case 0:
             view = cam2.cam.LookAtMatrix(up);
@@ -466,6 +491,9 @@ void Render::RenderScene(const Model &mapModel,
             projection = cam3.cam.projection;
             break;
     }
+    */
+    view = cam.LookAtMatrix(up);
+    projection = cam.projection;
 
     glm::mat4 model = glm::mat4(1.0f);
     int windowWidth;
@@ -609,9 +637,11 @@ void Render::HandleEvent(SDL_Event *event)
         int height = event->window.data2;
         glViewport(0, 0, width, height);
 
-        cam2.cam.aspect = (float) width / height;
+        // Divide aspect by 2.0 for split screen
+        float aspect = (float) width / height / 2.0;
+        cam2.cam.aspect = aspect;
         cam2.cam.CalcProjection();
-        cam3.cam.aspect = (float) width / height;
+        cam3.cam.aspect = aspect;
         cam3.cam.CalcProjection();
     }
     else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_F11) {

@@ -42,10 +42,11 @@ namespace Render {
     void Update(double delta);
     void RenderFrame(const Model &mapModel,
                      const Model &carModel, const Model &wheelModel);
-    void RenderScene(const Model &mapModel,
+    void RenderScene(const Camera &cam, const Model &mapModel,
                      const Model &carModel, const Model &wheelModel);
     void HandleEvent(SDL_Event *event);
     void DeleteAllLights();
+    float ScreenAspect();
     SDL_Window* GetWindow();
     SDL_GLContext& GetGLContext();
     void CleanUp();
