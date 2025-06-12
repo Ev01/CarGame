@@ -300,8 +300,8 @@ void Phys::PhysicsStep(float delta)
 
 void Phys::ProcessInput()
 {
-    car->ProcessInput();
-    car2->ProcessInput();
+    car->ProcessInput(false);
+    car2->ProcessInput(true);
 }
 
 

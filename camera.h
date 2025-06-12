@@ -4,11 +4,14 @@
 
 #include <SDL3/SDL.h>
 
+namespace JPH {
+    struct Body;
+}
 
 struct Camera {
-    glm::vec3 pos;
+    glm::vec3 pos = glm::vec3(0.0);
     // May not be normalised
-    glm::vec3 dir;
+    glm::vec3 dir = glm::vec3(1.0, 0.0, 0.0);
     float fov;
     float near;
     float far;
@@ -30,5 +33,14 @@ struct Camera {
     //void rotate(float angle, glm::vec3 axis);
 
     //glm::vec3 direction();
+};
+
+
+struct VehicleCamera {
+    Camera cam;
+    JPH::Body *targetBody;
+
+    void SetFollowSmooth(float yaw, float pitch, float dist, double angleSmoothing, double distSmoothing);
+    void Init(float aFov, float aAspect, float aNear, float aFar);
 };
 

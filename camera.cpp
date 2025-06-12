@@ -1,7 +1,15 @@
 #include "camera.h"
 
+#include "physics.h"
+#include "convert.h"
+
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
+
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
+#include <Jolt/Physics/Body/BodyInterface.h>
 
 
 
@@ -113,4 +121,42 @@ void Camera::SetOrbit(float dist, float height, glm::vec3 targ)
     pos = targ - difference * dist;
     pos.y = targ.y + height;
     dir = targ - pos;
+}
+
+
+void VehicleCamera::SetFollowSmooth(float yaw, float pitch, float dist,
+                                    double angleSmoothing,
+                                    double distSmoothing)
+{
+    JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
+    JPH::Vec3 targJolt = bodyInterface.GetCenterOfMassPosition(targetBody->GetID());
+    JPH::Quat rot = bodyInterface.GetRotation(targetBody->GetID());
+    JPH::Vec3 targDir = rot.RotateAxisX();
+    float targYaw = SDL_PI_F - SDL_atan2f(targDir.GetX(), targDir.GetZ());
+
+    glm::vec3 targ = ToGlmVec3(targJolt);
+    cam.SetFollowSmooth(targYaw + yaw, pitch, dist, targ, angleSmoothing, distSmoothing);
+    
+    // Cast ray for camera
+    // Doing it this way still makes the camera clip through a little bit. To
+    // fix this, a spherecast could be used with a radius equal to the camera's
+    // near-plane clipping distance. This code should also be applied before 
+    // smoothing. For this, the camera's target
+    // position may need to be stored to separate this code from smoothing.
+    
+    JPH::Vec3 newCamPos;
+    JPH::Vec3 camPosJolt = ToJoltVec3(cam.pos);
+    JPH::Vec3 camToTarg = targJolt - camPosJolt;
+    JPH::IgnoreSingleBodyFilter carBodyFilter = JPH::IgnoreSingleBodyFilter(targetBody->GetID());
+    bool hadHit = Phys::CastRay(targJolt - camToTarg/2.0, -camToTarg/2.0, newCamPos, carBodyFilter);
+    if (hadHit) {
+        cam.pos = ToGlmVec3(newCamPos);
+    }
+}
+
+
+
+void VehicleCamera::Init(float aFov, float aAspect, float aNear, float aFar)
+{
+    cam.Init(aFov, aAspect, aNear, aFar);
 }

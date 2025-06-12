@@ -42,7 +42,7 @@ struct Vehicle
     void AddCollisionBox(JPH::Vec3 position, JPH::Vec3 scale);
     bool IsWheelFlipped(int wheelIndex);
     void Update(float delta);
-    void ProcessInput();
+    void ProcessInput(bool useGamepad=false);
     void Init(VehicleSettings &settings);
     void Destroy();
 

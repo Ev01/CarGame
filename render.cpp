@@ -32,7 +32,10 @@ static glm::mat4 projection;
 static Texture skyboxTex;
 
 static Model cubeModel;
-static Camera cam;
+//static Camera cam;
+static VehicleCamera cam2;
+static VehicleCamera cam3;
+static int currentCamNum = 0;
 // Camera Settings
 static float camPitch = -0.2f;
 static float camDist = 14.0f;
@@ -325,10 +328,14 @@ bool Render::Init()
     glBindVertexArray(0);
 
     // Camera
+    /*
     cam.Init(SDL_PI_F / 4.0, 800.0f / 600.0f, 0.1f, 1000.0f);
-    cam.pos.z = 6.0f;
-    cam.SetYawPitch(-SDL_PI_F / 2.0, 0);
-
+    */
+    cam2.Init(SDL_PI_F / 4.0, 800.0f / 600.0f, 0.1f, 1000.0f);
+    cam3.Init(SDL_PI_F / 4.0, 800.0f / 600.0f, 0.1f, 1000.0f);
+    
+    //cam2.cam.pos.z = 6.0f;
+    //cam2.cam.SetYawPitch(-SDL_PI_F / 2.0, 0);
 
     // ----- Framebuffer -----
     CreateFramebuffer(&fbo, &textureColourBuffer, &rbo);
@@ -343,39 +350,32 @@ bool Render::Init()
 
 Camera& Render::GetCamera()
 {
-    return cam;
+    return cam2.cam;
 }
 
 
 void Render::PhysicsUpdate(double delta)
 {
+    /*
     JPH::Vec3 carPosJolt = Phys::GetCar().GetPos();
     glm::vec3 carPos = ToGlmVec3(carPosJolt);
     JPH::Quat carRot = Phys::GetCar().GetRotation();
     JPH::Vec3 carDir = carRot.RotateAxisX();
     float carYaw = SDL_PI_F - SDL_atan2f(carDir.GetX(), carDir.GetZ());
-    float yawOffset;
+    */
+    float yawOffset = 0;
     if (Input::GetGamepad()) {
         yawOffset = SDL_PI_F / 2.0f * Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHTX);
     }
+    cam2.targetBody = Phys::GetCar().mBody;
+    cam3.targetBody = Phys::GetCar2().mBody;
     //SDL_Log("Car yaw: %f, x: %f, z: %f", carYaw, carDir.GetX(), carDir.GetZ());
-    cam.SetFollowSmooth(carYaw + yawOffset, camPitch, camDist, carPos, 
+    //cam.SetFollowSmooth(carYaw + yawOffset, camPitch, camDist, carPos, 
+    //                    angleSmooth * delta, distSmooth * delta);
+    cam2.SetFollowSmooth(yawOffset, camPitch, camDist, 
                         angleSmooth * delta, distSmooth * delta);
-    //cam.SetFollow(carYaw + yawOffset, camPitch, camDist, carPos);
-    // Cast ray for camera
-    // Doing it this way still makes the camera clip through a little bit. To
-    // fix this, a spherecast could be used with a radius equal to the camera's
-    // near-plane clipping distance. This code should also be moved to the
-    // camera and applied before smoothing. For this, the camera's target
-    // position may need to be stored to separate this code from smoothing.
-    JPH::Vec3 newCamPos;
-    JPH::Vec3 camPosJolt = ToJoltVec3(cam.pos);
-    JPH::Vec3 camToCar = carPosJolt - camPosJolt;
-    JPH::IgnoreSingleBodyFilter carBodyFilter = JPH::IgnoreSingleBodyFilter(Phys::GetCar().mBody->GetID());
-    bool hadHit = Phys::CastRay(carPosJolt - camToCar/2.0,  -camToCar/2.0,  newCamPos, carBodyFilter);
-    if (hadHit) {
-        cam.pos = ToGlmVec3(newCamPos);
-    }
+    cam3.SetFollowSmooth(yawOffset, camPitch, camDist, 
+                        angleSmooth * delta, distSmooth * delta);
 }
 
 
@@ -384,14 +384,18 @@ void Render::Update(double delta)
 {
     // Update Camera
     ImGui::Begin("Cool window");
-    float fovDegrees = glm::degrees(cam.fov);
+    float fovDegrees = glm::degrees(cam2.cam.fov);
     ImGui::SliderFloat("FOV", &fovDegrees, 20.0f, 140.0f);
-    cam.SetFovAndRecalcProjection(glm::radians(fovDegrees));
+    cam2.cam.SetFovAndRecalcProjection(glm::radians(fovDegrees));
+    cam3.cam.SetFovAndRecalcProjection(glm::radians(fovDegrees));
     ImGui::SliderFloat("Camera Pitch", &camPitch,
                        -SDL_PI_F / 2.0f, SDL_PI_F / 2.0);
     ImGui::SliderFloat("Camera Distance", &camDist, 0.0f, 30.0f);
     ImGui::SliderFloat("Camera Angle Smoothing", &angleSmooth, 0.0f, 20.0f);
     ImGui::SliderFloat("Camera Distance Smoothing", &distSmooth, 0.0f, 20.0f);
+
+    const char* items[] = {"Cam1", "Cam2"};
+    ImGui::Combo("Camera", &currentCamNum, items, 2);
     ImGui::End();
 }
 
@@ -450,8 +454,20 @@ void Render::RenderFrame(const Model &mapModel,
 void Render::RenderScene(const Model &mapModel,
                          const Model &carModel, const Model &wheelModel)
 {
+    glm::mat4 view;
+    glm::mat4 projection;
+    switch (currentCamNum) {
+        case 0:
+            view = cam2.cam.LookAtMatrix(up);
+            projection = cam2.cam.projection;
+            break;
+        case 1:
+            view = cam3.cam.LookAtMatrix(up);
+            projection = cam3.cam.projection;
+            break;
+    }
+
     glm::mat4 model = glm::mat4(1.0f);
-    glm::mat4 view = cam.LookAtMatrix(up);
     int windowWidth;
     int windowHeight;
     if (!SDL_GetWindowSize(window, &windowWidth, &windowHeight)) {
@@ -462,7 +478,7 @@ void Render::RenderScene(const Model &mapModel,
 
     glUseProgram(shader.id);
 
-    shader.SetMat4fv((char*)"projection", glm::value_ptr(cam.projection));
+    shader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
     shader.SetMat4fv((char*)"view", glm::value_ptr(view));
 
     glm::vec3 sunCol = sunLight.mColour / glm::vec3(1.0);
@@ -573,7 +589,7 @@ void Render::RenderScene(const Model &mapModel,
     glm::mat4 skyboxView = glm::mat4(glm::mat3(view));
     glUseProgram(skyboxShader.id);
 
-    skyboxShader.SetMat4fv((char*)"projection", glm::value_ptr(cam.projection));
+    skyboxShader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
     skyboxShader.SetMat4fv((char*)"view", glm::value_ptr(skyboxView));
     skyboxShader.SetInt((char*)"skybox", 0);
 
@@ -593,8 +609,10 @@ void Render::HandleEvent(SDL_Event *event)
         int height = event->window.data2;
         glViewport(0, 0, width, height);
 
-        cam.aspect = (float) width / height;
-        cam.CalcProjection();
+        cam2.cam.aspect = (float) width / height;
+        cam2.cam.CalcProjection();
+        cam3.cam.aspect = (float) width / height;
+        cam3.cam.CalcProjection();
     }
     else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_F11) {
         SDL_SetWindowFullscreen(window, !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN));

@@ -399,15 +399,15 @@ void Vehicle::Update(float delta)
 }
 
 
-void Vehicle::ProcessInput()
+void Vehicle::ProcessInput(bool useGamepad)
 {
-    if (Input::GetGamepad()) {
+    if (useGamepad && Input::GetGamepad()) {
         mForward = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
         mBrake = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER);
         mSteerTarget = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_LEFTX);
         mHandbrake = (float) Input::GetGamepadButton(SDL_GAMEPAD_BUTTON_SOUTH);
     }
-    else {
+    else if (!useGamepad) {
         mSteerTarget = Input::GetScanAxis(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT);
         mBrake = (float) Input::IsScanDown(SDL_SCANCODE_DOWN);
         mForward = (float) Input::IsScanDown(SDL_SCANCODE_UP);
@@ -425,7 +425,7 @@ JPH::RMat44 Vehicle::GetWheelTransform(int wheelNum)
 
 JPH::RVec3 Vehicle::GetPos()
 {
-    JPH::BodyInterface &bodyInterface = Phys::GetPhysicsSystem().GetBodyInterface();
+    JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
     return bodyInterface.GetCenterOfMassPosition(mBody->GetID());
 }
 
