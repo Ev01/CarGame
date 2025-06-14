@@ -72,14 +72,24 @@ fixed later.
 11/06
 - [x] Properly delete OpenGl textures
 
+12/06
+- [x] Two cars
+- [x] Split screen
+
+12/06
+- Add music
 
 
+- [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())
 - [ ] Car headlights
 - [ ] Edit car paramters with GUI (Dear ImGUI)
-- [ ] Two cars
-- [ ] Split screen
 - [ ] Fix materials not loading properly when switching maps sometimes
 - [ ] Refactor with world struct/class
 - [ ] Get model from filename anywhere without loading it twice
 - [ ] Time trial with checkpoints
+- [ ] Speedometer
+- [ ] Luminosity
+- [ ] Crash sound effect
+- [ ] Adjust drift volume
+- [ ] FPS / VSync controls on GUI
 

@@ -8,13 +8,15 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 # set(CMAKE_BUILD_TYPE Debug)
 set(Jolt_ROOT "../JoltPhysics/Build/Debug/")
 set(SDL3_ROOT "~/SDL/build/Debug/")
-set(SDL_image_ROOT "~/SDL/build/Debug/")
+set(SDL3_image_ROOT "~/SDL_image/build/Debug/")
+set(SDL3_mixer_ROOT "~/SDL_mixer/build/Debug/")
 set(assimp_ROOT "~../assimp-src/build/Debug/generated")
 
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
 find_package(assimp REQUIRED)
 find_package(Jolt CONFIG REQUIRED)
+find_package(SDL3_mixer REQUIRED)
 
 add_library(imgui)
 add_subdirectory(vendor/imgui)
@@ -43,5 +45,5 @@ PRIVATE
 )
 
 #target_include_directories(car PUBLIC ../JoltPhysics)
-target_link_libraries(car PRIVATE SDL3::SDL3 SDL3_image::SDL3_image assimp::assimp Jolt::Jolt imgui -static-libgcc -static-libstdc++)
+target_link_libraries(car PRIVATE SDL3::SDL3 SDL3_image::SDL3_image SDL3_mixer::SDL3_mixer assimp::assimp Jolt::Jolt imgui -static-libgcc -static-libstdc++)
 #target_link_libraries(physics_test PRIVATE SDL3::SDL3)

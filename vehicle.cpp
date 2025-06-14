@@ -14,6 +14,7 @@
 using json = nlohmann::json;
 
 #include <SDL3/SDL.h>
+#include <SDL3_mixer/SDL_mixer.h>
 #include <vector>
 
 std::vector<Vehicle*> existingVehicles;
@@ -28,28 +29,39 @@ static void VehiclePostCollideCallback(JPH::VehicleConstraint &inVehicle, const 
     JPH::WheeledVehicleController *controller = static_cast<JPH::WheeledVehicleController*>
         (inVehicle.GetController());
     JPH::VehicleEngine &engine = controller->GetEngine();
+    /*
     float rpm = engine.GetCurrentRPM();
     SDL_SetAudioStreamFrequencyRatio(car->engineSnd->stream, rpm / 2000.0f + 0.5);
+    //SDL_SetAudioStreamGain(car->engineSnd->stream, rpm / 3000.0f + 0.3);
+    SDL_SetAudioStreamGain(car->engineSnd->stream, 0);
 
     float averageSlip = 0;
     float slipLong;
     //Wheel *wheel1 = vehicleConstraint->GetWheels()[0];
     //SDL_Log("ang vel: %f", wheel1->GetAngularVelocity());
     for (JPH::Wheel *wheel : inVehicle.GetWheels()) {
+        JPH::WheelWV *wheel2 = static_cast<JPH::WheelWV*> (wheel);
         if (!wheel->HasContact()) {
             continue;
         }
         JPH::Vec3 wPos = JPH::Vec3(car->mBody->GetWorldTransform() * JPH::Vec4(wheel->GetSettings()->mPosition, 1.0f));
         JPH::Vec3 wVel = car->mBody->GetPointVelocity(wPos);
-        float wheelLongVel = wheel->GetAngularVelocity() * wheel->GetSettings()->mRadius;
-        slipLong = SDL_fabsf(wheelLongVel) - SDL_fabsf(wVel.Dot(wheel->GetContactLongitudinal()));
-        slipLong = SDL_fabsf(slipLong);
+        //float wheelLongVel = wheel->GetAngularVelocity() * wheel->GetSettings()->mRadius;
+        //slipLong = SDL_fabsf(wheelLongVel) - SDL_fabsf(wVel.Dot(wheel->GetContactLongitudinal()));
+        //slipLong = SDL_fabsf(slipLong);
         //SDL_Log("%f", slipLong);
 
-        float slipLat = wVel.Dot(wheel->GetContactLateral());
-        float slip = slipLong*slipLong + slipLat*slipLat;
+        slipLong = wheel2->mLongitudinalSlip;
+
+        //float slipLat = wVel.Dot(wheel->GetContactLateral());
+
+        float slipLat = SDL_sin(wheel2->mLateralSlip) * wVel.Length();
+
+        float slip = SDL_sqrt(slipLong*slipLong + slipLat*slipLat);
         averageSlip += slip / inVehicle.GetWheels().size();
-        //SDL_Log("slip long: %f, lat: %f", slipLong, slipLat);
+        if (car == &Phys::GetCar()) {
+            SDL_Log("slip long: %f, lat: %f", slipLong, slipLat);
+        }
     }
     //SDL_Log("slip long: %f", SDL_fabsf(slipLong));
     //SDL_Log("wheel velocity: %f", wVel.Length());
@@ -63,6 +75,7 @@ static void VehiclePostCollideCallback(JPH::VehicleConstraint &inVehicle, const 
     float driftPitch = car->mBody->GetLinearVelocity().Length() / 30.0f + 0.6;
     SDL_SetAudioStreamFrequencyRatio(car->driftSnd->stream, driftPitch);
     SDL_SetAudioStreamGain(car->driftSnd->stream, driftGain);
+    */
 }
 
 
@@ -396,6 +409,53 @@ void Vehicle::Update(float delta)
 
 
     controller->SetDriverInput(mForward, mSteer, mBrake, mHandbrake);
+
+    SDL_SetAudioStreamFrequencyRatio(engineSnd->stream, rpm / 2000.0f + 0.5);
+    SDL_SetAudioStreamGain(engineSnd->stream, rpm / 3000.0f + 0.3);
+
+    float averageSlip = 0;
+    float slipLong;
+    //Wheel *wheel1 = vehicleConstraint->GetWheels()[0];
+    //SDL_Log("ang vel: %f", wheel1->GetAngularVelocity());
+    for (JPH::Wheel *wheel : mVehicleConstraint->GetWheels()) {
+        JPH::WheelWV *wheel2 = static_cast<JPH::WheelWV*> (wheel);
+        if (!wheel2->HasContact()) {
+            continue;
+        }
+        JPH::Vec3 wPos = JPH::Vec3(mBody->GetWorldTransform() * JPH::Vec4(wheel->GetSettings()->mPosition, 1.0f));
+        JPH::Vec3 wVel = mBody->GetPointVelocity(wPos);
+        float wheelLongVel = wheel->GetAngularVelocity() * wheel->GetSettings()->mRadius;
+        slipLong = SDL_fabsf(wheelLongVel) - SDL_fabsf(wVel.Dot(wheel->GetContactLongitudinal()));
+        slipLong = SDL_fabsf(slipLong);
+        //SDL_Log("%f", slipLong);
+
+        //slipLong = SDL_min(wheel2->mLongitudinalSlip, 1.0) * 10.0;
+        //slipLong *= wVel.Dot(wheel->GetContactLongitudinal());
+
+        //float slipLat = wVel.Dot(wheel->GetContactLateral());
+
+        float slipLat = SDL_sin(wheel2->mLateralSlip) * wVel.Length();
+
+        constexpr float gain = 4.0;
+        float slip = SDL_sqrt(slipLong*slipLong + slipLat*slipLat) * gain;
+        averageSlip += slip / mVehicleConstraint->GetWheels().size();
+        /*if (this == &Phys::GetCar()) {
+            SDL_Log("slip long: %f, lat: %f", slipLong, slipLat);
+        }
+        */
+    }
+    //SDL_Log("slip long: %f", SDL_fabsf(slipLong));
+    //SDL_Log("wheel velocity: %f", wVel.Length());
+    //SDL_Log("Wheels: %d", vehicleConstraint->GetWheels().size());
+    //SDL_Log("ang vel: %f", wheel->GetAngularVelocity());
+    //SDL_Log("%f, %f, %f", wPos.GetX(), wPos.GetY(), wPos.GetZ());
+    //SDL_Log("Slip average: %f", averageSlip);
+
+
+    float driftGain = SDL_min(averageSlip / 130.0f, 1.0f);
+    float driftPitch = mBody->GetLinearVelocity().Length() / 30.0f + 0.6;
+    SDL_SetAudioStreamFrequencyRatio(driftSnd->stream, driftPitch);
+    SDL_SetAudioStreamGain(driftSnd->stream, driftGain);
 }
 
 

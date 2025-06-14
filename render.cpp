@@ -40,6 +40,7 @@ static float camPitch = -0.2f;
 static float camDist = 14.0f;
 static float angleSmooth = 3.0f;
 static float distSmooth = 10.0f;
+static bool doSplitScreen = true;
 
 static float skyboxVertices[] = {
     // positions          
@@ -353,7 +354,11 @@ float Render::ScreenAspect()
     bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
     if (screenSuccess) {
         // Divide aspect by 2.0 for split screen
-        return (float) screenWidth / (float) screenHeight / 2.0;
+        float aspect = (float) screenWidth / (float) screenHeight;
+        if (doSplitScreen) {
+            aspect /= 2.0;
+        }
+        return aspect;
     }
     return 0.0;
 }
@@ -408,6 +413,15 @@ void Render::Update(double delta)
 
     const char* items[] = {"Cam1", "Cam2"};
     ImGui::Combo("Camera", &currentCamNum, items, 2);
+    bool splitBefore = doSplitScreen;
+    ImGui::Checkbox("Splitscreen", &doSplitScreen);
+    if (doSplitScreen != splitBefore) {
+        float aspect = ScreenAspect();
+        cam2.cam.aspect = aspect;
+        cam3.cam.aspect = aspect;
+        cam2.cam.CalcProjection();
+        cam3.cam.CalcProjection();
+    }
     ImGui::End();
 }
 
@@ -429,17 +443,19 @@ void Render::RenderFrame(const Model &mapModel,
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Render left screen
+    int playerScreenWidth = doSplitScreen ? screenWidth / 2 : screenWidth;
     if (screenSuccess) {
-        glViewport(0, 0, screenWidth/2, screenHeight);
+        glViewport(0, 0, playerScreenWidth, screenHeight);
     }
     RenderScene(cam2.cam, mapModel, carModel, wheelModel);
     
     // Render right screen
-    if (screenSuccess) {
-        glViewport(screenWidth/2, 0, screenWidth/2, screenHeight);
+    if (doSplitScreen) {
+        if (screenSuccess) {
+            glViewport(screenWidth/2, 0, playerScreenWidth, screenHeight);
+        }
+        RenderScene(cam3.cam, mapModel, carModel, wheelModel);
     }
-    RenderScene(cam3.cam, mapModel, carModel, wheelModel);
-
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, msFBO);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
@@ -638,7 +654,10 @@ void Render::HandleEvent(SDL_Event *event)
         glViewport(0, 0, width, height);
 
         // Divide aspect by 2.0 for split screen
-        float aspect = (float) width / height / 2.0;
+        float aspect = (float) width / height;
+        if (doSplitScreen) {
+            aspect /= 2;
+        }
         cam2.cam.aspect = aspect;
         cam2.cam.CalcProjection();
         cam3.cam.aspect = aspect;

@@ -1,6 +1,7 @@
 #include "audio.h"
 
 #include <SDL3/SDL.h>
+#include <SDL3_mixer/SDL_mixer.h>
 
 #include <vector>
 
@@ -15,6 +16,8 @@ static SDL_AudioDeviceID audioDevice;
 static std::vector<SoundFile> loadedSounds;
 static std::vector<Audio::Sound*> existingSounds;
 
+static Mix_Music *music;
+
 static bool openAudioDevice()
 {
     audioDevice = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
@@ -22,6 +25,12 @@ static bool openAudioDevice()
         SDL_Log("Could not open audio device: %s", SDL_GetError());
         return false;
     }
+    
+    if (!Mix_OpenAudio(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL)) {
+        SDL_Log("SDL_mixer could not open audio: %s", SDL_GetError());
+    }
+    
+
     SDL_Log("Opened audio device");
     return true;
 }
@@ -60,7 +69,23 @@ static Audio::SoundData getSoundDataFromFile(const char* filename)
 void Audio::Init()
 {
     openAudioDevice();
+    music = Mix_LoadMUS("sound/basam2w2.mp3");
+    if (music == NULL) {
+        SDL_Log("Couldn't load music: %s", SDL_GetError());
+    }
+    else {
+        //Mix_FadeInMusic(music, -1, 2000);
+        Mix_PlayMusic(music, -1);
+        Mix_VolumeMusic(MIX_MAX_VOLUME);
+    }
 }
+
+
+void Audio::CleanUp()
+{
+    Mix_FreeMusic(music);
+}
+
 
 Audio::Sound* Audio::CreateSoundFromFile(const char* filename)
 {

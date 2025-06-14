@@ -28,7 +28,7 @@
 #define MOUSE_SENSITIVITY 0.001f
 #define CAM_SPEED 4.0f
 #define PHYSICS_STEP_TIME 1.0 / 60
-
+#define FPS_RECORD_SIZE 100
 
 
 std::unique_ptr<Model> monkeyModel;
@@ -45,12 +45,32 @@ static glm::vec3 mapSpawnPoint = glm::vec3(0.0f);
 const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
 double delta, lastFrame;
+// Array of FPS values of the last few frames. Current frame is at
+// fpsRecordsPosition. Used to calculate average FPS.
+double fpsRecords[FPS_RECORD_SIZE];
+int fpsRecordPosition = 0;
+double averageFps = 0.0;
 float physicsTime = 0;
 
 float yaw = -SDL_PI_F / 2.0;
 float pitch;
 
 VehicleSettings carSettings;
+
+/*
+ * Records the newFps into the fpsRecords array and updates the average FPS.
+ */
+static void RecordFps(double newFps)
+{
+    fpsRecordPosition++;
+    if (fpsRecordPosition >= FPS_RECORD_SIZE) {
+        fpsRecordPosition -= FPS_RECORD_SIZE; 
+    }
+    averageFps -= fpsRecords[fpsRecordPosition] / (double) FPS_RECORD_SIZE;
+    fpsRecords[fpsRecordPosition] = newFps;
+    averageFps += newFps / (double) FPS_RECORD_SIZE;
+}
+
 
 
 double GetSeconds()
@@ -241,9 +261,10 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
-
     delta = GetSeconds() - lastFrame;
     lastFrame = GetSeconds();
+
+    RecordFps(1.0 / delta);
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
@@ -288,6 +309,27 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         delete testMap;
     }
     ImGui::End();
+
+    ImGui::Begin("FPS");
+    int interval;
+    if (SDL_GL_GetSwapInterval(&interval)) {
+        bool vSync = interval != 0;
+        ImGui::Checkbox("VSync", &vSync);
+        interval = (int) vSync;
+        SDL_GL_SetSwapInterval(interval);
+    }
+    else {
+        ImGui::Text("Couldn't get GL swap interval (VSync)");
+    }
+    static double fpsLimit = 300.0;
+    const double fpsSliderMin = 0.0;
+    const double fpsSliderMax = 300.0;
+    //ImGui::SliderFloat("FPS Limit", &fpsLimit, 0.0, 300.0);
+    ImGui::SliderScalar("FPS Limit", ImGuiDataType_Double, &fpsLimit, 
+                        &fpsSliderMin, &fpsSliderMax);
+    ImGui::Text("Current FPS: %f", 1.0 / delta);
+    ImGui::Text("Average %d frames: %f", FPS_RECORD_SIZE, averageFps);
+    ImGui::End();
         
 
     Camera &cam = Render::GetCamera();
@@ -308,17 +350,18 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     Render::RenderFrame(*mapModel, *carModel, *wheelModel);
 
+    if (fpsLimit > 0.0) {
+        double delta2 = GetSeconds() - lastFrame;
 
-    double delta2 = GetSeconds() - lastFrame;
-
-    constexpr double sfp = 1.0 / 300.0;
-    //SDL_Log("delta: %f", delta);
-    if (delta2 < sfp) {
-        double toDelaySeconds = (sfp - delta2);
-        //SDL_Log("Delta is %f. Delaying %f nanoseconds. SFP: %f", delta2, toDelaySeconds, sfp);
-        //double delayBefore = GetSeconds();
-        SDL_DelayPrecise((Uint64)(toDelaySeconds * 1000000000.0));
-        //SDL_Log("Real delay: %f", GetSeconds() - delayBefore);
+        double sfp = 1.0 / fpsLimit;
+        //SDL_Log("delta: %f", delta);
+        if (delta2 < sfp) {
+            double toDelaySeconds = (sfp - delta2);
+            //SDL_Log("Delta is %f. Delaying %f nanoseconds. SFP: %f", delta2, toDelaySeconds, sfp);
+            //double delayBefore = GetSeconds();
+            SDL_DelayPrecise((Uint64)(toDelaySeconds * 1000000000.0));
+            //SDL_Log("Real delay: %f", GetSeconds() - delayBefore);
+        }
     }
     return SDL_APP_CONTINUE;
 }

@@ -34,6 +34,7 @@ namespace Audio
     */
 
     void Init();
+    void CleanUp();
     void Update();
     Sound* CreateSoundFromFile(const char* filename);
     

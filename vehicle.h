@@ -12,6 +12,7 @@
 
 
 // Forward Declarations
+struct Mix_Chunk;
 namespace Audio {
     struct Sound;
 };
@@ -59,6 +60,7 @@ struct Vehicle
 
     Audio::Sound *engineSnd;
     Audio::Sound *driftSnd;
+
     JPH::Body *mBody;
     JPH::Ref<JPH::StaticCompoundShapeSettings> mCompoundShape;
     JPH::Array<JPH::Ref<JPH::WheelSettings>> mWheels;
