@@ -52,7 +52,11 @@ struct Vehicle
     void Init(VehicleSettings &settings);
     void Destroy();
 
-    float mForward, mBrake, mSteer, mSteerTarget, mHandbrake;
+    float mForward = 0;
+    float mBrake = 0;
+    float mSteer = 0;
+    float mSteerTarget = 0;
+    float mHandbrake = 0;
     float mDrivingDir = 1.0f;
 
     JPH::RMat44 GetWheelTransform(int wheelNum);
