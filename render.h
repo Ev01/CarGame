@@ -29,15 +29,18 @@ namespace Render {
         glm::vec3 mDirection;
         glm::vec3 mColour;
 
-        float mQuadratic;
-        float mCutoffInner;
-        float mCutoffOuter;
+        float mQuadratic = 1.0;
+        float mCutoffInner = 0.0;
+        float mCutoffOuter = 0.0;
     };
         
 
     bool Init();
     Camera& GetCamera();
     void AssimpAddLight(const aiLight *light, const aiNode *node, aiMatrix4x4 transform);
+    Render::SpotLight* CreateSpotLight();
+    void DestroySpotLight(SpotLight *spotLight);
+    //SpotLight& GetSpotLightById(unsigned int id);
     void PhysicsUpdate(double delta);
     void Update(double delta);
     void RenderFrame(const Model &mapModel,

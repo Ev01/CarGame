@@ -17,6 +17,7 @@
 #include "physics.h"
 #include "vehicle.h"
 #include "convert.h"
+#include "world.h"
 
 #include "glad/glad.h"
 #include "model.h"
@@ -106,6 +107,12 @@ bool CarNodeCallback(const aiNode *node, aiMatrix4x4 transform)
     else if (SDL_strncmp(node->mName.C_Str(), "CollisionBox", 12) == 0) {
         carSettings.AddCollisionBox(ToJoltVec3(aPosition), ToJoltVec3(aScale));
     }
+    else if (SDL_strcmp(node->mName.C_Str(), "HeadLightLeft") == 0) {
+        carSettings.headLightLeftTransform = joltTransform;
+    }
+    else if (SDL_strcmp(node->mName.C_Str(), "HeadLightRight") == 0) {
+        carSettings.headLightRightTransform = joltTransform;
+    }
     return true;
 }
 
@@ -127,6 +134,15 @@ static bool MapNodeCallback(const aiNode *node, const aiMatrix4x4 transform)
 }
 
 
+static void LightCallback(const aiLight *aLight, const aiNode *aNode,
+                           aiMatrix4x4 aTransform)
+{
+    World::AssimpAddLight(aLight, aNode, aTransform);
+    Render::AssimpAddLight(aLight, aNode, aTransform);
+}
+
+
+
 /*
 static void GLAPIENTRY GLErrorCallback(GLenum source, GLenum type,
                                        GLuint, GLenum severity,
@@ -143,7 +159,11 @@ static void GLAPIENTRY GLErrorCallback(GLenum source, GLenum type,
 static void AssimpTest()
 {
     Assimp::Importer importer;
-    const aiScene *scene = importer.ReadFile("models/no_tex_map.gltf", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+    /*const aiScene *scene = */importer.ReadFile(
+            "models/no_tex_map.gltf",
+            aiProcess_Triangulate 
+            | aiProcess_FlipUVs 
+            | aiProcess_CalcTangentSpace);
 }
 
 
@@ -186,7 +206,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     cylinderModel = std::unique_ptr<Model>(LoadModel("models/cylinder.obj"));
     carModel = std::unique_ptr<Model>(LoadModel("models/mycar.gltf", CarNodeCallback));
     wheelModel = std::unique_ptr<Model>(LoadModel("models/wheel.gltf"));
-    mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, Render::AssimpAddLight));
+    mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, LightCallback));
     //map1Model = LoadModel("models/map1.gltf", NULL, Render::AssimpAddLight);
 
     //currentMap = &mapModel;
@@ -275,6 +295,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     static int currentItem = 0;
     ImGui::Combo("Map", &currentItem, items, 3);
     if (ImGui::Button("Change map")) {
+        //Render::DeleteAllLights();
+        World::DestroyAllLights();
         Render::DeleteAllLights();
         mapSpawnPoint = glm::vec3(0.0f);
         JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
@@ -283,17 +305,17 @@ SDL_AppResult SDL_AppIterate(void *appstate)
             case 0:
                 SDL_Log("sizeof: %lld", sizeof(*mapModel));
                 mapModel.reset(LoadModel("models/no_tex_map.gltf",
-                               MapNodeCallback, Render::AssimpAddLight));
+                               MapNodeCallback, LightCallback));
                 Phys::LoadMap(*mapModel);
                 break;
             case 1:
                 mapModel.reset(LoadModel("models/map1.gltf",
-                               MapNodeCallback, Render::AssimpAddLight));
+                               MapNodeCallback, LightCallback));
                 Phys::LoadMap(*mapModel);
                 break;
             case 2:
                 mapModel.reset(LoadModel("models/simple_map.gltf",
-                               MapNodeCallback, Render::AssimpAddLight));
+                               MapNodeCallback, LightCallback));
                 Phys::LoadMap(*mapModel);
                 break;
 

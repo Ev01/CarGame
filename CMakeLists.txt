@@ -41,6 +41,7 @@ PRIVATE
     input.cpp
     audio.cpp
     render.cpp
+    world.cpp
     glad/glad.c
 )
 

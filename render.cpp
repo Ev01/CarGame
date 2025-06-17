@@ -20,7 +20,7 @@
 #include <SDL3/SDL.h>
 
 static std::vector<Render::Light> lights;
-static std::vector<Render::SpotLight> spotLights;
+static std::vector<Render::SpotLight*> spotLights;
 static Render::SunLight sunLight;
 static ShaderProg shader;
 static ShaderProg skyboxShader;
@@ -218,6 +218,7 @@ void Render::AssimpAddLight(const aiLight *aLight, const aiNode *aNode, aiMatrix
             SDL_Log("Sun direction = %f, %f, %f", sunLight.mDirection.x, sunLight.mDirection.y, sunLight.mDirection.z);
             break;
 
+        /*
         case aiLightSource_SPOT:
             SDL_Log("Adding Spot light %s...", aNode->mName.C_Str());
             SpotLight spotLight;
@@ -240,14 +241,57 @@ void Render::AssimpAddLight(const aiLight *aLight, const aiNode *aNode, aiMatrix
 
             spotLights.push_back(spotLight);
             break;
+        */
 
         default:
-            SDL_Log("Light not supported");
+            //SDL_Log("Light not supported");
             break;
     }
             
 
 }
+
+
+Render::SpotLight* Render::CreateSpotLight()
+{
+    SpotLight *newSpotLight = new SpotLight;
+    for (size_t i = 0; i < spotLights.size(); i++) {
+        // Look for null value in spotLights vector
+        if (spotLights[i] == nullptr) {
+            spotLights[i] = newSpotLight;
+            return newSpotLight;
+        }
+    }
+    // If no null value, add to end
+    spotLights.push_back(newSpotLight);
+    return newSpotLight;
+}
+
+
+void Render::DestroySpotLight(SpotLight *spotLight)
+{
+    for (size_t i = 0; i < spotLights.size(); i++) {
+        if (spotLights[i] == spotLight) {
+            spotLights[i] = nullptr;
+            delete spotLight;
+            return;
+        }
+    }
+
+    SDL_Log("Warning: Called DestroySpotLight, but spot light was not in spotLights vector.");
+    delete spotLight;
+}
+
+
+
+/*
+Render::SpotLight& Render::GetSpotLightById(unsigned int id)
+{
+    SDL_assert(spotLights.size() > id); // This spotlight was deleted
+    return spotLights[id];
+}
+*/
+    
 
 
 bool Render::Init()
@@ -396,7 +440,6 @@ void Render::PhysicsUpdate(double delta)
 }
 
 
-
 void Render::Update(double delta)
 {
     // Update Camera
@@ -424,7 +467,6 @@ void Render::Update(double delta)
     }
     ImGui::End();
 }
-
 
 
 void Render::RenderFrame(const Model &mapModel,
@@ -559,27 +601,28 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel,
     }
 
     for (size_t i = 0; i < spotLights.size(); i++) {
-        glm::vec3 lightCol = spotLights[i].mColour / glm::vec3(1.0);
+        if (spotLights[i] == nullptr) continue;
+        glm::vec3 lightCol = spotLights[i]->mColour / glm::vec3(1.0);
         //glm::vec3 lightCol = glm::vec3(6000.0);
         SDL_snprintf(uniformName, 64, "spotLights[%llu].diffuse", i);
         shader.SetVec3(uniformName, glm::value_ptr(lightCol));
         SDL_snprintf(uniformName, 64, "spotLights[%llu].specular", i);
         shader.SetVec3(uniformName, glm::value_ptr(lightCol));
 
-        glm::vec3 viewPos = glm::vec3(view * glm::vec4(spotLights[i].mPosition, 1.0));
+        glm::vec3 viewPos = glm::vec3(view * glm::vec4(spotLights[i]->mPosition, 1.0));
         SDL_snprintf(uniformName, 64, "spotLights[%llu].position", i);
         shader.SetVec3(uniformName, glm::value_ptr(viewPos));
 
-        glm::vec3 viewDir = glm::vec3(view * glm::vec4(spotLights[i].mDirection, 0.0));
+        glm::vec3 viewDir = glm::vec3(view * glm::vec4(spotLights[i]->mDirection, 0.0));
         SDL_snprintf(uniformName, 64, "spotLights[%llu].direction", i);
         shader.SetVec3(uniformName, glm::value_ptr(viewDir));
 
         SDL_snprintf(uniformName, 64, "spotLights[%llu].quadratic", i);
-        shader.SetFloat(uniformName, spotLights[i].mQuadratic);
+        shader.SetFloat(uniformName, spotLights[i]->mQuadratic);
         SDL_snprintf(uniformName, 64, "spotLights[%llu].cutoffInner", i);
-        shader.SetFloat(uniformName, spotLights[i].mCutoffInner);
+        shader.SetFloat(uniformName, spotLights[i]->mCutoffInner);
         SDL_snprintf(uniformName, 64, "spotLights[%llu].cutoffOuter", i);
-        shader.SetFloat(uniformName, spotLights[i].mCutoffOuter);
+        shader.SetFloat(uniformName, spotLights[i]->mCutoffOuter);
     }
 
 
@@ -646,6 +689,7 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel,
     glDepthMask(GL_TRUE);
 }
 
+
 void Render::HandleEvent(SDL_Event *event)
 {
     if (event->type == SDL_EVENT_WINDOW_RESIZED) {
@@ -672,7 +716,7 @@ void Render::HandleEvent(SDL_Event *event)
 void Render::DeleteAllLights()
 {
     lights.clear();
-    spotLights.clear();
+    //spotLights.clear();
     sunLight.mDirection = glm::vec3(0.0);
     sunLight.mColour = glm::vec3(0.0);
 }

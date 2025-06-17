@@ -79,6 +79,9 @@ fixed later.
 12/06
 - Add music
 
+14/06
+- [x] FPS / VSync controls on GUI
+
 
 - [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())
 - [ ] Car headlights
@@ -91,5 +94,4 @@ fixed later.
 - [ ] Luminosity
 - [ ] Crash sound effect
 - [ ] Adjust drift volume
-- [ ] FPS / VSync controls on GUI
 

@@ -2,6 +2,8 @@
 #include "audio.h"
 #include "input.h"
 #include "physics.h"
+#include "render.h"
+#include "convert.h"
 
 
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
@@ -22,13 +24,13 @@ std::vector<Vehicle*> existingVehicles;
 
 static void VehiclePostCollideCallback(JPH::VehicleConstraint &inVehicle, const JPH::PhysicsStepListenerContext &inContext)
 {
-    Vehicle *car = GetVehicleFromVehicleConstraint(&inVehicle);
-    SDL_assert(car != nullptr); // Have all vehicles been created with
+    //Vehicle *car = GetVehicleFromVehicleConstraint(&inVehicle);
+    //SDL_assert(car != nullptr); // Have all vehicles been created with
                                 // CreateVehicle()?
     // Audio stuff
-    JPH::WheeledVehicleController *controller = static_cast<JPH::WheeledVehicleController*>
-        (inVehicle.GetController());
-    JPH::VehicleEngine &engine = controller->GetEngine();
+    //JPH::WheeledVehicleController *controller = static_cast<JPH::WheeledVehicleController*>
+    //    (inVehicle.GetController());
+    //JPH::VehicleEngine &engine = controller->GetEngine();
     /*
     float rpm = engine.GetCurrentRPM();
     SDL_SetAudioStreamFrequencyRatio(car->engineSnd->stream, rpm / 2000.0f + 0.5);
@@ -331,6 +333,22 @@ void Vehicle::Init(VehicleSettings &settings)
     //SDL_Log("car com (%f, %f, %f)", com.GetX(), com.GetY(), com.GetZ());
     engineSnd = Audio::CreateSoundFromFile("sound/car_engine.wav");
     driftSnd = Audio::CreateSoundFromFile("sound/drift.wav");
+
+    // Head Lights
+    const float cutoffInner = SDL_cos(SDL_PI_F / 6.0);
+    const float cutoffOuter = SDL_cos(SDL_PI_F / 4.0);
+    headLightLeft = Render::CreateSpotLight();
+    headLightLeft->mColour = glm::vec3(300.0, 200.0, 100.0);
+    headLightLeft->mCutoffInner = cutoffInner;
+    headLightLeft->mCutoffOuter = cutoffOuter;
+
+    headLightRight = Render::CreateSpotLight();
+    headLightRight->mColour = glm::vec3(300.0, 200.0, 100.0);
+    headLightRight->mCutoffInner = cutoffInner;
+    headLightRight->mCutoffOuter = cutoffOuter;
+    
+    headLightLeftTransform = settings.headLightLeftTransform;
+    headLightRightTransform = settings.headLightRightTransform;
     engineSnd->doRepeat = true;
     driftSnd->doRepeat = true;
 }
@@ -456,6 +474,19 @@ void Vehicle::Update(float delta)
     float driftPitch = mBody->GetLinearVelocity().Length() / 30.0f + 0.6;
     SDL_SetAudioStreamFrequencyRatio(driftSnd->stream, driftPitch);
     SDL_SetAudioStreamGain(driftSnd->stream, driftGain);
+
+    JPH::RMat44 bodyTransform = mBody->GetWorldTransform();
+
+    headLightLeft->mPosition = ToGlmVec3(JPH::Vec3(
+                bodyTransform * headLightLeftTransform * JPH::Vec4(0, 0, 0, 1)));
+    headLightLeft->mDirection = ToGlmVec3(JPH::Vec3(
+                bodyTransform * headLightLeftTransform * JPH::Vec4(0, 1, 0, 0)));
+
+    headLightRight->mPosition = ToGlmVec3(JPH::Vec3(
+                bodyTransform * headLightRightTransform * JPH::Vec4(0, 0, 0, 1)));
+    headLightRight->mDirection = ToGlmVec3(JPH::Vec3(
+                bodyTransform * headLightRightTransform * JPH::Vec4(0, 1, 0, 0)));
+
 }
 
 
@@ -503,6 +534,9 @@ void Vehicle::Destroy()
 
     bodyInterface.RemoveBody(mBody->GetID());
     bodyInterface.DestroyBody(mBody->GetID());
+
+    Render::DestroySpotLight(headLightLeft);
+    Render::DestroySpotLight(headLightRight);
 }
 
 

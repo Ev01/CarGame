@@ -16,6 +16,9 @@ struct Mix_Chunk;
 namespace Audio {
     struct Sound;
 };
+namespace Render {
+    struct SpotLight;
+};
 
 struct VehicleSettings
 {
@@ -35,6 +38,8 @@ struct VehicleSettings
     float maxTorque;
     JPH::Ref<JPH::StaticCompoundShapeSettings> mCompoundShape;
     JPH::Array<JPH::Ref<JPH::WheelSettings>> mWheels;
+    JPH::RMat44 headLightLeftTransform;
+    JPH::RMat44 headLightRightTransform;
 };
 
 struct Vehicle
@@ -60,6 +65,10 @@ struct Vehicle
 
     Audio::Sound *engineSnd;
     Audio::Sound *driftSnd;
+    Render::SpotLight *headLightLeft;
+    Render::SpotLight *headLightRight;
+    JPH::RMat44 headLightLeftTransform;
+    JPH::RMat44 headLightRightTransform;
 
     JPH::Body *mBody;
     JPH::Ref<JPH::StaticCompoundShapeSettings> mCompoundShape;
