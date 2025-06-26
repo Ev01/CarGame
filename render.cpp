@@ -36,10 +36,10 @@ static VehicleCamera cam2;
 static VehicleCamera cam3;
 static int currentCamNum = 0;
 // Camera Settings
-static float camPitch = -0.2f;
-static float camDist = 14.0f;
-static float angleSmooth = 3.0f;
-static float distSmooth = 10.0f;
+static float camPitch = -0.4f;
+static float camDist = 6.5f;
+static float angleSmooth = 3.5f;
+static float distSmooth = 17.0f;
 static bool doSplitScreen = true;
 
 static float skyboxVertices[] = {
@@ -375,9 +375,11 @@ bool Render::Init()
     /*
     cam.Init(SDL_PI_F / 4.0, 800.0f / 600.0f, 0.1f, 1000.0f);
     */
+    const float fov = glm::radians(95.0);
+    //const float pitch = 
     float aspect = ScreenAspect();
-    cam2.Init(SDL_PI_F / 4.0, aspect, 0.1f, 1000.0f);
-    cam3.Init(SDL_PI_F / 4.0, aspect, 0.1f, 1000.0f);
+    cam2.Init(fov, aspect, 0.1f, 1000.0f);
+    cam3.Init(fov, aspect, 0.1f, 1000.0f);
     
     //cam2.cam.pos.z = 6.0f;
     //cam2.cam.SetYawPitch(-SDL_PI_F / 2.0, 0);

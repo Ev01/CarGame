@@ -229,6 +229,12 @@ void Model::LoadSceneMaterials(const aiScene *scene)
             SDL_snprintf(filepath, 256, "models/%s", str.C_Str());
             SDL_Log("Loading texture %s", filepath);
             Texture normalMap = CreateTextureFromFile(filepath, false);
+            // Linearly interpolate normal maps
+            /*
+            glBindTexture(GL_TEXTURE_2D, normalMap.id);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            */
             //Texture normalMap = gDefaultNormalMap;
             newMat->normalMap = normalMap;
         }
@@ -458,7 +464,7 @@ Model* LoadModel(std::string path, node_callback_t NodeCallback, light_callback_
         }
         */
 
-        aiColor3D col = scene->mLights[0]->mColorDiffuse;
+        //aiColor3D col = scene->mLights[0]->mColorDiffuse;
         /*
         SDL_Log("Colour: %f, %f, %f", col.r, col.b, col.g);
         SDL_Log("Name: %s", lightName.C_Str());
