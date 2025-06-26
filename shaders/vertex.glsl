@@ -10,22 +10,24 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-out vec3 Normal;
-out vec3 FragPos;
-out vec2 TexCoords;
-out mat3 TBN;
+out VS_OUT {
+    //vec3 Normal;
+    vec3 FragPos;
+    vec2 TexCoords;
+    mat3 TBN;
+} vs_out;
 
 void main() {
     gl_Position = projection * view * model * vec4(aPos, 1.0f);
-    FragPos = vec3(view * model * vec4(aPos, 1.0f));
-    Normal = mat3(transpose(inverse(view * model))) * aNormal;
-    TexCoords = aTexCoords;
+    vs_out.FragPos = vec3(view * model * vec4(aPos, 1.0f));
+    //vs_out.Normal = mat3(transpose(inverse(view * model))) * aNormal;
+    vs_out.TexCoords = aTexCoords;
 
     vec3 T = normalize(vec3(view * model * vec4(aTangent,    0.0)));
     vec3 B = normalize(vec3(view * model * vec4(aBitTangent, 0.0)));
     vec3 N = normalize(vec3(view * model * vec4(aNormal,     0.0)));
     //vec3 B = cross(N, T);
 
-    TBN = mat3(T, B, N);
+    vs_out.TBN = mat3(T, B, N);
 }
 

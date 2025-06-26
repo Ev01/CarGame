@@ -1,9 +1,11 @@
 #version 330 core
 
-in vec3 Normal;
-in vec3 FragPos;
-in vec2 TexCoords;
-in mat3 TBN;
+in VS_OUT {
+    //in vec3 Normal;
+    in vec3 FragPos;
+    in vec2 TexCoords;
+    in mat3 TBN;
+} fs_in;
 
 out vec4 FragColor;
 
@@ -73,12 +75,12 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 void main() {
     //vec3 norm = normalize(Normal);
 
-    vec3 norm = texture(material.normalMap, TexCoords).rgb;
+    vec3 norm = texture(material.normalMap, fs_in.TexCoords).rgb;
     // RGB is from 0.0 to 1.0. Normals coords should be from -1.0 to 1.0.
     norm = norm * 2.0 - 1.0;
-    norm = normalize(TBN * norm);
+    norm = normalize(fs_in.TBN * norm);
 
-    vec3 viewDir = normalize(-FragPos);
+    vec3 viewDir = normalize(-fs_in.FragPos);
     
 
     // Outgoing radiance
@@ -87,21 +89,21 @@ void main() {
     
     
     for (int i = 0; i < NUM_POINT_LIGHTS; i++) {
-        Lo += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
+        Lo += CalcPointLight(pointLights[i], norm, fs_in.FragPos, viewDir);
     }
     
     
     for (int i = 0; i < NUM_SPOT_LIGHTS; i++) {
-        Lo += CalcSpotLight(spotLights[i], norm, FragPos, viewDir);
+        Lo += CalcSpotLight(spotLights[i], norm, fs_in.FragPos, viewDir);
     }
     
     
     vec3 albedo = material.baseColour 
-                * texture(material.albedo, TexCoords).rgb;
+                * texture(material.albedo, fs_in.TexCoords).rgb;
     vec3 ambient = vec3(0.01) * albedo;
     vec3 result  = ambient + Lo;
 
-    //vec4 result = texture(diffuse, TexCoords);
+    //vec4 result = texture(diffuse, fs_in.TexCoords);
     FragColor = vec4(result, 1.0);
     
     //vec3 normCol = (norm + 1.0) / 2.0;
@@ -162,9 +164,9 @@ vec3 CalcLightIntensity(vec3 normal, vec3 lightDir, vec3 viewDir,
     vec3 halfwayDir = normalize(lightDir + viewDir);
 
     vec3 albedo = material.baseColour 
-                * texture(material.albedo, TexCoords).rgb;
+                * texture(material.albedo, fs_in.TexCoords).rgb;
     float metallic = material.metallic;
-    float roughness = texture(material.roughnessMap, TexCoords).r 
+    float roughness = texture(material.roughnessMap, fs_in.TexCoords).r 
                     * material.roughness;
 
 
