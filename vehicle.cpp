@@ -139,15 +139,16 @@ void VehicleSettings::AddWheel(JPH::Vec3 position, bool isSteering)
 {
     SDL_Log("Add Wheel with position %f, %f, %f", 
             position.GetX(), position.GetY(), position.GetZ());
-	const float wheel_radius = 0.45f;
-	const float wheel_width = 0.2f;
+	const float wheel_radius = 0.31f;
+	const float wheel_width = 0.27f;
     JPH::WheelSettingsWV *wheel = new JPH::WheelSettingsWV;
+    //JPH::Vec3 up = JPH::Vec3(0, 1, 0);
 	wheel->mPosition = position;
     wheel->mMaxSteerAngle = isSteering ? SDL_PI_F / 8.0 : 0;
     wheel->mRadius = wheel_radius;
     wheel->mWidth = wheel_width;
-    wheel->mSuspensionMinLength = 0.1f;
-    wheel->mSuspensionMaxLength = 0.3f;
+    wheel->mSuspensionMinLength = suspensionMinLength;
+    wheel->mSuspensionMaxLength = suspensionMaxLength;
 
     mWheels.push_back(wheel);
 }
@@ -236,6 +237,7 @@ void Vehicle::Init(VehicleSettings &settings)
     mWheels = settings.mWheels;
     mCompoundShape = settings.mCompoundShape;
 
+    // Set up wheels
     JPH::Vec3 frontWheelUp = JPH::Vec3(SDL_sin(settings.frontCamber), SDL_cos(settings.frontCamber), 0.0);
     JPH::Vec3 rearWheelUp = JPH::Vec3(SDL_sin(settings.rearCamber), SDL_cos(settings.rearCamber), 0.0);
     JPH::Vec3 frontSteeringAxis = JPH::Vec3(-SDL_tan(settings.frontKingPin), 1, -SDL_tan(settings.frontCaster)).Normalized();
@@ -266,6 +268,12 @@ void Vehicle::Init(VehicleSettings &settings)
     rr->mWheelForward = rearWheelForward * flipX;
     rl->mWheelForward = rearWheelForward;
 
+    // Move wheels up a bit so that they rest where placed in the model.
+    fr->mPosition -= fr->mSuspensionDirection * settings.suspensionMinLength;
+    fl->mPosition -= fl->mSuspensionDirection * settings.suspensionMinLength;
+    rr->mPosition -= rr->mSuspensionDirection * settings.suspensionMinLength;
+    rl->mPosition -= rl->mSuspensionDirection * settings.suspensionMinLength;
+
 
     // Create collision tester
 	//colTester = new VehicleCollisionTesterCastSphere(Layers::MOVING, 0.5f * wheel_width);
@@ -293,13 +301,13 @@ void Vehicle::Init(VehicleSettings &settings)
 	constraintSettings.mController = controller;
     controller->mEngine.mMaxTorque = settings.maxTorque;
 
+    // Set which wheels are driven
 	controller->mDifferentials.resize(1);
     for (unsigned int i = 0; i < mWheels.size(); i++) {
-        JPH::Vec3 pos = mWheels[i]->mPosition;
-        if (pos.GetX() < 0.0f && pos.GetZ() > 1.0f) {
+        if (mWheels[i] == fl) {
             controller->mDifferentials[0].mLeftWheel = i;
         }
-        else if (pos.GetX() > 1.0f && pos.GetZ() > 1.0f) {
+        else if (mWheels[i] == fr) {
             controller->mDifferentials[0].mRightWheel = i;
         }
     }
@@ -311,8 +319,6 @@ void Vehicle::Init(VehicleSettings &settings)
 	mVehicleConstraint = new JPH::VehicleConstraint(*mBody, constraintSettings);
 	physicsSystem.AddConstraint(mVehicleConstraint);
 	physicsSystem.AddStepListener(mVehicleConstraint);
-
-
 
 	mVehicleConstraint->SetVehicleCollisionTester(mColTester);
     mVehicleConstraint->SetPostCollideCallback(VehiclePostCollideCallback);
@@ -349,6 +355,8 @@ void Vehicle::Init(VehicleSettings &settings)
     
     headLightLeftTransform = settings.headLightLeftTransform;
     headLightRightTransform = settings.headLightRightTransform;
+
+    // Sounds
     engineSnd->doRepeat = true;
     driftSnd->doRepeat = true;
 }

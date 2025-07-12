@@ -204,8 +204,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     // Load model
     //monkeyModel = LoadModel("models/monkey.obj");
     cylinderModel = std::unique_ptr<Model>(LoadModel("models/cylinder.obj"));
-    carModel = std::unique_ptr<Model>(LoadModel("models/mycar.gltf", CarNodeCallback));
-    wheelModel = std::unique_ptr<Model>(LoadModel("models/wheel.gltf"));
+    carModel = std::unique_ptr<Model>(LoadModel("models/silvia_s13_ver2.gltf", CarNodeCallback));
+    wheelModel = std::unique_ptr<Model>(LoadModel("models/silvia_wheel.gltf"));
     mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, LightCallback));
     //map1Model = LoadModel("models/map1.gltf", NULL, Render::AssimpAddLight);
 

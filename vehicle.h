@@ -36,6 +36,8 @@ struct VehicleSettings
     float longGrip;
     float latGrip;
     float maxTorque;
+    float suspensionMinLength = 0.1f;
+    float suspensionMaxLength = 0.3f;
     JPH::Ref<JPH::StaticCompoundShapeSettings> mCompoundShape;
     JPH::Array<JPH::Ref<JPH::WheelSettings>> mWheels;
     JPH::RMat44 headLightLeftTransform;
