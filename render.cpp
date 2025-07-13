@@ -394,6 +394,7 @@ bool Render::Init()
     return true;
 }
 
+
 float Render::ScreenAspect()
 {
     int screenWidth, screenHeight;
@@ -408,7 +409,6 @@ float Render::ScreenAspect()
     }
     return 0.0;
 }
-
 
 
 Camera& Render::GetCamera()
@@ -636,40 +636,25 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel,
     shader.SetMat4fv((char*)"model", glm::value_ptr(model));
     mapModel.Draw(shader);
 
-    // Draw Car
-    glm::vec3 carPos = ToGlmVec3(Phys::GetCar().GetPos());
-    glm::mat4 carTrans = glm::mat4(1.0f);
-    carTrans = glm::translate(carTrans, carPos);
-    carTrans = carTrans * QuatToMatrix(Phys::GetCar().GetRotation());
+    // Draw all cars
+    for (Vehicle *car : GetExistingVehicles()) {
+        glm::vec3 carPos = ToGlmVec3(car->GetPos());
+        glm::mat4 carTrans = glm::mat4(1.0f);
+        carTrans = glm::translate(carTrans, carPos);
+        carTrans = carTrans * QuatToMatrix(car->GetRotation());
 
-    carModel.Draw(shader, carTrans);
+        car->mVehicleModel->Draw(shader, carTrans);
 
-
-    // Draw car wheels
-    for (int i = 0; i < 4; i++) {
-        glm::mat4 wheelTrans = ToGlmMat4(Phys::GetCar().GetWheelTransform(i));
-        if (Phys::GetCar().IsWheelFlipped(i)) {
-            wheelTrans = glm::rotate(wheelTrans, SDL_PI_F, glm::vec3(1.0f, 0.0f, 0.0f));
+        // Draw car wheels
+        for (int i = 0; i < 4; i++) {
+            glm::mat4 wheelTrans = ToGlmMat4(car->GetWheelTransform(i));
+            if (car->IsWheelFlipped(i)) {
+                wheelTrans = glm::rotate(wheelTrans, SDL_PI_F, glm::vec3(1.0f, 0.0f, 0.0f));
+            }
+            car->mWheelModel->Draw(shader, wheelTrans);
         }
-        wheelModel.Draw(shader, wheelTrans);
     }
 
-    // Draw Car 2
-    carPos = ToGlmVec3(Phys::GetCar2().GetPos());
-    carTrans = glm::mat4(1.0f);
-    carTrans = glm::translate(carTrans, carPos);
-    carTrans = carTrans * QuatToMatrix(Phys::GetCar2().GetRotation());
-
-    carModel.Draw(shader, carTrans);
-    
-    // Draw car 2 wheels
-    for (int i = 0; i < 4; i++) {
-        glm::mat4 wheelTrans = ToGlmMat4(Phys::GetCar2().GetWheelTransform(i));
-        if (Phys::GetCar2().IsWheelFlipped(i)) {
-            wheelTrans = glm::rotate(wheelTrans, SDL_PI_F, glm::vec3(1.0f, 0.0f, 0.0f));
-        }
-        wheelModel.Draw(shader, wheelTrans);
-    }
 
     // Draw skybox
     

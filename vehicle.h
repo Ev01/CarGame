@@ -8,11 +8,13 @@
 #include <Jolt/Physics/Vehicle/VehicleConstraint.h>
 #include <Jolt/RegisterTypes.h>
 
+#include <string>
 
 
 
 // Forward Declarations
 struct Mix_Chunk;
+struct Model;
 namespace Audio {
     struct Sound;
 };
@@ -22,9 +24,12 @@ namespace Render {
 
 struct VehicleSettings
 {
-    void AddWheel(JPH::Vec3 position, bool isSteering);
+    void AddWheel(JPH::Vec3 position, bool isSteering, float wheelRadius, float wheelWidth);
     void AddCollisionBox(JPH::Vec3 position, JPH::Vec3 scale);
 
+    std::string model_file;
+    Model *vehicleModel;
+    Model *wheelModel;
     float mass;
     float frontCamber;
     float frontToe;
@@ -38,6 +43,8 @@ struct VehicleSettings
     float maxTorque;
     float suspensionMinLength = 0.1f;
     float suspensionMaxLength = 0.3f;
+    float suspensionFrequency = 1.5f;
+    float suspensionDamping = 0.5f;
     JPH::Ref<JPH::StaticCompoundShapeSettings> mCompoundShape;
     JPH::Array<JPH::Ref<JPH::WheelSettings>> mWheels;
     JPH::RMat44 headLightLeftTransform;
@@ -46,20 +53,11 @@ struct VehicleSettings
 
 struct Vehicle
 {
-    void AddWheel(JPH::Vec3 position, bool isSteering);
-    void AddCollisionBox(JPH::Vec3 position, JPH::Vec3 scale);
     bool IsWheelFlipped(int wheelIndex);
     void Update(float delta);
     void ProcessInput(bool useGamepad=false);
     void Init(VehicleSettings &settings);
     void Destroy();
-
-    float mForward = 0;
-    float mBrake = 0;
-    float mSteer = 0;
-    float mSteerTarget = 0;
-    float mHandbrake = 0;
-    float mDrivingDir = 1.0f;
 
     JPH::RMat44 GetWheelTransform(int wheelNum);
     JPH::RVec3 GetPos();
@@ -68,6 +66,14 @@ struct Vehicle
     JPH::WheelSettings* GetWheelFL();
     JPH::WheelSettings* GetWheelRR();
     JPH::WheelSettings* GetWheelRL();
+    void DebugGUI();
+
+    float mForward = 0;
+    float mBrake = 0;
+    float mSteer = 0;
+    float mSteerTarget = 0;
+    float mHandbrake = 0;
+    float mDrivingDir = 1.0f;
 
     Audio::Sound *engineSnd;
     Audio::Sound *driftSnd;
@@ -77,13 +83,22 @@ struct Vehicle
     JPH::RMat44 headLightRightTransform;
 
     JPH::Body *mBody;
+
+    // The below 4 could probably be removed and just have a pointer to
+    // VehicleSettings object instead.
+    Model *mVehicleModel;
+    Model *mWheelModel;
     JPH::Ref<JPH::StaticCompoundShapeSettings> mCompoundShape;
     JPH::Array<JPH::Ref<JPH::WheelSettings>> mWheels;
+
+    VehicleSettings *mSettings = nullptr;
+
     JPH::Ref<JPH::VehicleConstraint> mVehicleConstraint;
     JPH::Ref<JPH::VehicleCollisionTester> mColTester;
 };
 
 VehicleSettings GetVehicleSettingsFromFile(const char* filename);
+const std::vector<Vehicle*> GetExistingVehicles();
 Vehicle* GetVehicleFromVehicleConstraint(const JPH::VehicleConstraint *constraint);
 Vehicle* CreateVehicle();
 void DestroyVehicle(Vehicle *toDestroy);

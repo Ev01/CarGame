@@ -82,9 +82,12 @@ fixed later.
 14/06
 - [x] FPS / VSync controls on GUI
 
+- [x] Car headlights
+
+- [ ] Get car settings parameters with default variable when reading from json
+- [ ] Give vehicles a reference to the VehicleSettings struct
 
 - [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())
-- [ ] Car headlights
 - [ ] Edit car paramters with GUI (Dear ImGUI)
 - [ ] Fix materials not loading properly when switching maps sometimes
 - [ ] Refactor with world struct/class

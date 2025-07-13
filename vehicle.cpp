@@ -5,7 +5,7 @@
 #include "render.h"
 #include "convert.h"
 
-
+#include "vendor/imgui/imgui.h"
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
@@ -99,6 +99,7 @@ Vehicle* GetVehicleFromVehicleConstraint(const JPH::VehicleConstraint *constrain
     json j = json::parse(fileData);
 
     VehicleSettings vs;
+    vs.model_file   = j["model_file"];
     vs.mass         = j["mass"];
     vs.frontCamber  = glm::radians((float) j["front_camber"]);
     vs.frontToe     = glm::radians((float) j["front_toe"]);
@@ -109,62 +110,32 @@ Vehicle* GetVehicleFromVehicleConstraint(const JPH::VehicleConstraint *constrain
     vs.longGrip     = j["long_grip"];
     vs.latGrip      = j["lat_grip"];
     vs.maxTorque    = j["max_torque"];
+    vs.suspensionMinLength = j["suspension_min_length"];
+    vs.suspensionMaxLength = j["suspension_max_length"];
+    vs.suspensionFrequency = j["suspension_frequency"];
+    vs.suspensionDamping =   j["suspension_damping"];
     return vs;
 }
 
 
-void Vehicle::AddWheel(JPH::Vec3 position, bool isSteering)
+void VehicleSettings::AddWheel(JPH::Vec3 position, bool isSteering, float wheelRadius, float wheelWidth)
 {
     SDL_Log("Add Wheel with position %f, %f, %f", 
             position.GetX(), position.GetY(), position.GetZ());
-	const float wheel_radius = 0.45f;
-	const float wheel_width = 0.2f;
-    JPH::WheelSettingsWV *wheel = new JPH::WheelSettingsWV;
-	wheel->mPosition = position;
-    wheel->mMaxSteerAngle = isSteering ? SDL_PI_F / 8.0 : 0;
-    wheel->mRadius = wheel_radius;
-    wheel->mWidth = wheel_width;
-    wheel->mSuspensionMinLength = 0.1f;
-    wheel->mSuspensionMaxLength = 0.3f;
-
-    //wheel->mSuspensionSpring.mFrequency = 0.5f;
-    //wheel->mSuspensionSpring.mDamping = 1.0f;
-
-
-    mWheels.push_back(wheel);
-}
-
-
-void VehicleSettings::AddWheel(JPH::Vec3 position, bool isSteering)
-{
-    SDL_Log("Add Wheel with position %f, %f, %f", 
-            position.GetX(), position.GetY(), position.GetZ());
-	const float wheel_radius = 0.31f;
-	const float wheel_width = 0.27f;
+	//const float wheel_radius = 0.31f;
+	//const float wheel_width = 0.27f;
     JPH::WheelSettingsWV *wheel = new JPH::WheelSettingsWV;
     //JPH::Vec3 up = JPH::Vec3(0, 1, 0);
 	wheel->mPosition = position;
     wheel->mMaxSteerAngle = isSteering ? SDL_PI_F / 8.0 : 0;
-    wheel->mRadius = wheel_radius;
-    wheel->mWidth = wheel_width;
+    wheel->mRadius = wheelRadius;
+    wheel->mWidth = wheelWidth;
     wheel->mSuspensionMinLength = suspensionMinLength;
     wheel->mSuspensionMaxLength = suspensionMaxLength;
+    wheel->mSuspensionSpring.mFrequency = suspensionFrequency;
+    wheel->mSuspensionSpring.mDamping = suspensionDamping;
 
     mWheels.push_back(wheel);
-}
-
-
-void Vehicle::AddCollisionBox(JPH::Vec3 position, JPH::Vec3 scale)
-{
-    SDL_Log("Adding collision box with size (%f, %f, %f) and pos (%f, %f, %f",
-            scale.GetX(), scale.GetY(), scale.GetZ(),
-            position.GetX(), position.GetY(), position.GetZ());
-    if (!mCompoundShape) {
-        mCompoundShape = new JPH::StaticCompoundShapeSettings;
-    }
-
-    JPH::Ref<JPH::Shape> shape = JPH::OffsetCenterOfMassShapeSettings(-position, new JPH::BoxShape(scale)).Create().Get();
-    mCompoundShape->AddShape(position, JPH::Quat::sIdentity(), shape);
 }
 
 
@@ -236,6 +207,8 @@ void Vehicle::Init(VehicleSettings &settings)
     //static VehicleSettings settings = GetVehicleSettingsFromFile("data/car.json");
     mWheels = settings.mWheels;
     mCompoundShape = settings.mCompoundShape;
+    mVehicleModel = settings.vehicleModel;
+    mWheelModel = settings.wheelModel;
 
     // Set up wheels
     JPH::Vec3 frontWheelUp = JPH::Vec3(SDL_sin(settings.frontCamber), SDL_cos(settings.frontCamber), 0.0);
@@ -359,7 +332,30 @@ void Vehicle::Init(VehicleSettings &settings)
     // Sounds
     engineSnd->doRepeat = true;
     driftSnd->doRepeat = true;
+
+    mSettings = &settings;
 }
+
+
+void Vehicle::DebugGUI()
+{
+    JPH::Vec3 flipX = JPH::Vec3(-1, 1, 1);
+
+    ImGui::Begin("Vehicle Debug");
+
+    float frontCamberDeg = glm::degrees(mSettings->frontCamber);
+    const float frontCamberBefore = frontCamberDeg;
+    ImGui::SliderFloat("Front Camber", &frontCamberDeg, -20.0f, 20.0f);
+    if (frontCamberDeg != frontCamberBefore) {
+        mSettings->frontCamber = glm::radians(frontCamberDeg);
+        JPH::Vec3 frontWheelUp = JPH::Vec3(SDL_sin(mSettings->frontCamber), SDL_cos(mSettings->frontCamber), 0.0);
+        GetWheelFR()->mWheelUp = frontWheelUp * flipX;
+        GetWheelFL()->mWheelUp = frontWheelUp;
+    }
+
+    ImGui::End();
+}
+
 
 
 void Vehicle::Update(float delta)
@@ -545,6 +541,12 @@ void Vehicle::Destroy()
 
     Render::DestroySpotLight(headLightLeft);
     Render::DestroySpotLight(headLightRight);
+}
+
+
+const std::vector<Vehicle*> GetExistingVehicles()
+{
+    return existingVehicles;
 }
 
 

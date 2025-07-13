@@ -35,7 +35,9 @@
 std::unique_ptr<Model> monkeyModel;
 std::unique_ptr<Model> cylinderModel;
 std::unique_ptr<Model> carModel;
+std::unique_ptr<Model> carModel2;
 std::unique_ptr<Model> wheelModel;
+std::unique_ptr<Model> wheelModel2;
 std::unique_ptr<Model> mapModel;
 //std::unique_ptr<Model> mapModel2;
 std::unique_ptr<Model> map1Model;
@@ -57,6 +59,8 @@ float yaw = -SDL_PI_F / 2.0;
 float pitch;
 
 VehicleSettings carSettings;
+VehicleSettings carSettings2;
+VehicleSettings *curLoadingVehicleSettings = nullptr;
 
 /*
  * Records the newFps into the fpsRecords array and updates the average FPS.
@@ -79,8 +83,17 @@ double GetSeconds()
     return (double) SDL_GetTicksNS() / (double) SDL_NS_PER_SECOND;
 }
 
+
+void PrepareLoadCar(VehicleSettings *vsToLoad)
+{
+    curLoadingVehicleSettings = vsToLoad;
+}
+
+
 bool CarNodeCallback(const aiNode *node, aiMatrix4x4 transform)
 {
+    SDL_assert(curLoadingVehicleSettings); // Call PrepareLoadCar before loading
+                                           // the car
     aiQuaternion aRotation;
     aiVector3D aPosition;
     aiVector3D aScale;
@@ -88,30 +101,31 @@ bool CarNodeCallback(const aiNode *node, aiMatrix4x4 transform)
 
     JPH::RMat44 joltTransform = ToJoltMat4(transform);
     JPH::Vec3 position = joltTransform.GetTranslation();
+    SDL_Log("%f, %f, %f", aScale.x, aScale.y, aScale.z);
     if (SDL_strcmp(node->mName.C_Str(), "WheelPosFR") == 0) {
-        //SDL_Log("FR, %s", node->mName.C_Str());
-
-        carSettings.AddWheel(position, true);
+        SDL_assert(SDL_fabs(aScale.x - aScale.y) < 0.01); // Wheel is oval-shaped, not circular
+        curLoadingVehicleSettings->AddWheel(position, true, aScale.x, aScale.z);
     }
     else if (SDL_strcmp(node->mName.C_Str(), "WheelPosFL") == 0) {
-        //SDL_Log("FL");
-        carSettings.AddWheel(position, true);
+        SDL_assert(SDL_fabs(aScale.x - aScale.y) < 0.01); // Wheel is oval-shaped, not circular
+        curLoadingVehicleSettings->AddWheel(position, true, aScale.x, aScale.z);
     }
     else if (SDL_strcmp(node->mName.C_Str(), "WheelPosRR") == 0) {
-        //SDL_Log("RR");
-        carSettings.AddWheel(position, false);
+        SDL_assert(SDL_fabs(aScale.x - aScale.y) < 0.01); // Wheel is oval-shaped, not circular
+        curLoadingVehicleSettings->AddWheel(position, false, aScale.x, aScale.z);
     }
     else if (SDL_strcmp(node->mName.C_Str(), "WheelPosRL") == 0) {
-        carSettings.AddWheel(position, false);
+        SDL_assert(SDL_fabs(aScale.x - aScale.y) < 0.01); // Wheel is oval-shaped, not circular
+        curLoadingVehicleSettings->AddWheel(position, false, aScale.x, aScale.z);
     }
     else if (SDL_strncmp(node->mName.C_Str(), "CollisionBox", 12) == 0) {
-        carSettings.AddCollisionBox(ToJoltVec3(aPosition), ToJoltVec3(aScale));
+        curLoadingVehicleSettings->AddCollisionBox(ToJoltVec3(aPosition), ToJoltVec3(aScale));
     }
     else if (SDL_strcmp(node->mName.C_Str(), "HeadLightLeft") == 0) {
-        carSettings.headLightLeftTransform = joltTransform;
+        curLoadingVehicleSettings->headLightLeftTransform = joltTransform;
     }
     else if (SDL_strcmp(node->mName.C_Str(), "HeadLightRight") == 0) {
-        carSettings.headLightRightTransform = joltTransform;
+        curLoadingVehicleSettings->headLightRightTransform = joltTransform;
     }
     return true;
 }
@@ -199,13 +213,25 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     Phys::SetupJolt();
     Phys::CreateCars();
 
+    // Load car 1
     carSettings = GetVehicleSettingsFromFile("data/car.json");
+    PrepareLoadCar(&carSettings);
+    carModel = std::unique_ptr<Model>(LoadModel(carSettings.model_file.c_str(), CarNodeCallback));
+    carSettings.vehicleModel = carModel.get();
+    wheelModel = std::unique_ptr<Model>(LoadModel("models/silvia_wheel.gltf"));
+    carSettings.wheelModel = wheelModel.get();
+
+    // Load car 2
+    carSettings2 = GetVehicleSettingsFromFile("data/car2.json");
+    PrepareLoadCar(&carSettings2);
+    carModel2 = std::unique_ptr<Model>(LoadModel(carSettings2.model_file.c_str(), CarNodeCallback));
+    carSettings2.vehicleModel = carModel2.get();
+    wheelModel2 = std::unique_ptr<Model>(LoadModel("models/wheel.gltf"));
+    carSettings2.wheelModel = wheelModel2.get();
 
     // Load model
     //monkeyModel = LoadModel("models/monkey.obj");
     cylinderModel = std::unique_ptr<Model>(LoadModel("models/cylinder.obj"));
-    carModel = std::unique_ptr<Model>(LoadModel("models/silvia_s13_ver2.gltf", CarNodeCallback));
-    wheelModel = std::unique_ptr<Model>(LoadModel("models/silvia_wheel.gltf"));
     mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, LightCallback));
     //map1Model = LoadModel("models/map1.gltf", NULL, Render::AssimpAddLight);
 
@@ -213,7 +239,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     Phys::SetupSimulation();
     Phys::GetCar().Init(carSettings);
-    Phys::GetCar2().Init(carSettings);
+    Phys::GetCar2().Init(carSettings2);
     Phys::GetBodyInterface().SetPosition(Phys::GetCar2().mBody->GetID(), JPH::Vec3(6.0, 0, 0), JPH::EActivation::Activate);
     
     Phys::LoadMap(*mapModel);
@@ -353,6 +379,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     ImGui::Text("Average %d frames: %f", FPS_RECORD_SIZE, averageFps);
     ImGui::End();
         
+    Phys::GetCar().DebugGUI();
 
     Camera &cam = Render::GetCamera();
 
