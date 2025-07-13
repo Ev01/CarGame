@@ -201,6 +201,7 @@ JPH::WheelSettings* Vehicle::GetWheelRL()
 
 void Vehicle::Init(VehicleSettings &settings)
 {
+    mSettings = &settings;
     JPH::PhysicsSystem &physicsSystem = Phys::GetPhysicsSystem();
     JPH::BodyInterface &bodyInterface = physicsSystem.GetBodyInterface();
 
@@ -242,10 +243,12 @@ void Vehicle::Init(VehicleSettings &settings)
     rl->mWheelForward = rearWheelForward;
 
     // Move wheels up a bit so that they rest where placed in the model.
+    
     fr->mPosition -= fr->mSuspensionDirection * settings.suspensionMinLength;
     fl->mPosition -= fl->mSuspensionDirection * settings.suspensionMinLength;
     rr->mPosition -= rr->mSuspensionDirection * settings.suspensionMinLength;
     rl->mPosition -= rl->mSuspensionDirection * settings.suspensionMinLength;
+    
 
 
     // Create collision tester
@@ -296,16 +299,18 @@ void Vehicle::Init(VehicleSettings &settings)
 	mVehicleConstraint->SetVehicleCollisionTester(mColTester);
     mVehicleConstraint->SetPostCollideCallback(VehiclePostCollideCallback);
 
+    float &longGripRef = mSettings->longGrip;
+    float &latGripRef = mSettings->latGrip;
 	static_cast<JPH::WheeledVehicleController *>(mVehicleConstraint->GetController())->SetTireMaxImpulseCallback(
-		[=](JPH::uint, float &outLongitudinalImpulse, float &outLateralImpulse, float inSuspensionImpulse, float inLongitudinalFriction, float inLateralFriction, float, float, float)
+		[&longGripRef, &latGripRef](JPH::uint, float &outLongitudinalImpulse, float &outLateralImpulse, float inSuspensionImpulse, float inLongitudinalFriction, float inLateralFriction, float, float, float)
 		{
             JPH::uint velSteps = Phys::GetPhysicsSystem().GetPhysicsSettings()
                                                          .mNumVelocitySteps;
 			outLongitudinalImpulse = velSteps * inLongitudinalFriction 
                                      * inSuspensionImpulse
-                                     * settings.longGrip;
+                                     * longGripRef;
 			outLateralImpulse = inLateralFriction * inSuspensionImpulse
-                                * settings.latGrip;
+                                * latGripRef;
 		});
 
     //RVec3 com = Phys::GetCarPos();
@@ -333,25 +338,110 @@ void Vehicle::Init(VehicleSettings &settings)
     engineSnd->doRepeat = true;
     driftSnd->doRepeat = true;
 
-    mSettings = &settings;
 }
 
 
 void Vehicle::DebugGUI()
 {
     JPH::Vec3 flipX = JPH::Vec3(-1, 1, 1);
+    JPH::WheelSettings *fr = GetWheelFR();
+    JPH::WheelSettings *fl = GetWheelFL();
+    JPH::WheelSettings *rr = GetWheelRR();
+    JPH::WheelSettings *rl = GetWheelRL();
 
     ImGui::Begin("Vehicle Debug");
 
+
+    // Front Camber
     float frontCamberDeg = glm::degrees(mSettings->frontCamber);
     const float frontCamberBefore = frontCamberDeg;
     ImGui::SliderFloat("Front Camber", &frontCamberDeg, -20.0f, 20.0f);
     if (frontCamberDeg != frontCamberBefore) {
         mSettings->frontCamber = glm::radians(frontCamberDeg);
         JPH::Vec3 frontWheelUp = JPH::Vec3(SDL_sin(mSettings->frontCamber), SDL_cos(mSettings->frontCamber), 0.0);
-        GetWheelFR()->mWheelUp = frontWheelUp * flipX;
-        GetWheelFL()->mWheelUp = frontWheelUp;
+        fr->mWheelUp = frontWheelUp * flipX;
+        fl->mWheelUp = frontWheelUp;
     }
+
+    // Rear Camber
+    float rearCamberDeg = glm::degrees(mSettings->rearCamber);
+    const float rearCamberBefore = rearCamberDeg;
+    ImGui::SliderFloat("Rear Camber", &rearCamberDeg, -20.0f, 20.0f);
+    if (rearCamberDeg != rearCamberBefore) {
+        mSettings->rearCamber = glm::radians(rearCamberDeg);
+        JPH::Vec3 rearWheelUp = JPH::Vec3(SDL_sin(mSettings->rearCamber), SDL_cos(mSettings->rearCamber), 0.0);
+        rr->mWheelUp = rearWheelUp * flipX;
+        rl->mWheelUp = rearWheelUp;
+    }
+
+    // Front Caster
+    float frontCasterDeg = glm::degrees(mSettings->frontCaster);
+    const float frontCasterBefore = frontCasterDeg;
+    ImGui::SliderFloat("Front Caster", &frontCasterDeg, -45.0f, 45.0f);
+    if (frontCasterDeg != frontCasterBefore) {
+        mSettings->frontCaster = glm::radians(frontCasterDeg);
+        JPH::Vec3 frontSteeringAxis = JPH::Vec3(-SDL_tan(mSettings->frontKingPin), 1, -SDL_tan(mSettings->frontCaster)).Normalized();
+        JPH::Vec3 frontSuspensionDir = frontSteeringAxis * JPH::Vec3(-1, -1, -1);
+        fr->mSteeringAxis = frontSteeringAxis * flipX;
+        fl->mSteeringAxis = frontSteeringAxis;
+        fr->mSuspensionDirection = frontSuspensionDir * flipX;
+        fl->mSuspensionDirection = frontSuspensionDir;
+    }
+    
+    // Front Toe
+    float frontToeDeg = glm::degrees(mSettings->frontToe);
+    const float frontToeBefore = frontToeDeg;
+    ImGui::SliderFloat("Front Toe", &frontToeDeg, -45.0f, 45.0f);
+    if (frontToeDeg != frontToeBefore) {
+        mSettings->frontToe = glm::radians(frontToeDeg);
+        JPH::Vec3 frontWheelForward = JPH::Vec3(-SDL_sin(mSettings->frontToe), 0, SDL_cos(mSettings->frontToe));
+        fr->mWheelForward = frontWheelForward * flipX;
+        fl->mWheelForward = frontWheelForward;
+    }
+    
+    // Rear Toe
+    float rearToeDeg = glm::degrees(mSettings->rearToe);
+    const float rearToeBefore = rearToeDeg;
+    ImGui::SliderFloat("Rear Toe", &rearToeDeg, -45.0f, 45.0f);
+    if (rearToeDeg != rearToeBefore) {
+        mSettings->rearToe = glm::radians(rearToeDeg);
+        JPH::Vec3 rearWheelForward = JPH::Vec3(-SDL_sin(mSettings->rearToe), 0, SDL_cos(mSettings->rearToe));
+        rr->mWheelForward = rearWheelForward * flipX;
+        rl->mWheelForward = rearWheelForward;
+    }
+
+    // Max Torque
+    ImGui::SliderFloat("Max Torque", &(mSettings->maxTorque), 0.0, 1200.0);
+    static_cast<JPH::WheeledVehicleController *>(mVehicleConstraint->GetController())->GetEngine().mMaxTorque = mSettings->maxTorque;
+
+    // Suspension
+    //const float minLengthBefore = mSettings->suspensionMinLength;
+    ImGui::SliderFloat("Suspension Min Length", &(mSettings->suspensionMinLength), 0.0, 1.0);
+    ImGui::SliderFloat("Suspension Max Length", &(mSettings->suspensionMaxLength), 0.0, 1.0);
+    ImGui::SliderFloat("Suspension Frequency", &(mSettings->suspensionFrequency), 0.0, 8.0);
+    ImGui::SliderFloat("Suspension Damping", &(mSettings->suspensionDamping), 0.0, 8.0);
+    for (JPH::Ref<JPH::WheelSettings> wheel : mWheels) {
+        wheel->mSuspensionMinLength = mSettings->suspensionMinLength;
+        wheel->mSuspensionMaxLength = mSettings->suspensionMaxLength;
+        wheel->mSuspensionSpring.mFrequency = mSettings->suspensionFrequency;
+        wheel->mSuspensionSpring.mDamping = mSettings->suspensionDamping;
+    }
+
+    // Mass
+    const float massBefore = mSettings->mass;
+    ImGui::SliderFloat("Mass", &(mSettings->mass), 1.0, 4000.0);
+    if (massBefore != mSettings->mass) {
+        JPH::MotionProperties* motionProperties = mBody->GetMotionProperties();
+        JPH::MassProperties massProperties = mBody->GetShape()->GetMassProperties();
+        massProperties.ScaleToMass(mSettings->mass);
+        motionProperties->SetMassProperties(JPH::EAllowedDOFs::All, massProperties);
+    }
+
+    // Tire Grip
+    ImGui::SliderFloat("Longitudinal Grip", &(mSettings->longGrip), 0.5f, 5.0f);
+    ImGui::SliderFloat("Latiudinal Grip",   &(mSettings->latGrip),  0.5f, 5.0f);
+    
+    ImGui::Text("Current Steering: %f", mSteer);
 
     ImGui::End();
 }
@@ -367,7 +457,11 @@ void Vehicle::Update(float delta)
 
     //mSteer = mSteer + (mSteerTarget - mSteer) * 0.1f;
     if (!Input::GetGamepad()) {
-        mSteer += glm::sign(mSteerTarget - mSteer) * 0.1f;
+        float difference = glm::sign(mSteerTarget - mSteer) * 0.1f;
+        if (SDL_fabsf(difference) > SDL_fabsf(mSteerTarget - mSteer)) {
+            difference = mSteerTarget - mSteer;
+        }
+        mSteer += difference;
         mSteer = SDL_clamp(mSteer, -1.0f, 1.0f);
     } else {
         mSteer = mSteerTarget;

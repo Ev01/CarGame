@@ -1,17 +1,17 @@
 {
     "model_file": "models/silvia_s13_ver2.gltf",
     "mass": 1300.0,
-    "front_camber": -5.0,
+    "front_camber": -0.5,
     "front_toe": 0.8,
-    "front_caster": 20.0,
+    "front_caster": 1.0,
     "front_king_pin": 0.0,
-    "rear_camber": -5.0,
+    "rear_camber": -1.0,
     "rear_toe": 0.0,
     "long_grip": 2.0,
     "lat_grip": 2.0,
-    "max_torque": 400.0,
+    "max_torque": 120.0,
     "suspension_min_length": 0.1,
-    "suspension_max_length": 0.3,
-    "suspension_frequency":  2.0,
-    "suspension_damping":    1.0
+    "suspension_max_length": 0.24,
+    "suspension_frequency":  2.24,
+    "suspension_damping":    0.427
 }

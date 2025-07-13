@@ -37,7 +37,7 @@ static VehicleCamera cam3;
 static int currentCamNum = 0;
 // Camera Settings
 static float camPitch = -0.4f;
-static float camDist = 6.5f;
+static float camDist = 3.7f;
 static float angleSmooth = 3.5f;
 static float distSmooth = 17.0f;
 static bool doSplitScreen = true;
