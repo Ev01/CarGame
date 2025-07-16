@@ -8,6 +8,7 @@
 #include "glad/glad.h"
 #include "physics.h"
 #include "vehicle.h"
+#include "world.h"
 
 #include "vendor/imgui/imgui.h"
 #include "vendor/imgui/backends/imgui_impl_opengl3.h"
@@ -431,8 +432,8 @@ void Render::PhysicsUpdate(double delta)
         yawOffset = SDL_PI_F / 2.0f * Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHTX);
     }
     float yawOffset2 = SDL_PI_F / 2.0f * Input::GetScanAxis(SDL_SCANCODE_D, SDL_SCANCODE_A);
-    cam2.targetBody = Phys::GetCar().mBody;
-    cam3.targetBody = Phys::GetCar2().mBody;
+    cam2.targetBody = World::GetCar().mBody;
+    cam3.targetBody = World::GetCar2().mBody;
     //SDL_Log("Car yaw: %f, x: %f, z: %f", carYaw, carDir.GetX(), carDir.GetZ());
     //cam.SetFollowSmooth(carYaw + yawOffset, camPitch, camDist, carPos, 
     //                    angleSmooth * delta, distSmooth * delta);
@@ -472,8 +473,7 @@ void Render::Update(double delta)
 }
 
 
-void Render::RenderFrame(const Model &mapModel,
-                         const Model &carModel, const Model &wheelModel)
+void Render::RenderFrame(const Model &mapModel)
 {
     int screenWidth, screenHeight;
     bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
@@ -492,14 +492,14 @@ void Render::RenderFrame(const Model &mapModel,
     if (screenSuccess) {
         glViewport(0, 0, playerScreenWidth, screenHeight);
     }
-    RenderScene(cam2.cam, mapModel, carModel, wheelModel);
+    RenderScene(cam2.cam, mapModel);
     
     // Render right screen
     if (doSplitScreen) {
         if (screenSuccess) {
             glViewport(screenWidth/2, 0, playerScreenWidth, screenHeight);
         }
-        RenderScene(cam3.cam, mapModel, carModel, wheelModel);
+        RenderScene(cam3.cam, mapModel);
     }
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, msFBO);
@@ -536,8 +536,7 @@ void Render::RenderFrame(const Model &mapModel,
 }
 
 
-void Render::RenderScene(const Camera &cam, const Model &mapModel,
-                         const Model &carModel, const Model &wheelModel)
+void Render::RenderScene(const Camera &cam, const Model &mapModel)
 {
     glm::mat4 view;
     glm::mat4 projection;

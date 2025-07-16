@@ -181,8 +181,6 @@ static void AssimpTest()
 }
 
 
-
-
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO);
@@ -211,8 +209,16 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     Audio::Init();
 
     Phys::SetupJolt();
-    Phys::CreateCars();
+    World::CreateCars();
 
+
+    // Load model
+    //monkeyModel = LoadModel("models/monkey.obj");
+    cylinderModel = std::unique_ptr<Model>(LoadModel("models/cylinder.obj"));
+    mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, LightCallback));
+    //map1Model = LoadModel("models/map1.gltf", NULL, Render::AssimpAddLight);
+
+    //currentMap = &mapModel;
     // Load car 1
     carSettings = GetVehicleSettingsFromFile("data/car.json");
     PrepareLoadCar(&carSettings);
@@ -229,18 +235,11 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     wheelModel2 = std::unique_ptr<Model>(LoadModel("models/wheel.gltf"));
     carSettings2.wheelModel = wheelModel2.get();
 
-    // Load model
-    //monkeyModel = LoadModel("models/monkey.obj");
-    cylinderModel = std::unique_ptr<Model>(LoadModel("models/cylinder.obj"));
-    mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, LightCallback));
-    //map1Model = LoadModel("models/map1.gltf", NULL, Render::AssimpAddLight);
-
-    //currentMap = &mapModel;
-
     Phys::SetupSimulation();
-    Phys::GetCar().Init(carSettings);
-    Phys::GetCar2().Init(carSettings2);
-    Phys::GetBodyInterface().SetPosition(Phys::GetCar2().mBody->GetID(), JPH::Vec3(6.0, 0, 0), JPH::EActivation::Activate);
+    World::GetCar().Init(carSettings);
+    World::GetCar2().Init(carSettings2);
+    World::Init();
+    Phys::GetBodyInterface().SetPosition(World::GetCar2().mBody->GetID(), JPH::Vec3(6.0, 0, 0), JPH::EActivation::Activate);
     
     Phys::LoadMap(*mapModel);
 
@@ -346,8 +345,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
                 break;
 
         }
-        bodyInterface.SetPosition(Phys::GetCar().mBody->GetID(), ToJoltVec3(mapSpawnPoint), JPH::EActivation::Activate);
-        bodyInterface.SetPosition(Phys::GetCar2().mBody->GetID(), ToJoltVec3(mapSpawnPoint) + JPH::Vec3(6.0, 0, 0), JPH::EActivation::Activate);
+        bodyInterface.SetPosition(World::GetCar().mBody->GetID(), ToJoltVec3(mapSpawnPoint), JPH::EActivation::Activate);
+        bodyInterface.SetPosition(World::GetCar2().mBody->GetID(), ToJoltVec3(mapSpawnPoint) + JPH::Vec3(6.0, 0, 0), JPH::EActivation::Activate);
     }
     if (ImGui::Button("Assimp Test")) {
         AssimpTest();
@@ -379,7 +378,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     ImGui::Text("Average %d frames: %f", FPS_RECORD_SIZE, averageFps);
     ImGui::End();
         
-    Phys::GetCar().DebugGUI();
+    World::GetCar().DebugGUI();
 
     Camera &cam = Render::GetCamera();
 
@@ -387,8 +386,11 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     physicsTime += delta;
     while (physicsTime >= PHYSICS_STEP_TIME) {
         Phys::SetForwardDir(ToJoltVec3(cam.dir));
+        World::PrePhysicsUpdate(PHYSICS_STEP_TIME);
+        World::ProcessInput();
         Phys::ProcessInput();
         Phys::PhysicsStep(PHYSICS_STEP_TIME);
+
         Render::PhysicsUpdate(PHYSICS_STEP_TIME);
         physicsTime -= PHYSICS_STEP_TIME;
     }
@@ -397,7 +399,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     Audio::Update();
     Render::Update(delta);
 
-    Render::RenderFrame(*mapModel, *carModel, *wheelModel);
+    Render::RenderFrame(*mapModel);
 
     if (fpsLimit > 0.0) {
         double delta2 = GetSeconds() - lastFrame;
@@ -418,6 +420,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
 void SDL_AppQuit(void *appstate, SDL_AppResult result)
 {
+    World::CleanUp();
     Phys::CleanUp();
     Render::CleanUp();
 }

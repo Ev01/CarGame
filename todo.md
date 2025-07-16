@@ -83,15 +83,23 @@ fixed later.
 - [x] FPS / VSync controls on GUI
 
 - [x] Car headlights
+- [x] Fix materials not loading properly when switching maps sometimes
 
-- [ ] Get car settings parameters with default variable when reading from json
-- [ ] Give vehicles a reference to the VehicleSettings struct
+13/07
+- [x] Edit car paramters with GUI (Dear ImGUI)
+- Fixed bug where car steers a bit to the side all the time
 
-- [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())
-- [ ] Edit car paramters with GUI (Dear ImGUI)
-- [ ] Fix materials not loading properly when switching maps sometimes
 - [ ] Refactor with world struct/class
-- [ ] Get model from filename anywhere without loading it twice
+      - [x] Move car variables into World
+      - [ ] Create an array of vehicles in World or Vehicle file. Render reads
+	    from this
+      - [ ] Move all vehicle loading code to the vehicle file. This includes the
+	    assimp callback.
+      - [ ] 
+- [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())
+- [ ] Get model from filename anywhere without loading it twice. When loading a
+      model, it will save it to an array if loading it for the first time. Later
+      load calls will return a pointer to the already loaded model.
 - [ ] Time trial with checkpoints
 - [ ] Speedometer
 - [ ] Luminosity

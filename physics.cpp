@@ -6,7 +6,7 @@
 #include "audio.h"
 #include "model.h"
 #include "convert.h"
-#include "vehicle.h"
+//#include "vehicle.h"
 
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayerInterfaceTable.h>
 #include <Jolt/Physics/Collision/BroadPhase/ObjectVsBroadPhaseLayerFilterTable.h>
@@ -16,6 +16,7 @@
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+// Might not be needed
 #include <Jolt/Physics/Vehicle/VehicleConstraint.h>
 #include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
 
@@ -42,8 +43,6 @@ PhysicsSystem physics_system;
 Body *floorBody;
 Vec3 forwardDir;
 
-Vehicle *car;
-Vehicle *car2;
 
 std::optional<BroadPhaseLayerInterfaceTable> broad_phase_layer_interface = std::nullopt;
 std::optional<ObjectLayerPairFilterTable> object_vs_object_layer_filter = std::nullopt;
@@ -285,9 +284,6 @@ void Phys::SetupSimulation()
 
 void Phys::PhysicsStep(float delta) 
 {
-    car->Update(delta);
-    car2->Update(delta);
-
     // If you take larger steps than 1 / 60th of a second you need to do multiple collision steps in order to keep the simulation stable. Do 1 collision step per 1 / 60th of a second (round up).
     const int cCollisionSteps = 1;
 
@@ -300,8 +296,6 @@ void Phys::PhysicsStep(float delta)
 
 void Phys::ProcessInput()
 {
-    car->ProcessInput(false);
-    car2->ProcessInput(true);
 }
 
 
@@ -318,8 +312,6 @@ void Phys::CleanUp()
 	// Unregisters all types with the factory and cleans up the default material
     UnregisterTypes();
 
-    DestroyVehicle(car);
-    DestroyVehicle(car2);
 
 	// Destroy the factory
 	delete Factory::sInstance;
@@ -327,22 +319,8 @@ void Phys::CleanUp()
 }
 
 
-void Phys::CreateCars()
-{
-    car = CreateVehicle();
-    car2 = CreateVehicle();
-}
 
 
-Vehicle& Phys::GetCar()
-{
-    return *car;
-}
-
-Vehicle& Phys::GetCar2()
-{
-    return *car2;
-}
 
 
 JPH::PhysicsSystem& Phys::GetPhysicsSystem()

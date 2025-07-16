@@ -1,6 +1,8 @@
 #include "world.h"
 #include "render.h"
 #include "convert.h"
+#include "vehicle.h"
+#include "model.h"
 
 #include <assimp/matrix4x4.h>
 #include <assimp/types.h>
@@ -11,6 +13,52 @@
 #include <vector>
 
 static std::vector<Render::SpotLight*> spotLights;
+static Vehicle *car;
+static Vehicle *car2;
+
+
+void World::PrePhysicsUpdate(float delta)
+{
+    car->Update(delta);
+    car2->Update(delta);
+}
+
+
+void World::ProcessInput()
+{
+    car->ProcessInput(false);
+    car2->ProcessInput(true);
+}
+
+void World::Init()
+{
+
+}
+
+void World::CleanUp()
+{
+    DestroyVehicle(car);
+    DestroyVehicle(car2);
+}
+
+
+void World::CreateCars()
+{
+    car = CreateVehicle();
+    car2 = CreateVehicle();
+}
+
+
+Vehicle& World::GetCar()
+{
+    return *car;
+}
+
+Vehicle& World::GetCar2()
+{
+    return *car2;
+}
+
 
 void World::AssimpAddLight(const aiLight *aLight, const aiNode *aNode,
                            aiMatrix4x4 aTransform)
