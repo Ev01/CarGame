@@ -6,6 +6,7 @@
 struct aiLight;
 struct aiNode;
 struct Vehicle;
+struct Model;
 
 template<typename TReal> class aiMatrix4x4t;
 typedef aiMatrix4x4t<ai_real> aiMatrix4x4;
@@ -16,10 +17,12 @@ namespace World {
 
     void DestroyAllLights();
     void PrePhysicsUpdate(float delta);
+    void Update(float delta);
     void ProcessInput();
     void Init();
     void CleanUp();
     void CreateCars();
     Vehicle& GetCar();
     Vehicle& GetCar2();
+    Model& GetCurrentMapModel();
 }

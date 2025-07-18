@@ -95,7 +95,7 @@ fixed later.
 	    from this
       - [x] Move all vehicle loading code to the vehicle file. This includes the
 	    assimp callback.
-      - [ ] Move map loading code to the world file
+      - [x] Move map loading code to the world file
 - [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())
 - [ ] Get model from filename anywhere without loading it twice. When loading a
       model, it will save it to an array if loading it for the first time. Later

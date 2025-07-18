@@ -466,13 +466,14 @@ void Render::Update(double delta)
 }
 
 
-void Render::RenderFrame(const Model &mapModel)
+void Render::RenderFrame()
 {
     int screenWidth, screenHeight;
     bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
     if (screenSuccess) {
         glViewport(0, 0, screenWidth, screenHeight);
     }
+
 
     glBindFramebuffer(GL_FRAMEBUFFER, msFBO);
     glEnable(GL_DEPTH_TEST);
@@ -485,14 +486,14 @@ void Render::RenderFrame(const Model &mapModel)
     if (screenSuccess) {
         glViewport(0, 0, playerScreenWidth, screenHeight);
     }
-    RenderScene(cam2.cam, mapModel);
+    RenderScene(cam2.cam);
     
     // Render right screen
     if (doSplitScreen) {
         if (screenSuccess) {
             glViewport(screenWidth/2, 0, playerScreenWidth, screenHeight);
         }
-        RenderScene(cam3.cam, mapModel);
+        RenderScene(cam3.cam);
     }
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, msFBO);
@@ -529,7 +530,7 @@ void Render::RenderFrame(const Model &mapModel)
 }
 
 
-void Render::RenderScene(const Camera &cam, const Model &mapModel)
+void Render::RenderScene(const Camera &cam)
 {
     glm::mat4 view;
     glm::mat4 projection;
@@ -624,6 +625,7 @@ void Render::RenderScene(const Camera &cam, const Model &mapModel)
     shader.SetFloat((char*)"material.shininess", 32.0f);
 
     // Draw map
+    Model &mapModel = World::GetCurrentMapModel();
     model = glm::mat4(1.0f);
     shader.SetMat4fv((char*)"model", glm::value_ptr(model));
     mapModel.Draw(shader);

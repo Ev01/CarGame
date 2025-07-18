@@ -43,8 +43,8 @@ namespace Render {
     //SpotLight& GetSpotLightById(unsigned int id);
     void PhysicsUpdate(double delta);
     void Update(double delta);
-    void RenderFrame(const Model &mapModel);
-    void RenderScene(const Camera &cam, const Model &mapModel);
+    void RenderFrame();
+    void RenderScene(const Camera &cam);
     void HandleEvent(SDL_Event *event);
     void DeleteAllLights();
     float ScreenAspect();

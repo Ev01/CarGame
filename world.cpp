@@ -3,6 +3,9 @@
 #include "convert.h"
 #include "vehicle.h"
 #include "model.h"
+#include "physics.h"
+
+#include "vendor/imgui/imgui.h"
 
 #include <assimp/matrix4x4.h>
 #include <assimp/types.h>
@@ -18,11 +21,87 @@ static Vehicle *car2;
 static VehicleSettings carSettings;
 static VehicleSettings carSettings2;
 
+static std::unique_ptr<Model> mapModel;
+static glm::vec3 mapSpawnPoint = glm::vec3(0.0f);
+//static Model *currentMap;
+
+
+static bool MapNodeCallback(const aiNode *node, const aiMatrix4x4 transform)
+{
+    aiQuaternion aRotation;
+    aiVector3D aPosition;
+    aiVector3D aScale;
+    transform.Decompose(aScale, aRotation, aPosition);
+
+    JPH::RMat44 joltTransform = ToJoltMat4(transform);
+    JPH::Vec3 position = joltTransform.GetTranslation();
+
+    if (SDL_strcmp(node->mName.C_Str(), "SpawnPoint") == 0) {
+        mapSpawnPoint = ToGlmVec3(position);
+    }
+    return true;
+}
+
+
+static void LightCallback(const aiLight *aLight, const aiNode *aNode,
+                           aiMatrix4x4 aTransform)
+{
+    // TODO: Make more effecient
+    World::AssimpAddLight(aLight, aNode, aTransform);
+    Render::AssimpAddLight(aLight, aNode, aTransform);
+}
+
+static void ChangeMap(const char *modelFileName)
+{
+    mapModel.reset(LoadModel(modelFileName, MapNodeCallback, LightCallback));
+    Phys::LoadMap(*mapModel);
+}
+
+
+
 
 void World::PrePhysicsUpdate(float delta)
 {
     car->Update(delta);
     car2->Update(delta);
+}
+
+
+void World::Update(float delta)
+{
+    ImGui::Begin("Maps");
+    const char* items[] = {"Map01", "Map02", "simple_map"};
+    static int currentItem = 0;
+    ImGui::Combo("Map", &currentItem, items, 3);
+    if (ImGui::Button("Change map")) {
+        World::DestroyAllLights();
+        Render::DeleteAllLights();
+        mapSpawnPoint = glm::vec3(0.0f);
+        JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
+        Phys::UnloadMap();
+        switch(currentItem) {
+            case 0:
+                SDL_Log("sizeof: %lld", sizeof(*mapModel));
+                mapModel.reset(LoadModel("models/no_tex_map.gltf",
+                               MapNodeCallback, LightCallback));
+                Phys::LoadMap(*mapModel);
+                break;
+            case 1:
+                mapModel.reset(LoadModel("models/map1.gltf",
+                               MapNodeCallback, LightCallback));
+                Phys::LoadMap(*mapModel);
+                break;
+            case 2:
+                mapModel.reset(LoadModel("models/simple_map.gltf",
+                               MapNodeCallback, LightCallback));
+                Phys::LoadMap(*mapModel);
+                break;
+
+        }
+        bodyInterface.SetPosition(World::GetCar().mBody->GetID(), ToJoltVec3(mapSpawnPoint), JPH::EActivation::Activate);
+        bodyInterface.SetPosition(World::GetCar2().mBody->GetID(), ToJoltVec3(mapSpawnPoint) + JPH::Vec3(6.0, 0, 0), JPH::EActivation::Activate);
+    }
+    ImGui::End();
 }
 
 
@@ -41,6 +120,9 @@ void World::Init()
     carSettings2.Init();
     car->Init(carSettings);
     car2->Init(carSettings2);
+
+    mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, LightCallback));
+    Phys::LoadMap(*mapModel);
 }
 
 void World::CleanUp()
@@ -146,4 +228,4 @@ void World::DestroyAllLights()
 }
 
 
-
+Model& World::GetCurrentMapModel() { return *mapModel; }
