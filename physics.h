@@ -61,7 +61,6 @@ namespace Phys {
 
     void CleanUp();
     void ProcessInput();
-    void SetForwardDir(JPH::Vec3 dir);
     JPH::PhysicsSystem& GetPhysicsSystem();
     JPH::BodyInterface&  GetBodyInterface();
 }

@@ -32,8 +32,6 @@
 #define FPS_RECORD_SIZE 100
 
 
-const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-
 double delta, lastFrame;
 // Array of FPS values of the last few frames. Current frame is at
 // fpsRecordsPosition. Used to calculate average FPS.
@@ -41,9 +39,6 @@ double fpsRecords[FPS_RECORD_SIZE];
 int fpsRecordPosition = 0;
 double averageFps = 0.0;
 float physicsTime = 0;
-
-float yaw = -SDL_PI_F / 2.0;
-float pitch;
 
 
 /*
@@ -61,21 +56,15 @@ static void RecordFps(double newFps)
 }
 
 
-
 static double GetSeconds()
 {
     return (double) SDL_GetTicksNS() / (double) SDL_NS_PER_SECOND;
 }
 
 
-
-
-
-
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO);
-
 
     if (!Render::Init()) {
         return SDL_APP_FAILURE;
@@ -105,18 +94,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     World::Init();
 
-    // Spawn second car away from first car
-    Phys::GetBodyInterface().SetPosition(World::GetCar2().mBody->GetID(), JPH::Vec3(6.0, 0, 0), JPH::EActivation::Activate);
-    
-
     glViewport(0, 0, 800, 600);
-
-    //SDL_SetWindowRelativeMouseMode(Render::GetWindow(), true);
-    /*
-    if (!SDL_SetWindowSurfaceVSync(window, 1)) {
-        SDL_Log("Couldn't set VSync: %s", SDL_GetError());
-    }
-    */
     glEnable(GL_DEPTH_TEST);
 
     lastFrame = GetSeconds();
@@ -148,24 +126,6 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     Input::HandleEvent(event);
     Render::HandleEvent(event);
 
-    if (event->type == SDL_EVENT_MOUSE_MOTION) {
-        yaw += event->motion.xrel * MOUSE_SENSITIVITY;
-        pitch -= event->motion.yrel * MOUSE_SENSITIVITY;
-        pitch = SDL_clamp(pitch, -SDL_PI_F / 2.0 + 0.1, SDL_PI_F / 2.0 - 0.1);
-    }
-    else if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_F) {
-        SDL_Log("FPS: %f", 1.0/delta);
-    }
-    /*
-    else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_TAB) {
-        SDL_SetWindowRelativeMouseMode(Render::GetWindow(), false);
-    }
-    else if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN && event->button.button == 1) {
-        SDL_SetWindowRelativeMouseMode(Render::GetWindow(), true);
-    }
-    */
-
-
     return SDL_APP_CONTINUE;
 }
 
@@ -181,7 +141,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-
+    // Debug FPS window
     ImGui::Begin("FPS");
     int interval;
     if (SDL_GL_GetSwapInterval(&interval)) {
@@ -196,26 +156,20 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     static double fpsLimit = 300.0;
     const double fpsSliderMin = 0.0;
     const double fpsSliderMax = 300.0;
-    //ImGui::SliderFloat("FPS Limit", &fpsLimit, 0.0, 300.0);
     ImGui::SliderScalar("FPS Limit", ImGuiDataType_Double, &fpsLimit, 
                         &fpsSliderMin, &fpsSliderMax);
     ImGui::Text("Current FPS: %f", 1.0 / delta);
     ImGui::Text("Average %d frames: %f", FPS_RECORD_SIZE, averageFps);
     ImGui::End();
         
-    World::GetCar().DebugGUI();
-
-    Camera &cam = Render::GetCamera();
-
     // Do physics step
     physicsTime += delta;
     while (physicsTime >= PHYSICS_STEP_TIME) {
-        Phys::SetForwardDir(ToJoltVec3(cam.dir));
         World::PrePhysicsUpdate(PHYSICS_STEP_TIME);
         World::ProcessInput();
         Phys::ProcessInput();
-        Phys::PhysicsStep(PHYSICS_STEP_TIME);
 
+        Phys::PhysicsStep(PHYSICS_STEP_TIME);
         Render::PhysicsUpdate(PHYSICS_STEP_TIME);
         physicsTime -= PHYSICS_STEP_TIME;
     }
@@ -225,19 +179,17 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     Render::Update(delta);
     World::Update(delta);
 
+    // Render
     Render::RenderFrame();
 
+    // Limit FPS
     if (fpsLimit > 0.0) {
         double delta2 = GetSeconds() - lastFrame;
 
         double sfp = 1.0 / fpsLimit;
-        //SDL_Log("delta: %f", delta);
         if (delta2 < sfp) {
             double toDelaySeconds = (sfp - delta2);
-            //SDL_Log("Delta is %f. Delaying %f nanoseconds. SFP: %f", delta2, toDelaySeconds, sfp);
-            //double delayBefore = GetSeconds();
             SDL_DelayPrecise((Uint64)(toDelaySeconds * 1000000000.0));
-            //SDL_Log("Real delay: %f", GetSeconds() - delayBefore);
         }
     }
     return SDL_APP_CONTINUE;

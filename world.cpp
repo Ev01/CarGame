@@ -23,7 +23,6 @@ static VehicleSettings carSettings2;
 
 static std::unique_ptr<Model> mapModel;
 static glm::vec3 mapSpawnPoint = glm::vec3(0.0f);
-//static Model *currentMap;
 
 
 static bool MapNodeCallback(const aiNode *node, const aiMatrix4x4 transform)
@@ -51,13 +50,20 @@ static void LightCallback(const aiLight *aLight, const aiNode *aNode,
     Render::AssimpAddLight(aLight, aNode, aTransform);
 }
 
+
 static void ChangeMap(const char *modelFileName)
 {
+    JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
     mapModel.reset(LoadModel(modelFileName, MapNodeCallback, LightCallback));
     Phys::LoadMap(*mapModel);
+    // Respawn cars
+    bodyInterface.SetPosition(World::GetCar().mBody->GetID(),
+                              ToJoltVec3(mapSpawnPoint),
+                              JPH::EActivation::Activate);
+    bodyInterface.SetPosition(World::GetCar2().mBody->GetID(),
+                              ToJoltVec3(mapSpawnPoint) + JPH::Vec3(6.0, 0, 0),
+                              JPH::EActivation::Activate);
 }
-
-
 
 
 void World::PrePhysicsUpdate(float delta)
@@ -77,31 +83,22 @@ void World::Update(float delta)
         World::DestroyAllLights();
         Render::DeleteAllLights();
         mapSpawnPoint = glm::vec3(0.0f);
-        JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
         Phys::UnloadMap();
         switch(currentItem) {
             case 0:
                 SDL_Log("sizeof: %lld", sizeof(*mapModel));
-                mapModel.reset(LoadModel("models/no_tex_map.gltf",
-                               MapNodeCallback, LightCallback));
-                Phys::LoadMap(*mapModel);
+                ChangeMap("models/no_tex_map.gltf");
                 break;
             case 1:
-                mapModel.reset(LoadModel("models/map1.gltf",
-                               MapNodeCallback, LightCallback));
-                Phys::LoadMap(*mapModel);
+                ChangeMap("models/map1.gltf");
                 break;
             case 2:
-                mapModel.reset(LoadModel("models/simple_map.gltf",
-                               MapNodeCallback, LightCallback));
-                Phys::LoadMap(*mapModel);
+                ChangeMap("models/simple_map.gltf");
                 break;
-
         }
-        bodyInterface.SetPosition(World::GetCar().mBody->GetID(), ToJoltVec3(mapSpawnPoint), JPH::EActivation::Activate);
-        bodyInterface.SetPosition(World::GetCar2().mBody->GetID(), ToJoltVec3(mapSpawnPoint) + JPH::Vec3(6.0, 0, 0), JPH::EActivation::Activate);
     }
     ImGui::End();
+    car->DebugGUI();
 }
 
 
@@ -123,6 +120,11 @@ void World::Init()
 
     mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, LightCallback));
     Phys::LoadMap(*mapModel);
+    
+    // Spawn second car away from first car
+    Phys::GetBodyInterface().SetPosition(GetCar2().mBody->GetID(),
+                                         JPH::Vec3(6.0, 0, 0),
+                                         JPH::EActivation::Activate);
 }
 
 void World::CleanUp()

@@ -40,9 +40,6 @@ using namespace JPH::literals;
 bool isJoltSetup = false;
     
 PhysicsSystem physics_system;
-Body *floorBody;
-Vec3 forwardDir;
-
 
 std::optional<BroadPhaseLayerInterfaceTable> broad_phase_layer_interface = std::nullopt;
 std::optional<ObjectLayerPairFilterTable> object_vs_object_layer_filter = std::nullopt;
@@ -296,14 +293,6 @@ void Phys::PhysicsStep(float delta)
 
 void Phys::ProcessInput()
 {
-}
-
-
-void Phys::SetForwardDir(Vec3 dir)
-{
-    dir.SetY(0.0f);
-    dir = dir.Normalized();
-    forwardDir = dir;
 }
 
 
