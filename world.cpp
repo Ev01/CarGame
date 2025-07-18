@@ -15,6 +15,8 @@
 static std::vector<Render::SpotLight*> spotLights;
 static Vehicle *car;
 static Vehicle *car2;
+static VehicleSettings carSettings;
+static VehicleSettings carSettings2;
 
 
 void World::PrePhysicsUpdate(float delta)
@@ -32,7 +34,13 @@ void World::ProcessInput()
 
 void World::Init()
 {
-
+    CreateCars();
+    carSettings = GetVehicleSettingsFromFile("data/car.json");
+    carSettings2 = GetVehicleSettingsFromFile("data/car2.json");
+    carSettings.Init();
+    carSettings2.Init();
+    car->Init(carSettings);
+    car2->Init(carSettings2);
 }
 
 void World::CleanUp()

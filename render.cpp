@@ -420,13 +420,6 @@ Camera& Render::GetCamera()
 
 void Render::PhysicsUpdate(double delta)
 {
-    /*
-    JPH::Vec3 carPosJolt = Phys::GetCar().GetPos();
-    glm::vec3 carPos = ToGlmVec3(carPosJolt);
-    JPH::Quat carRot = Phys::GetCar().GetRotation();
-    JPH::Vec3 carDir = carRot.RotateAxisX();
-    float carYaw = SDL_PI_F - SDL_atan2f(carDir.GetX(), carDir.GetZ());
-    */
     float yawOffset = 0;
     if (Input::GetGamepad()) {
         yawOffset = SDL_PI_F / 2.0f * Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHTX);

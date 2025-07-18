@@ -19,7 +19,8 @@ using json = nlohmann::json;
 #include <SDL3_mixer/SDL_mixer.h>
 #include <vector>
 
-std::vector<Vehicle*> existingVehicles;
+static std::vector<Vehicle*> existingVehicles;
+VehicleSettings *curLoadingVehicleSettings = nullptr;
 
 
 static void VehiclePostCollideCallback(JPH::VehicleConstraint &inVehicle, const JPH::PhysicsStepListenerContext &inContext)
@@ -81,6 +82,56 @@ static void VehiclePostCollideCallback(JPH::VehicleConstraint &inVehicle, const 
 }
 
 
+// Must call before loading a car model with the CarNodeCallback. This will load
+// collision and other info from the car model into this VehicleSettings obj
+// when LoadModel is called.
+static void PrepareLoadCar(VehicleSettings *vsToLoad)
+{
+    curLoadingVehicleSettings = vsToLoad;
+}
+
+
+static bool CarNodeCallback(const aiNode *node, aiMatrix4x4 transform)
+{
+    SDL_assert(curLoadingVehicleSettings); // Call PrepareLoadCar before loading
+                                           // the car
+    aiQuaternion aRotation;
+    aiVector3D aPosition;
+    aiVector3D aScale;
+    transform.Decompose(aScale, aRotation, aPosition);
+
+    JPH::RMat44 joltTransform = ToJoltMat4(transform);
+    JPH::Vec3 position = joltTransform.GetTranslation();
+    SDL_Log("%f, %f, %f", aScale.x, aScale.y, aScale.z);
+    if (SDL_strcmp(node->mName.C_Str(), "WheelPosFR") == 0) {
+        SDL_assert(SDL_fabs(aScale.x - aScale.y) < 0.01); // Wheel is oval-shaped, not circular
+        curLoadingVehicleSettings->AddWheel(position, true, aScale.x, aScale.z);
+    }
+    else if (SDL_strcmp(node->mName.C_Str(), "WheelPosFL") == 0) {
+        SDL_assert(SDL_fabs(aScale.x - aScale.y) < 0.01); // Wheel is oval-shaped, not circular
+        curLoadingVehicleSettings->AddWheel(position, true, aScale.x, aScale.z);
+    }
+    else if (SDL_strcmp(node->mName.C_Str(), "WheelPosRR") == 0) {
+        SDL_assert(SDL_fabs(aScale.x - aScale.y) < 0.01); // Wheel is oval-shaped, not circular
+        curLoadingVehicleSettings->AddWheel(position, false, aScale.x, aScale.z);
+    }
+    else if (SDL_strcmp(node->mName.C_Str(), "WheelPosRL") == 0) {
+        SDL_assert(SDL_fabs(aScale.x - aScale.y) < 0.01); // Wheel is oval-shaped, not circular
+        curLoadingVehicleSettings->AddWheel(position, false, aScale.x, aScale.z);
+    }
+    else if (SDL_strncmp(node->mName.C_Str(), "CollisionBox", 12) == 0) {
+        curLoadingVehicleSettings->AddCollisionBox(ToJoltVec3(aPosition), ToJoltVec3(aScale));
+    }
+    else if (SDL_strcmp(node->mName.C_Str(), "HeadLightLeft") == 0) {
+        curLoadingVehicleSettings->headLightLeftTransform = joltTransform;
+    }
+    else if (SDL_strcmp(node->mName.C_Str(), "HeadLightRight") == 0) {
+        curLoadingVehicleSettings->headLightRightTransform = joltTransform;
+    }
+    return true;
+}
+
+
 Vehicle* GetVehicleFromVehicleConstraint(const JPH::VehicleConstraint *constraint)
 {
     for (size_t i = 0; i < existingVehicles.size(); i++) {
@@ -92,29 +143,39 @@ Vehicle* GetVehicleFromVehicleConstraint(const JPH::VehicleConstraint *constrain
 }
 
 
- VehicleSettings GetVehicleSettingsFromFile(const char* filename)
+VehicleSettings GetVehicleSettingsFromFile(const char* filename)
 {
     SDL_Log("Loading vehicle settings from file %s", filename);
     char* fileData = (char*) SDL_LoadFile(filename, NULL);
     json j = json::parse(fileData);
 
     VehicleSettings vs;
-    vs.model_file   = j["model_file"];
-    vs.mass         = j["mass"];
-    vs.frontCamber  = glm::radians((float) j["front_camber"]);
-    vs.frontToe     = glm::radians((float) j["front_toe"]);
-    vs.frontCaster  = glm::radians((float) j["front_caster"]);
-    vs.frontKingPin = glm::radians((float) j["front_king_pin"]);
-    vs.rearCamber   = glm::radians((float) j["rear_camber"]);
-    vs.rearToe      = glm::radians((float) j["rear_toe"]);
-    vs.longGrip     = j["long_grip"];
-    vs.latGrip      = j["lat_grip"];
-    vs.maxTorque    = j["max_torque"];
+    vs.modelFile      = j["model_file"];
+    vs.wheelModelFile = j["wheel_model_file"];
+    vs.mass           = j["mass"];
+    vs.frontCamber    = glm::radians((float) j["front_camber"]);
+    vs.frontToe       = glm::radians((float) j["front_toe"]);
+    vs.frontCaster    = glm::radians((float) j["front_caster"]);
+    vs.frontKingPin   = glm::radians((float) j["front_king_pin"]);
+    vs.rearCamber     = glm::radians((float) j["rear_camber"]);
+    vs.rearToe        = glm::radians((float) j["rear_toe"]);
+    vs.longGrip       = j["long_grip"];
+    vs.latGrip        = j["lat_grip"];
+    vs.maxTorque      = j["max_torque"];
     vs.suspensionMinLength = j["suspension_min_length"];
     vs.suspensionMaxLength = j["suspension_max_length"];
     vs.suspensionFrequency = j["suspension_frequency"];
-    vs.suspensionDamping =   j["suspension_damping"];
+    vs.suspensionDamping   = j["suspension_damping"];
     return vs;
+}
+
+
+void VehicleSettings::Init()
+{
+    // TODO: Destroy these models
+    PrepareLoadCar(this);
+    vehicleModel = LoadModel(modelFile.c_str(), CarNodeCallback);
+    wheelModel = LoadModel(wheelModelFile.c_str());
 }
 
 
@@ -280,10 +341,10 @@ void Vehicle::Init(VehicleSettings &settings)
     // Set which wheels are driven
 	controller->mDifferentials.resize(1);
     for (unsigned int i = 0; i < mWheels.size(); i++) {
-        if (mWheels[i] == fl) {
+        if (mWheels[i].GetPtr() == fl) {
             controller->mDifferentials[0].mLeftWheel = i;
         }
-        else if (mWheels[i] == fr) {
+        else if (mWheels[i].GetPtr() == fr) {
             controller->mDifferentials[0].mRightWheel = i;
         }
     }
@@ -638,7 +699,7 @@ void Vehicle::Destroy()
 }
 
 
-const std::vector<Vehicle*> GetExistingVehicles()
+const std::vector<Vehicle*>& GetExistingVehicles()
 {
     return existingVehicles;
 }

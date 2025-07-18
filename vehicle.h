@@ -26,8 +26,11 @@ struct VehicleSettings
 {
     void AddWheel(JPH::Vec3 position, bool isSteering, float wheelRadius, float wheelWidth);
     void AddCollisionBox(JPH::Vec3 position, JPH::Vec3 scale);
+    // Loads the models
+    void Init();
 
-    std::string model_file;
+    std::string modelFile;
+    std::string wheelModelFile;
     Model *vehicleModel;
     Model *wheelModel;
     float mass;
@@ -98,7 +101,7 @@ struct Vehicle
 };
 
 VehicleSettings GetVehicleSettingsFromFile(const char* filename);
-const std::vector<Vehicle*> GetExistingVehicles();
+const std::vector<Vehicle*>& GetExistingVehicles();
 Vehicle* GetVehicleFromVehicleConstraint(const JPH::VehicleConstraint *constraint);
 Vehicle* CreateVehicle();
 void DestroyVehicle(Vehicle *toDestroy);

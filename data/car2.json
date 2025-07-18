@@ -1,5 +1,6 @@
 {
     "model_file": "models/mycar.gltf",
+    "wheel_model_file": "models/wheel.gltf",
     "mass": 1300.0,
     "front_camber": -5.0,
     "front_toe": 0.8,
