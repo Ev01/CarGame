@@ -4,6 +4,7 @@
 #include "vehicle.h"
 #include "model.h"
 #include "physics.h"
+#include "audio.h"
 
 #include "vendor/imgui/imgui.h"
 
@@ -29,6 +30,7 @@ static VehicleSettings carSettings2;
 static std::unique_ptr<Model> mapModel;
 static glm::vec3 mapSpawnPoint = glm::vec3(0.0f);
 static std::vector<Checkpoint> existingCheckpoints;
+static Audio::Sound *checkpointSound;
 
 RaceProgress gPlayerRaceProgress;
 
@@ -181,6 +183,7 @@ void World::OnContactAdded(const JPH::Body &inBody1, const JPH::Body &inBody2)
             || inBody2.GetID() == checkpoint.mBodyID) {
         //checkpoint.Collect();
         gPlayerRaceProgress.CollectCheckpoint();
+        checkpointSound->Play();
         //if (existingCheckpoints.back().mIsCollected) {
         //    ResetCheckpoints();
         //}
@@ -235,6 +238,10 @@ void World::ProcessInput()
 
 void World::Init()
 {
+    // Audio
+    checkpointSound = Audio::CreateSoundFromFile("sound/sound2.wav");
+    checkpointSound->doRepeat = false;
+
     CreateCars();
     carSettings = GetVehicleSettingsFromFile("data/car.json");
     carSettings2 = GetVehicleSettingsFromFile("data/car2.json");
