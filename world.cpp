@@ -10,10 +10,15 @@
 #include <assimp/matrix4x4.h>
 #include <assimp/types.h>
 #include <assimp/vector3.h>
+#include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/Body/BodyActivationListener.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
 
 #include <glm/glm.hpp>
+#include <SDL3/SDL.h>
 
 #include <vector>
+#include <algorithm>
 
 static std::vector<Render::SpotLight*> spotLights;
 static Vehicle *car;
@@ -23,6 +28,17 @@ static VehicleSettings carSettings2;
 
 static std::unique_ptr<Model> mapModel;
 static glm::vec3 mapSpawnPoint = glm::vec3(0.0f);
+static std::vector<Checkpoint> existingCheckpoints;
+
+RaceProgress gPlayerRaceProgress;
+
+
+static void CreateCheckpoint(JPH::Vec3 position, unsigned int num)
+{
+    Checkpoint &newCheckpoint = existingCheckpoints.emplace_back();
+    newCheckpoint.Init(position);
+    newCheckpoint.mNum = num;
+}
 
 
 static bool MapNodeCallback(const aiNode *node, const aiMatrix4x4 transform)
@@ -37,6 +53,21 @@ static bool MapNodeCallback(const aiNode *node, const aiMatrix4x4 transform)
 
     if (SDL_strcmp(node->mName.C_Str(), "SpawnPoint") == 0) {
         mapSpawnPoint = ToGlmVec3(position);
+    }
+    else if (SDL_strncmp(node->mName.C_Str(), "checkpoint", 10) == 0) {
+        /*
+        Checkpoints should be named in the format checkpoint.### in the model 
+        file, where ### is the number of the checkpoint and determines the order
+        checkpoints should be taken.
+        */
+        // Pointer to the location of the . character in the node name
+        char *dotLoc = SDL_strchr(node->mName.C_Str(), '.');
+        char strNum[3];
+        // Copy the 3 digits at the end to strNum and convert to integer
+        SDL_strlcpy(strNum, dotLoc + 1, 4);
+        unsigned int num = SDL_atoi(strNum);
+        CreateCheckpoint(position, num);
+        SDL_Log("Create checkpoint num = %d, strNum = %s", num, strNum);
     }
     return true;
 }
@@ -53,9 +84,15 @@ static void LightCallback(const aiLight *aLight, const aiNode *aNode,
 
 static void ChangeMap(const char *modelFileName)
 {
+    // Remove all checkpoints
+    existingCheckpoints.clear();
+    // Load the map
     JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
     mapModel.reset(LoadModel(modelFileName, MapNodeCallback, LightCallback));
     Phys::LoadMap(*mapModel);
+    // Sort checkpoints
+    //std::sort(existingCheckpoints.begin(), existingCheckpoints.end(),
+    //        [] (Checkpoint const& a, Checkpoint const& b) {
     // Respawn cars
     bodyInterface.SetPosition(World::GetCar().mBody->GetID(),
                               ToJoltVec3(mapSpawnPoint),
@@ -66,10 +103,98 @@ static void ChangeMap(const char *modelFileName)
 }
 
 
+/*
+static void ResetCheckpoints()
+{
+    for (Checkpoint &c : existingCheckpoints) {
+        c.mIsCollected = false;
+    }
+}
+*/
+
+
+void RaceProgress::CollectCheckpoint()
+{
+    mCheckpointsCollected++;
+    mCheckpointsCollected %= existingCheckpoints.size();
+    if (mCheckpointsCollected == 1) {
+        if (mRaceStartMS > 0) {
+            SDL_Log("Finished race in %f seconds",
+                    (SDL_GetTicks() - mRaceStartMS) / 1000.0);
+        }
+        BeginRace();
+    }
+}
+
+
+void RaceProgress::BeginRace()
+{
+    mRaceStartMS = SDL_GetTicks();
+}
+
+
+void Checkpoint::Init(JPH::Vec3 position)
+{
+    JPH::BoxShapeSettings shapeSettings(JPH::Vec3(2, 2, 2));
+    JPH::ShapeRefC shape = shapeSettings.Create().Get();
+    JPH::BodyCreationSettings bodySettings(shape, position,
+                                           JPH::Quat::sIdentity(),
+                                           JPH::EMotionType::Static,
+                                           Phys::Layers::NON_SOLID);
+    bodySettings.mIsSensor = true;
+    JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
+    JPH::Body *checkpointBody = bodyInterface.CreateBody(bodySettings);
+    bodyInterface.AddBody(checkpointBody->GetID(), JPH::EActivation::DontActivate);
+
+    mBodyID = checkpointBody->GetID();
+}
+
+
+/*
+void Checkpoint::Collect()
+{
+    mIsCollected = true;
+}
+*/
+
+
+JPH::Vec3 Checkpoint::GetPosition() const
+{
+    return Phys::GetBodyInterface().GetPosition(mBodyID);
+}
+
+
+std::vector<Checkpoint>& World::GetCheckpoints()
+{
+    return existingCheckpoints;
+}
+
+
+void World::OnContactAdded(const JPH::Body &inBody1, const JPH::Body &inBody2)
+{
+    if (existingCheckpoints.size() == 0) return;
+    //JPH::BodyInterface &bodyInterface = Phys::GetPhysicsSystem().GetBodyInterfaceNoLock();
+    //for (Checkpoint &checkpoint : existingCheckpoints) {
+
+    Checkpoint &checkpoint = existingCheckpoints[gPlayerRaceProgress.mCheckpointsCollected];     
+    if (inBody1.GetID() == checkpoint.mBodyID 
+            || inBody2.GetID() == checkpoint.mBodyID) {
+        //checkpoint.Collect();
+        gPlayerRaceProgress.CollectCheckpoint();
+        //if (existingCheckpoints.back().mIsCollected) {
+        //    ResetCheckpoints();
+        //}
+        //break;
+    }
+    //}
+}
+
+
 void World::PrePhysicsUpdate(float delta)
 {
     car->Update(delta);
     car2->Update(delta);
+
 }
 
 
@@ -117,6 +242,7 @@ void World::Init()
     carSettings2.Init();
     car->Init(carSettings);
     car2->Init(carSettings2);
+    //CreateCheckpoint(JPH::Vec3(1, 2, 1));
 
     mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, LightCallback));
     Phys::LoadMap(*mapModel);
@@ -126,6 +252,7 @@ void World::Init()
                                          JPH::Vec3(6.0, 0, 0),
                                          JPH::EActivation::Activate);
 }
+
 
 void World::CleanUp()
 {
@@ -145,6 +272,7 @@ Vehicle& World::GetCar()
 {
     return *car;
 }
+
 
 Vehicle& World::GetCar2()
 {

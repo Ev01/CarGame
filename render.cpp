@@ -31,7 +31,7 @@ static SDL_GLContext context;
 
 static Texture skyboxTex;
 
-static Model cubeModel;
+static Model *cubeModel;
 //static Camera cam;
 static VehicleCamera cam2;
 static VehicleCamera cam3;
@@ -41,7 +41,7 @@ static float camPitch = -0.4f;
 static float camDist = 3.7f;
 static float angleSmooth = 3.5f;
 static float distSmooth = 17.0f;
-static bool doSplitScreen = true;
+static bool doSplitScreen = false;
 
 static float skyboxVertices[] = {
     // positions          
@@ -372,6 +372,9 @@ bool Render::Init()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glBindVertexArray(0);
 
+    // Cube
+    cubeModel = LoadModel("models/cube.gltf");
+
     // Camera
     /*
     cam.Init(SDL_PI_F / 4.0, 800.0f / 600.0f, 0.1f, 1000.0f);
@@ -534,18 +537,6 @@ void Render::RenderScene(const Camera &cam)
 {
     glm::mat4 view;
     glm::mat4 projection;
-    /*
-    switch (currentCamNum) {
-        case 0:
-            view = cam2.cam.LookAtMatrix(up);
-            projection = cam2.cam.projection;
-            break;
-        case 1:
-            view = cam3.cam.LookAtMatrix(up);
-            projection = cam3.cam.projection;
-            break;
-    }
-    */
     view = cam.LookAtMatrix(up);
     projection = cam.projection;
 
@@ -554,8 +545,8 @@ void Render::RenderScene(const Camera &cam)
     int windowHeight;
     if (!SDL_GetWindowSize(window, &windowWidth, &windowHeight)) {
         SDL_Log("Could not get window size, using defaults");
-        //windowWidth = 800;
-        //windowHeight = 600;
+        windowWidth = 800;
+        windowHeight = 600;
     } 
 
     glUseProgram(shader.id);
@@ -564,7 +555,6 @@ void Render::RenderScene(const Camera &cam)
     shader.SetMat4fv((char*)"view", glm::value_ptr(view));
 
     glm::vec3 sunCol = sunLight.mColour / glm::vec3(1.0);
-    //glm::vec3 sunCol = glm::vec3(0.3);
     glm::vec3 sunDir = glm::vec3(view * glm::vec4(sunLight.mDirection, 0.0));
     shader.SetVec3((char*)"dirLight.direction", glm::value_ptr(sunDir));
     shader.SetVec3((char*)"dirLight.ambient", 0.1, 0.1, 0.1);
@@ -649,6 +639,19 @@ void Render::RenderScene(const Camera &cam)
         }
     }
 
+    // Draw checkpoints
+    //for (const Checkpoint &checkpoint : World::GetCheckpoints()) {
+    //    if (checkpoint.mIsCollected) continue;
+    if (World::GetCheckpoints().size() > 0) {
+        Checkpoint &checkpoint = World::GetCheckpoints()[gPlayerRaceProgress.mCheckpointsCollected];
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, ToGlmVec3(checkpoint.GetPosition()));
+        model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
+        cubeModel->Draw(shader, model);
+    }
+    //    break; // Only Draw checkpoint needed next
+    //}
+
 
     // Draw skybox
     
@@ -706,6 +709,7 @@ void Render::DeleteAllLights()
 
 void Render::CleanUp()
 {
+    delete cubeModel;
     glDeleteFramebuffers(1, &fbo);
 }
 

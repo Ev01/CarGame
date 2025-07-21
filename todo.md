@@ -101,6 +101,10 @@ fixed later.
       model, it will save it to an array if loading it for the first time. Later
       load calls will return a pointer to the already loaded model.
 - [ ] Time trial with checkpoints
+	- [ ] Create checkpoint struct
+	- [ ] Create body for checkpoint with trigger mode
+	- [ ] Detect when car collides with checkpoint
+- [ ] Transparency graphics
 - [ ] Speedometer
 - [ ] Luminosity
 - [ ] Crash sound effect

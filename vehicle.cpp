@@ -503,6 +503,8 @@ void Vehicle::DebugGUI()
     ImGui::SliderFloat("Latiudinal Grip",   &(mSettings->latGrip),  0.5f, 5.0f);
     
     ImGui::Text("Current Steering: %f", mSteer);
+    JPH::Vec3 position = mBody->GetCenterOfMassPosition();
+    ImGui::Text("Position: %f, %f, %f", position.GetX(), position.GetY(), position.GetZ());
 
     ImGui::End();
 }

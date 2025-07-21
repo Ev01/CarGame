@@ -6,6 +6,7 @@
 #include "audio.h"
 #include "model.h"
 #include "convert.h"
+#include "world.h"
 //#include "vehicle.h"
 
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayerInterfaceTable.h>
@@ -51,6 +52,20 @@ std::optional<JobSystemThreadPool> job_system = std::nullopt;
 std::vector<BodyID> mapBodyIds;
 
 
+class MyContactListener : public JPH::ContactListener
+{
+public:
+    virtual void OnContactAdded(
+            const JPH::Body &inBody1, const JPH::Body &inBody2,
+            const JPH::ContactManifold &inManifold,
+            JPH::ContactSettings &ioSettings) override
+    {
+        World::OnContactAdded(inBody1, inBody2);
+    }
+};
+
+MyContactListener contactListener;
+
 // Callback for traces, connect this to your own trace function if you have one
 static void traceImpl(const char *inFMT, ...)
 {
@@ -93,8 +108,6 @@ void* alignedAllocateImpl(size_t inSize, size_t inAlignment)
 {
     return SDL_aligned_alloc(inAlignment, inSize);
 }
-
-
 
 
 void Phys::SetupJolt() 
@@ -198,12 +211,16 @@ void Phys::UnloadMap()
 
 
 
-bool Phys::CastRay(JPH::Vec3 start, JPH::Vec3 direction, JPH::Vec3 &outPos, const JPH::BodyFilter &inBodyFilter)
+bool Phys::CastRay(
+        JPH::Vec3 start, JPH::Vec3 direction, JPH::Vec3 &outPos, 
+        const JPH::BroadPhaseLayerFilter &inBroadPhaseLayerFilter, 
+        const JPH::ObjectLayerFilter &inObjectLayerFilter,
+        const JPH::BodyFilter &inBodyFilter)
 {
     JPH::RRayCast ray {start, direction};
     JPH::RayCastResult hit;
 
-    bool hadHit = physics_system.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, inBodyFilter);
+    bool hadHit = physics_system.GetNarrowPhaseQuery().CastRay(ray, hit, inBroadPhaseLayerFilter, inObjectLayerFilter, inBodyFilter);
     outPos = ray.GetPointOnRay(hit.mFraction);
     return hadHit;
 }
@@ -243,6 +260,8 @@ void Phys::SetupSimulation()
             Layers::NON_MOVING, BroadPhaseLayers::NON_MOVING);
     broad_phase_layer_interface->MapObjectToBroadPhaseLayer(
             Layers::MOVING, BroadPhaseLayers::MOVING);
+    broad_phase_layer_interface->MapObjectToBroadPhaseLayer(
+            Layers::NON_SOLID, BroadPhaseLayers::NON_MOVING);
 
     // Create class that filters object vs object layers
     // Note: As this is an interface, PhysicsSystem will take a reference to this so this instance needs to stay alive!
@@ -252,6 +271,9 @@ void Phys::SetupSimulation()
             (Layers::MOVING, Layers::MOVING);
     object_vs_object_layer_filter->EnableCollision
             (Layers::MOVING, Layers::NON_MOVING);
+    object_vs_object_layer_filter->EnableCollision
+            (Layers::MOVING, Layers::NON_SOLID);
+
 
     // Create class that filters object vs broadphase layers
     // Note: As this is an interface, PhysicsSystem will take a reference to this so this instance needs to stay alive!
@@ -263,6 +285,10 @@ void Phys::SetupSimulation()
 
 	// Now we can create the actual physics system.
 	physics_system.Init(cMaxBodies, cNumBodyMutexes, cMaxBodyPairs, cMaxContactConstraints, *broad_phase_layer_interface, *object_vs_broadphase_layer_filter, *object_vs_object_layer_filter);
+
+    // Register the contact listener. This gets notified when bodies collide and
+    // separate.
+    physics_system.SetContactListener(&contactListener);
 
 	// The main way to interact with the bodies in the physics system is through the body interface. There is a locking and a non-locking
 	// variant of this. We're going to use the locking version (even though we're not planning to access bodies from multiple threads)

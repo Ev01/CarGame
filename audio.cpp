@@ -75,8 +75,8 @@ void Audio::Init()
     }
     else {
         //Mix_FadeInMusic(music, -1, 2000);
-        Mix_PlayMusic(music, -1);
-        Mix_VolumeMusic(MIX_MAX_VOLUME);
+        //Mix_PlayMusic(music, -1);
+        //Mix_VolumeMusic(MIX_MAX_VOLUME);
     }
 }
 

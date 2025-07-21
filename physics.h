@@ -36,7 +36,9 @@ namespace Phys {
     {
         static constexpr JPH::ObjectLayer NON_MOVING = 0;
         static constexpr JPH::ObjectLayer MOVING = 1;
-        static constexpr JPH::ObjectLayer NUM_LAYERS = 2;
+        // Static objects such as checkpoints
+        static constexpr JPH::ObjectLayer NON_SOLID = 2;
+        static constexpr JPH::ObjectLayer NUM_LAYERS = 3;
     };
 
     // Each broadphase layer results in a separate bounding volume tree in the broad phase. You at least want to have
@@ -57,7 +59,10 @@ namespace Phys {
     void PhysicsStep(float delta);
     void LoadMap(const Model &mapModel);
     void UnloadMap();
-    bool CastRay(JPH::Vec3 start, JPH::Vec3 direction, JPH::Vec3 &outPos, const JPH::BodyFilter &inBodyFilter = { });
+    bool CastRay(JPH::Vec3 start, JPH::Vec3 direction, JPH::Vec3 &outPos,
+                 const JPH::BroadPhaseLayerFilter &inBroadPhaseLayerFilter = { }, 
+                 const JPH::ObjectLayerFilter &inObjectLayerFilter = { },
+                 const JPH::BodyFilter &inBodyFilter = { });
 
     void CleanUp();
     void ProcessInput();

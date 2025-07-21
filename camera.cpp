@@ -12,6 +12,15 @@
 #include <Jolt/Physics/Body/BodyInterface.h>
 
 
+// Filter used to determine which objects the camera should move in front of.
+class CameraObjectLayerFilter : public JPH::ObjectLayerFilter {
+public:
+    virtual bool ShouldCollide(JPH::ObjectLayer inLayer) const override
+    {
+        return inLayer != Phys::Layers::NON_SOLID;
+    }
+} cameraObjectLayerFilter;
+
 
 void Camera::Init(float aFov, float aAspect, float aNear, float aFar)
 {
@@ -147,8 +156,12 @@ void VehicleCamera::SetFollowSmooth(float yaw, float pitch, float dist,
     JPH::Vec3 newCamPos;
     JPH::Vec3 camPosJolt = ToJoltVec3(cam.pos);
     JPH::Vec3 camToTarg = targJolt - camPosJolt;
-    JPH::IgnoreSingleBodyFilter carBodyFilter = JPH::IgnoreSingleBodyFilter(targetBody->GetID());
-    bool hadHit = Phys::CastRay(targJolt - camToTarg/2.0, -camToTarg/2.0, newCamPos, carBodyFilter);
+    JPH::IgnoreSingleBodyFilter carBodyFilter(targetBody->GetID());
+
+    bool hadHit = Phys::CastRay(
+            targJolt - camToTarg/2.0, -camToTarg/2.0, newCamPos,
+            { }, cameraObjectLayerFilter, carBodyFilter);
+
     if (hadHit) {
         cam.pos = ToGlmVec3(newCamPos);
     }
