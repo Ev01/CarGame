@@ -5,6 +5,7 @@
 struct Texture {
     Texture();
     ~Texture();
+    void SetWrapClamp();
     void Destroy();
     unsigned int id = 0;
 };

@@ -32,8 +32,8 @@ struct Material
     Texture normalMap;
     Texture roughnessMap;
     glm::vec3 diffuseColour;
-    float roughness;
-    float metallic;
+    float roughness = 1.0f;
+    float metallic = 0.0f;
 };
 
 struct Mesh {
@@ -51,7 +51,9 @@ struct Mesh {
               unsigned int aMaterialIdx);
 
 
-    void Draw(ShaderProg shader, const std::vector<std::unique_ptr<Material>> &materials) const;
+    void Draw(ShaderProg shader,
+              const std::vector<std::unique_ptr<Material>> &materials,
+              const Material *materialOverride = nullptr) const;
 
     Mesh();
     ~Mesh();
@@ -63,8 +65,15 @@ struct Mesh {
 struct ModelNode {
     ~ModelNode();
     ModelNode();
-    void Draw(ShaderProg shader, const std::vector<std::unique_ptr<Mesh>> &meshes, const std::vector<std::unique_ptr<Material>> &materials) const;
-    void Draw(ShaderProg shader, const std::vector<std::unique_ptr<Mesh>> &meshes, const std::vector<std::unique_ptr<Material>> &materials, glm::mat4 transform) const;
+    void Draw(ShaderProg shader,
+              const std::vector<std::unique_ptr<Mesh>> &meshes,
+              const std::vector<std::unique_ptr<Material>> &materials,
+              const Material *materialOverride = nullptr) const;
+    void Draw(ShaderProg shader,
+              const std::vector<std::unique_ptr<Mesh>> &meshes,
+              const std::vector<std::unique_ptr<Material>> &materials,
+              glm::mat4 transform,
+              const Material *materialOverride = nullptr) const;
 
     // Array of indices pointing to location of meshes in the Model's meshes
     // array
@@ -75,8 +84,9 @@ struct ModelNode {
 
 struct Model {
     ~Model();
-    void Draw(ShaderProg shader) const;
-    void Draw(ShaderProg shader, glm::mat4 transform) const;
+    void Draw(ShaderProg shader, const Material *materialOverride = nullptr) const;
+    void Draw(ShaderProg shader, glm::mat4 transform,
+              const Material *materialOverride = nullptr) const;
 
     void LoadSceneMaterials(const aiScene *scene);
     void LoadSceneMeshes(const aiScene *scene);

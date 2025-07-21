@@ -7,6 +7,14 @@
 Texture gDefaultTexture;
 Texture gDefaultNormalMap;
 
+
+void Texture::SetWrapClamp()
+{
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+
+
 Texture CreateTextureFromFile(const char* filename, bool isSRGB) {
     unsigned int textureId;
     Texture texture;
@@ -46,7 +54,7 @@ Texture CreateTextureFromFile(const char* filename, bool isSRGB) {
             break;
     }
 
-    GLenum targetFormat = isSRGB ? GL_SRGB : GL_RGB;
+    GLenum targetFormat = isSRGB ? GL_SRGB8_ALPHA8 : GL_RGBA;
 
     glTexImage2D(GL_TEXTURE_2D, 0, targetFormat, surf->w, surf->h, 0,
                  format, GL_UNSIGNED_BYTE, surf->pixels);

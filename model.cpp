@@ -118,18 +118,23 @@ ModelNode::ModelNode()
 }
 
 
-void Mesh::Draw(ShaderProg shader, const std::vector<std::unique_ptr<Material>> &materials) const
+void Mesh::Draw(ShaderProg shader,
+                const std::vector<std::unique_ptr<Material>> &materials,
+                const Material *materialOverride) const
 {
     glm::vec3 diffuseColour = glm::vec3(1.0f);
     float roughness = 1.0;
-
-    const Material &material = *materials[materialIdx];
     
-    unsigned int texId = material.texture.id;
-    unsigned int normalMapId = material.normalMap.id;
-    unsigned int roughnessMapId = material.roughnessMap.id;
-    diffuseColour = material.diffuseColour;
-    roughness = material.roughness;
+    const Material *material = materials[materialIdx].get();
+    if (materialOverride) {
+        material = materialOverride;
+    }
+    
+    unsigned int texId = material->texture.id;
+    unsigned int normalMapId = material->normalMap.id;
+    unsigned int roughnessMapId = material->roughnessMap.id;
+    diffuseColour = material->diffuseColour;
+    roughness = material->roughness;
 
     texId = texId == 0 ? gDefaultTexture.id : texId;
     normalMapId = normalMapId == 0 ? gDefaultNormalMap.id : normalMapId;
@@ -156,7 +161,7 @@ void Mesh::Draw(ShaderProg shader, const std::vector<std::unique_ptr<Material>> 
     shader.SetVec3((char*)"material.baseColour",
                     glm::value_ptr(diffuseColour));
     shader.SetFloat((char*)"material.roughness", roughness);
-    shader.SetFloat((char*)"material.metallic", material.metallic);
+    shader.SetFloat((char*)"material.metallic", material->metallic);
 
     glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
@@ -164,36 +169,44 @@ void Mesh::Draw(ShaderProg shader, const std::vector<std::unique_ptr<Material>> 
 }
 
 
-void ModelNode::Draw(ShaderProg shader, const std::vector<std::unique_ptr<Mesh>> &meshes, const std::vector<std::unique_ptr<Material>> &materials, glm::mat4 transform) const
+void ModelNode::Draw(ShaderProg shader,
+                     const std::vector<std::unique_ptr<Mesh>> &meshes,
+                     const std::vector<std::unique_ptr<Material>> &materials,
+                     glm::mat4 transform,
+                     const Material *materialOverride) const
 {
     glm::mat4 newTrans = transform * mTransform;
     newTrans = ToGlmMat4(ToJoltMat4(newTrans));
     shader.SetMat4fv((char*)"model", glm::value_ptr(newTrans));
 
     for (size_t i = 0; i < mMeshes.size(); i++) {
-        meshes[mMeshes[i]]->Draw(shader, materials);
+        meshes[mMeshes[i]]->Draw(shader, materials, materialOverride);
     }
 }
 
 
-void ModelNode::Draw(ShaderProg shader, const std::vector<std::unique_ptr<Mesh>> &meshes, const std::vector<std::unique_ptr<Material>> &materials) const
+void ModelNode::Draw(ShaderProg shader,
+                     const std::vector<std::unique_ptr<Mesh>> &meshes,
+                     const std::vector<std::unique_ptr<Material>> &materials,
+                     const Material *materialOverride) const
 {
-    Draw(shader, meshes, materials, glm::mat4(1.0f));
+    Draw(shader, meshes, materials, glm::mat4(1.0f), materialOverride);
 }
 
 
-void Model::Draw(ShaderProg shader, glm::mat4 transform) const
+void Model::Draw(ShaderProg shader, glm::mat4 transform,
+                 const Material *materialOverride) const
 {
     for (unsigned int i = 0; i < nodes.size(); i++) {
-        nodes[i]->Draw(shader, meshes, materials, transform);
+        nodes[i]->Draw(shader, meshes, materials, transform, materialOverride);
     }
 }
 
 
-void Model::Draw(ShaderProg shader) const
+void Model::Draw(ShaderProg shader, const Material *materialOverride) const
 {
     for (unsigned int i = 0; i < nodes.size(); i++) {
-        nodes[i]->Draw(shader, meshes, materials);
+        nodes[i]->Draw(shader, meshes, materials, materialOverride);
     }
 }
 

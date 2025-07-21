@@ -30,8 +30,12 @@ static SDL_Window *window;
 static SDL_GLContext context;
 
 static Texture skyboxTex;
+static Texture grassTex;
+static Material grassMat;
+static Material windowMat;
 
 static Model *cubeModel;
+static Model *quadModel;
 //static Camera cam;
 static VehicleCamera cam2;
 static VehicleCamera cam3;
@@ -360,6 +364,19 @@ bool Render::Init()
                                        "texture/Lycksele/negy.jpg",
                                        "texture/Lycksele/posz.jpg",
                                        "texture/Lycksele/negz.jpg");
+    grassTex = CreateTextureFromFile("texture/grass.png");
+    grassTex.SetWrapClamp();
+    grassMat.texture = grassTex;
+    grassMat.normalMap = gDefaultNormalMap;
+    grassMat.roughnessMap = gDefaultTexture;
+    grassMat.diffuseColour = glm::vec3(1.0f);
+
+    windowMat.texture = CreateTextureFromFile("texture/blending_transparent_window.png");
+    //windowMat.texture.SetWrapClamp();
+    windowMat.normalMap = gDefaultNormalMap;
+    windowMat.roughnessMap = gDefaultTexture;
+    windowMat.diffuseColour = glm::vec3(1.0f);
+
     // ----- Quad VAO -----
     glGenVertexArrays(1, &quadVAO);
     glGenBuffers(1, &quadVBO);
@@ -374,6 +391,7 @@ bool Render::Init()
 
     // Cube
     cubeModel = LoadModel("models/cube.gltf");
+    quadModel = LoadModel("models/quad.gltf");
 
     // Camera
     /*
@@ -394,6 +412,13 @@ bool Render::Init()
 
     // Enable MSAA (anti-aliasing)
     glEnable(GL_MULTISAMPLE);
+    // Enable transparency
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
 
     return true;
 }
@@ -535,6 +560,7 @@ void Render::RenderFrame()
 
 void Render::RenderScene(const Camera &cam)
 {
+    glEnable(GL_CULL_FACE);
     glm::mat4 view;
     glm::mat4 projection;
     view = cam.LookAtMatrix(up);
@@ -639,22 +665,49 @@ void Render::RenderScene(const Camera &cam)
         }
     }
 
-    // Draw checkpoints
-    //for (const Checkpoint &checkpoint : World::GetCheckpoints()) {
-    //    if (checkpoint.mIsCollected) continue;
+    // Draw next checkpoint in race
     if (World::GetCheckpoints().size() > 0) {
         Checkpoint &checkpoint = World::GetCheckpoints()[gPlayerRaceProgress.mCheckpointsCollected];
         model = glm::mat4(1.0f);
         model = glm::translate(model, ToGlmVec3(checkpoint.GetPosition()));
         model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
-        cubeModel->Draw(shader, model);
+        cubeModel->Draw(shader, model, &windowMat);
     }
-    //    break; // Only Draw checkpoint needed next
-    //}
 
+    // Draw grass
+    /*
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0, 1.0, 16.0));
+    model = glm::scale(model, glm::vec3(2.0, 2.0, 2.0));
+    model = glm::rotate(model, SDL_PI_F, glm::vec3(0.0, 1.0, 0.0));
+    model = glm::rotate(model, SDL_PI_F / 2.0f, glm::vec3(1.0, 0.0, 0.0));
+    */
+    /*
+    glm::vec3 white = glm::vec3(1.0f);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, gDefaultTexture.id);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, gDefaultNormalMap.id);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, grassTex.id);
+
+    shader.SetInt((char*)"material.texture_diffuse", 0);
+    shader.SetInt((char*)"material.normalMap", 1);
+    shader.SetInt((char*)"material.roughnessMap", 2);
+
+    shader.SetMat4fv((char*)"model", glm::value_ptr(model));
+    shader.SetVec3((char*)"material.baseColour", glm::value_ptr(white));
+    shader.SetFloat((char*)"material.roughness", 1.0);
+    shader.SetFloat((char*)"material.metallic", 0.0);
+
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    */
+    //quadModel->Draw(shader, model, &grassMat);
+    //quadModel->Draw(shader, model, &windowMat);
 
     // Draw skybox
-    
     glDepthFunc(GL_LEQUAL);
     glDepthMask(GL_FALSE);
     // Remove translation component from view matrix
@@ -672,6 +725,7 @@ void Render::RenderScene(const Camera &cam)
 
     glDepthFunc(GL_LESS);
     glDepthMask(GL_TRUE);
+    glDisable(GL_CULL_FACE);
 }
 
 
@@ -710,6 +764,7 @@ void Render::DeleteAllLights()
 void Render::CleanUp()
 {
     delete cubeModel;
+    delete quadModel;
     glDeleteFramebuffers(1, &fbo);
 }
 

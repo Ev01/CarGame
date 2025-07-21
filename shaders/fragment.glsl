@@ -75,6 +75,13 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 void main() {
     //vec3 norm = normalize(Normal);
 
+    vec4 textureSample = texture(material.albedo, fs_in.TexCoords);
+    /*
+    if (textureSample.a < 0.1) {
+        discard;
+    }
+    */
+
     vec3 norm = texture(material.normalMap, fs_in.TexCoords).rgb;
     // RGB is from 0.0 to 1.0. Normals coords should be from -1.0 to 1.0.
     norm = norm * 2.0 - 1.0;
@@ -97,14 +104,13 @@ void main() {
         Lo += CalcSpotLight(spotLights[i], norm, fs_in.FragPos, viewDir);
     }
     
-    
-    vec3 albedo = material.baseColour 
-                * texture(material.albedo, fs_in.TexCoords).rgb;
+    vec3 albedo = material.baseColour * textureSample.rgb;
     vec3 ambient = vec3(0.01) * albedo;
     vec3 result  = ambient + Lo;
 
     //vec4 result = texture(diffuse, fs_in.TexCoords);
-    FragColor = vec4(result, 1.0);
+    // The alpha is quite hacky here.
+    FragColor = vec4(result, textureSample.a);
     
     //vec3 normCol = (norm + 1.0) / 2.0;
     //FragColor = vec4(normCol, 1.0);

@@ -88,22 +88,30 @@ fixed later.
 13/07
 - [x] Edit car paramters with GUI (Dear ImGUI)
 - Fixed bug where car steers a bit to the side all the time
-
-- [ ] Refactor with world struct/class
+ 
+ 
+- [x] Refactor with world struct/class
       - [x] Move car variables into World
       - [x] Create an array of vehicles in World or Vehicle file. Render reads
 	    from this
       - [x] Move all vehicle loading code to the vehicle file. This includes the
 	    assimp callback.
       - [x] Move map loading code to the world file
+
+
+20/07 - 21/07
+- [x] Time trial with checkpoints
+	- [x] Create checkpoint struct
+	- [x] Create body for checkpoint with trigger mode
+	- [x] Detect when car collides with checkpoint
+
+
+
+
 - [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())
 - [ ] Get model from filename anywhere without loading it twice. When loading a
       model, it will save it to an array if loading it for the first time. Later
       load calls will return a pointer to the already loaded model.
-- [ ] Time trial with checkpoints
-	- [ ] Create checkpoint struct
-	- [ ] Create body for checkpoint with trigger mode
-	- [ ] Detect when car collides with checkpoint
 - [ ] Transparency graphics
 - [ ] Speedometer
 - [ ] Luminosity
