@@ -12,6 +12,7 @@ const float exposure = -1.0;
     
 vec3 EdgeDetect();
 
+
 void main()
 {
     //vec4 col = vec4(EdgeDetect(), 1.0);
@@ -29,7 +30,7 @@ void main()
     col = pow(col, vec3(1.0/gamma));
 
     FragColor = vec4(col, 1.0);
-    //FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+    //FragColor = vec4(texture(screenTexture, TexCoords).rrr, 1.0);
 }
 
 

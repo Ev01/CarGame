@@ -45,6 +45,8 @@ namespace Render {
     void Update(double delta);
     void RenderFrame();
     void RenderScene(const Camera &cam);
+    void RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
+                     bool enableSkybox = true);
     void HandleEvent(SDL_Event *event);
     void DeleteAllLights();
     float ScreenAspect();

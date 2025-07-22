@@ -58,13 +58,13 @@ void ShaderProg::SetFloat(char uniformName[], float value)
     glUniform1f(glGetUniformLocation(id, uniformName), value);
 }
 
-void ShaderProg::SetMat4fv(char uniformName[], float *matrix)
+void ShaderProg::SetMat4fv(char uniformName[], const float *matrix)
 {
     glUniformMatrix4fv(glGetUniformLocation(id, uniformName), 1, GL_FALSE, matrix);
 }
 
 
-void ShaderProg::SetVec3(char uniformName[], float *vec3)
+void ShaderProg::SetVec3(char uniformName[], const float *vec3)
 {
     glUniform3fv(glGetUniformLocation(id, uniformName), 1, vec3);
 }

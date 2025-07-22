@@ -183,7 +183,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     Render::RenderFrame();
 
     // Limit FPS
-    if (fpsLimit > 0.0) {
+    if (fpsLimit > 0.1) {
         double delta2 = GetSeconds() - lastFrame;
 
         double sfp = 1.0 / fpsLimit;

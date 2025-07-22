@@ -20,12 +20,19 @@
 
 #include <SDL3/SDL.h>
 
+#define GLERR do {\
+        GLuint glerr;\
+        while((glerr = glGetError()) != GL_NO_ERROR)\
+            SDL_Log("%s:%d glGetError() = 0x%04x", __FILE__, __LINE__, glerr);\
+    } while (0)
+
 static std::vector<Render::Light> lights;
 static std::vector<Render::SpotLight*> spotLights;
 static Render::SunLight sunLight;
-static ShaderProg shader;
+static ShaderProg PbrShader;
 static ShaderProg skyboxShader;
 static ShaderProg screenShader;
+static ShaderProg simpleDepthShader;
 static SDL_Window *window;
 static SDL_GLContext context;
 
@@ -113,6 +120,10 @@ static unsigned int msFBO;
 static unsigned int msRBO;
 static unsigned int msTexColourBuffer;
 
+static unsigned int depthMapFBO;
+static unsigned int depthMap; // Depth map texture
+const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
+static glm::mat4 lightSpaceMatrix;
 
 static unsigned int quadVAO;
 static unsigned int quadVBO;
@@ -186,6 +197,100 @@ static void CreateMSFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsign
         SDL_Log("Error: Framebuffer is not complete!");
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+
+static void RenderSkybox(glm::mat4 view, glm::mat4 projection)
+{
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    // Remove translation component from view matrix
+    glm::mat4 skyboxView = glm::mat4(glm::mat3(view));
+    glUseProgram(skyboxShader.id);
+
+    skyboxShader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
+    skyboxShader.SetMat4fv((char*)"view", glm::value_ptr(skyboxView));
+    skyboxShader.SetInt((char*)"skybox", 0);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex.id);
+    glBindVertexArray(skyboxVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
+}
+
+
+static void DrawMap(ShaderProg &shader)
+{
+    Model &mapModel = World::GetCurrentMapModel();
+    glm::mat4 model = glm::mat4(1.0f);
+    shader.SetMat4fv((char*)"model", glm::value_ptr(model));
+    mapModel.Draw(shader);
+}
+
+
+static void DrawCars(ShaderProg &shader)
+{
+    for (Vehicle *car : GetExistingVehicles()) {
+        glm::vec3 carPos = ToGlmVec3(car->GetPos());
+        glm::mat4 carTrans = glm::mat4(1.0f);
+        carTrans = glm::translate(carTrans, carPos);
+        carTrans = carTrans * QuatToMatrix(car->GetRotation());
+
+        car->mVehicleModel->Draw(shader, carTrans);
+
+        // Draw car wheels
+        for (int i = 0; i < 4; i++) {
+            glm::mat4 wheelTrans = ToGlmMat4(car->GetWheelTransform(i));
+            if (car->IsWheelFlipped(i)) {
+                wheelTrans = glm::rotate(wheelTrans, SDL_PI_F, glm::vec3(1.0f, 0.0f, 0.0f));
+            }
+            car->mWheelModel->Draw(shader, wheelTrans);
+        }
+    }
+}
+
+
+static void DrawCheckpoints(ShaderProg &shader)
+{
+    if (World::GetCheckpoints().size() > 0) {
+        Checkpoint &checkpoint = World::GetCheckpoints()[gPlayerRaceProgress.mCheckpointsCollected];
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, ToGlmVec3(checkpoint.GetPosition()));
+        model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
+        cubeModel->Draw(shader, model, &windowMat);
+    }
+}
+
+
+/*
+ * Render the scene without any shader setup
+ */
+static void RenderSceneRaw(ShaderProg &shader)
+{
+    // Draw map
+    DrawMap(shader);
+
+    // Draw all cars
+    DrawCars(shader);
+
+    // Draw next checkpoint in race
+    DrawCheckpoints(shader);
+
+}
+
+
+static void RenderSceneShadow()
+{
+    GLERR;
+    glUseProgram(simpleDepthShader.id);
+    GLERR;
+    simpleDepthShader.SetMat4fv((char*)"lightSpaceMatrix", glm::value_ptr(lightSpaceMatrix));
+    GLERR;
+    RenderSceneRaw(simpleDepthShader);
+    GLERR;
 }
 
 
@@ -288,17 +393,6 @@ void Render::DestroySpotLight(SpotLight *spotLight)
 }
 
 
-
-/*
-Render::SpotLight& Render::GetSpotLightById(unsigned int id)
-{
-    SDL_assert(spotLights.size() > id); // This spotlight was deleted
-    return spotLights[id];
-}
-*/
-    
-
-
 bool Render::Init()
 {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -328,12 +422,13 @@ bool Render::Init()
         SDL_Log("Could not turn on VSync");
     }
 
+    GLERR;
     // Create shaders
     unsigned int vShader = CreateShaderFromFile("shaders/vertex.glsl", 
                                                  GL_VERTEX_SHADER);
     unsigned int fShader = CreateShaderFromFile("shaders/fragment.glsl", 
                                                  GL_FRAGMENT_SHADER);
-    shader = CreateAndLinkShaderProgram(vShader, fShader);
+    PbrShader = CreateAndLinkShaderProgram(vShader, fShader);
 
     unsigned int vSkybox = CreateShaderFromFile("shaders/v_skybox.glsl",
                                                 GL_VERTEX_SHADER);
@@ -347,6 +442,11 @@ bool Render::Init()
                                                 GL_FRAGMENT_SHADER);
     screenShader = CreateAndLinkShaderProgram(vScreen, fScreen);
 
+    unsigned int vSimpleDepth = CreateShaderFromFile("shaders/v_simple_depth.glsl", GL_VERTEX_SHADER);
+    unsigned int fSimpleDepth = CreateShaderFromFile("shaders/f_simple_depth.glsl", GL_FRAGMENT_SHADER);
+    simpleDepthShader = CreateAndLinkShaderProgram(vSimpleDepth, fSimpleDepth);
+
+    GLERR;
     // Skybox VAO
     glGenVertexArrays(1, &skyboxVAO);
     glGenBuffers(1, &skyboxVBO);
@@ -358,6 +458,7 @@ bool Render::Init()
 
     //glDisableVertexAttribArray(1);
     //glDisableVertexAttribArray(2);
+    // Texture and Materials
     skyboxTex = CreateCubemapFromFiles("texture/Lycksele/posx.jpg",
                                        "texture/Lycksele/negx.jpg",
                                        "texture/Lycksele/posy.jpg",
@@ -377,6 +478,7 @@ bool Render::Init()
     windowMat.roughnessMap = gDefaultTexture;
     windowMat.diffuseColour = glm::vec3(1.0f);
 
+    GLERR;
     // ----- Quad VAO -----
     glGenVertexArrays(1, &quadVAO);
     glGenBuffers(1, &quadVBO);
@@ -389,7 +491,7 @@ bool Render::Init()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glBindVertexArray(0);
 
-    // Cube
+    // Models
     cubeModel = LoadModel("models/cube.gltf");
     quadModel = LoadModel("models/quad.gltf");
 
@@ -406,9 +508,39 @@ bool Render::Init()
     //cam2.cam.pos.z = 6.0f;
     //cam2.cam.SetYawPitch(-SDL_PI_F / 2.0, 0);
 
+    GLERR;
     // ----- Framebuffer -----
     CreateFramebuffer(&fbo, &textureColourBuffer, &rbo);
+    GLERR;
     CreateMSFramebuffer(&msFBO, &msTexColourBuffer, &msRBO);
+
+    // Shadow Map
+    GLERR;
+    glGenFramebuffers(1, &depthMapFBO);
+    glGenTextures(1, &depthMap);
+    
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+                 SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT,
+                 GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    float borderColour[] = {1.0f, 1.0f, 1.0f, 1.0f};
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColour);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+                           depthMap, 0);
+    // Don't draw colours onto this buffer
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    GLERR;
+
 
     // Enable MSAA (anti-aliasing)
     glEnable(GL_MULTISAMPLE);
@@ -496,59 +628,100 @@ void Render::Update(double delta)
 
 void Render::RenderFrame()
 {
+    GLERR;
+    // Shadow pass
+    float nearPlane = 1.0f, farPlane = 140.0f;
+    const glm::vec3 shadowOrigin = cam2.cam.pos;
+    constexpr float SHADOW_START_FAC = 70.0f;
+    glm::mat4 lightView = glm::lookAt(
+            shadowOrigin - sunLight.mDirection * SHADOW_START_FAC,
+            shadowOrigin, up);
+    glm::mat4 lightProjection = glm::ortho(-40.0f, 40.0f, -40.0f, 40.0f, 
+                                    nearPlane, farPlane);
+    // Transforms world space to light space
+    lightSpaceMatrix = lightProjection * lightView;
+
+    
+    glEnable(GL_CULL_FACE);
+    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glCullFace(GL_FRONT);
+    RenderSceneShadow();
+    glCullFace(GL_BACK);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    
+    GLERR;
+
+    // Get screen width and height
     int screenWidth, screenHeight;
     bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
     if (screenSuccess) {
         glViewport(0, 0, screenWidth, screenHeight);
     }
 
+    GLERR;
 
+    // Set up multisampled framebuffer for rendering
     glBindFramebuffer(GL_FRAMEBUFFER, msFBO);
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.7f, 0.6f, 0.2f, 1.0f);
     glClearDepth(1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    GLERR;
     // Render left screen
     int playerScreenWidth = doSplitScreen ? screenWidth / 2 : screenWidth;
     if (screenSuccess) {
         glViewport(0, 0, playerScreenWidth, screenHeight);
     }
+    glUseProgram(PbrShader.id);
     RenderScene(cam2.cam);
     
     // Render right screen
+    
     if (doSplitScreen) {
         if (screenSuccess) {
             glViewport(screenWidth/2, 0, playerScreenWidth, screenHeight);
         }
+        glUseProgram(PbrShader.id);
         RenderScene(cam3.cam);
     }
+    
 
+    GLERR;
+    
+    // Blit multisampled framebuffer onto the regular framebuffer
     glBindFramebuffer(GL_READ_FRAMEBUFFER, msFBO);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
     glBlitFramebuffer(0, 0, screenWidth, screenHeight,
                       0, 0, screenWidth, screenHeight,
                       GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
-
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    GLERR;
 
+    //glViewport(0, 0, screenWidth, screenHeight);
     glViewport(0, 0, fbWidth, fbHeight);
+
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+    GLERR;
 
     glDisable(GL_DEPTH_TEST);
     glUseProgram(screenShader.id);
     glBindVertexArray(quadVAO);
     glBindTexture(GL_TEXTURE_2D, textureColourBuffer);
+    //glBindTexture(GL_TEXTURE_2D, depthMap);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindTexture(GL_TEXTURE_2D, 0);
+    //RenderSceneShadow();
 
-
-
+    GLERR;
     //static bool showDemoWindow = true;
     //ImGui::ShowDemoWindow(&showDemoWindow);
-
     
 
     ImGui::Render();
@@ -560,13 +733,15 @@ void Render::RenderFrame()
 
 void Render::RenderScene(const Camera &cam)
 {
-    glEnable(GL_CULL_FACE);
-    glm::mat4 view;
-    glm::mat4 projection;
-    view = cam.LookAtMatrix(up);
-    projection = cam.projection;
+    RenderScene(cam.LookAtMatrix(up), cam.projection);
+}
 
-    glm::mat4 model = glm::mat4(1.0f);
+
+void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection, 
+                         bool enableSkybox)
+{
+    glEnable(GL_CULL_FACE);
+
     int windowWidth;
     int windowHeight;
     if (!SDL_GetWindowSize(window, &windowWidth, &windowHeight)) {
@@ -575,15 +750,24 @@ void Render::RenderScene(const Camera &cam)
         windowHeight = 600;
     } 
 
+    ShaderProg &shader = PbrShader;
     glUseProgram(shader.id);
 
     shader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
     shader.SetMat4fv((char*)"view", glm::value_ptr(view));
 
+    // Shadow setup
+    shader.SetMat4fv((char*)"lightSpaceMatrix", glm::value_ptr(lightSpaceMatrix));
+    glActiveTexture(GL_TEXTURE8);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    shader.SetInt((char*)"shadowMap", 8);
+    glActiveTexture(GL_TEXTURE0);
+
     glm::vec3 sunCol = sunLight.mColour / glm::vec3(1.0);
+    // Sunlight direction in view space
     glm::vec3 sunDir = glm::vec3(view * glm::vec4(sunLight.mDirection, 0.0));
     shader.SetVec3((char*)"dirLight.direction", glm::value_ptr(sunDir));
-    shader.SetVec3((char*)"dirLight.ambient", 0.1, 0.1, 0.1);
+    shader.SetVec3((char*)"dirLight.ambient", 0.05, 0.05, 0.05);
     shader.SetVec3((char*)"dirLight.diffuse", glm::value_ptr(sunCol));
     shader.SetVec3((char*)"dirLight.specular", glm::value_ptr(sunCol));
 
@@ -638,93 +822,13 @@ void Render::RenderScene(const Camera &cam)
     }
 
 
-    shader.SetFloat((char*)"material.shininess", 32.0f);
+    //shader.SetFloat((char*)"material.shininess", 32.0f);
 
-    // Draw map
-    Model &mapModel = World::GetCurrentMapModel();
-    model = glm::mat4(1.0f);
-    shader.SetMat4fv((char*)"model", glm::value_ptr(model));
-    mapModel.Draw(shader);
-
-    // Draw all cars
-    for (Vehicle *car : GetExistingVehicles()) {
-        glm::vec3 carPos = ToGlmVec3(car->GetPos());
-        glm::mat4 carTrans = glm::mat4(1.0f);
-        carTrans = glm::translate(carTrans, carPos);
-        carTrans = carTrans * QuatToMatrix(car->GetRotation());
-
-        car->mVehicleModel->Draw(shader, carTrans);
-
-        // Draw car wheels
-        for (int i = 0; i < 4; i++) {
-            glm::mat4 wheelTrans = ToGlmMat4(car->GetWheelTransform(i));
-            if (car->IsWheelFlipped(i)) {
-                wheelTrans = glm::rotate(wheelTrans, SDL_PI_F, glm::vec3(1.0f, 0.0f, 0.0f));
-            }
-            car->mWheelModel->Draw(shader, wheelTrans);
-        }
-    }
-
-    // Draw next checkpoint in race
-    if (World::GetCheckpoints().size() > 0) {
-        Checkpoint &checkpoint = World::GetCheckpoints()[gPlayerRaceProgress.mCheckpointsCollected];
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, ToGlmVec3(checkpoint.GetPosition()));
-        model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
-        cubeModel->Draw(shader, model, &windowMat);
-    }
-
-    // Draw grass
-    /*
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0, 1.0, 16.0));
-    model = glm::scale(model, glm::vec3(2.0, 2.0, 2.0));
-    model = glm::rotate(model, SDL_PI_F, glm::vec3(0.0, 1.0, 0.0));
-    model = glm::rotate(model, SDL_PI_F / 2.0f, glm::vec3(1.0, 0.0, 0.0));
-    */
-    /*
-    glm::vec3 white = glm::vec3(1.0f);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, gDefaultTexture.id);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, gDefaultNormalMap.id);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, grassTex.id);
-
-    shader.SetInt((char*)"material.texture_diffuse", 0);
-    shader.SetInt((char*)"material.normalMap", 1);
-    shader.SetInt((char*)"material.roughnessMap", 2);
-
-    shader.SetMat4fv((char*)"model", glm::value_ptr(model));
-    shader.SetVec3((char*)"material.baseColour", glm::value_ptr(white));
-    shader.SetFloat((char*)"material.roughness", 1.0);
-    shader.SetFloat((char*)"material.metallic", 0.0);
-
-    glBindVertexArray(quadVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    */
-    //quadModel->Draw(shader, model, &grassMat);
-    //quadModel->Draw(shader, model, &windowMat);
-
+    RenderSceneRaw(shader);
     // Draw skybox
-    glDepthFunc(GL_LEQUAL);
-    glDepthMask(GL_FALSE);
-    // Remove translation component from view matrix
-    glm::mat4 skyboxView = glm::mat4(glm::mat3(view));
-    glUseProgram(skyboxShader.id);
-
-    skyboxShader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
-    skyboxShader.SetMat4fv((char*)"view", glm::value_ptr(skyboxView));
-    skyboxShader.SetInt((char*)"skybox", 0);
-
-    glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex.id);
-    glBindVertexArray(skyboxVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    glBindVertexArray(0);
-
-    glDepthFunc(GL_LESS);
-    glDepthMask(GL_TRUE);
+    if (enableSkybox) {
+        RenderSkybox(view, projection);
+    }
     glDisable(GL_CULL_FACE);
 }
 

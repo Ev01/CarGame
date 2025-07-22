@@ -5,6 +5,7 @@ in VS_OUT {
     in vec3 FragPos;
     in vec2 TexCoords;
     in mat3 TBN;
+    in vec4 FragPosLightSpace;
 } fs_in;
 
 out vec4 FragColor;
@@ -65,12 +66,41 @@ uniform DirLight dirLight;
 #define NUM_SPOT_LIGHTS 16
 uniform PointLight pointLights[NUM_POINT_LIGHTS];
 uniform SpotLight spotLights[NUM_SPOT_LIGHTS];
+uniform sampler2D shadowMap;
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 
 #define PI 3.14159265359
+
+float ShadowCalculation(vec4 fragPosLightSpace, float bias)
+{
+    // perform perspective divide
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    // Map [-1, 1] range to [0, 1] range
+    projCoords = projCoords * 0.5 + 0.5;
+
+    // Get depth of current fragment from lights perspective
+    float currentDepth = projCoords.z;
+    
+    // Get cloest depth from lights perspective
+    //float closestDepth = texture(shadowMap, projCoords.xy).r;
+    //float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+    
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            float pcfDepth = texture(shadowMap,
+                                     projCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= 9.0;
+
+    return shadow;
+}
 
 void main() {
     //vec3 norm = normalize(Normal);
@@ -103,6 +133,7 @@ void main() {
     for (int i = 0; i < NUM_SPOT_LIGHTS; i++) {
         Lo += CalcSpotLight(spotLights[i], norm, fs_in.FragPos, viewDir);
     }
+
     
     vec3 albedo = material.baseColour * textureSample.rgb;
     vec3 ambient = vec3(0.01) * albedo;
@@ -209,7 +240,11 @@ vec3 CalcLightIntensity(vec3 normal, vec3 lightDir, vec3 viewDir,
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     vec3 lightDir = normalize(-light.direction);
-    vec3 radiance = light.diffuse;
+    // Calculate shadows
+    //float shadowBias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
+    float shadowBias = -0.0005;
+    float shadow = ShadowCalculation(fs_in.FragPosLightSpace, shadowBias);
+    vec3 radiance = light.diffuse * (1.0 - shadow);
     return CalcLightIntensity(normal, lightDir, viewDir, radiance);
 }
 

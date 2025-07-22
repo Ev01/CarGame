@@ -104,6 +104,7 @@ fixed later.
 	- [x] Create checkpoint struct
 	- [x] Create body for checkpoint with trigger mode
 	- [x] Detect when car collides with checkpoint
+- [x] Transparency graphics
 
 
 
@@ -112,9 +113,13 @@ fixed later.
 - [ ] Get model from filename anywhere without loading it twice. When loading a
       model, it will save it to an array if loading it for the first time. Later
       load calls will return a pointer to the already loaded model.
-- [ ] Transparency graphics
 - [ ] Speedometer
 - [ ] Luminosity
 - [ ] Crash sound effect
 - [ ] Adjust drift volume
+- [ ] Proper race start with countdown
+- [ ] Sprint race (not circuit)
+- [ ] Shadows
+	- [x] Sun shadow
+	- [ ] Shadows for all light sources
 
