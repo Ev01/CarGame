@@ -12,6 +12,14 @@ const float exposure = -1.0;
     
 vec3 EdgeDetect();
 
+float near = 1.0;
+float far = 40.0;
+float LinearizeDepth(float depth)
+{
+    float z = depth * 2.0 - 1.0; // back to NDC
+    return (2.0 * near * far) / (far + near - z * (far - near));
+}
+
 
 void main()
 {
@@ -31,6 +39,11 @@ void main()
 
     FragColor = vec4(col, 1.0);
     //FragColor = vec4(texture(screenTexture, TexCoords).rrr, 1.0);
+    /*
+    FragColor = vec4(vec3(
+                LinearizeDepth(texture(screenTexture, TexCoords).r) / far),
+                    1.0);
+    */
 }
 
 

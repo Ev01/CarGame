@@ -282,16 +282,44 @@ static void RenderSceneRaw(ShaderProg &shader)
 }
 
 
-static void RenderSceneShadow()
+static void RenderSceneShadow(glm::mat4 aLightSpaceMatrix)
 {
     GLERR;
     glUseProgram(simpleDepthShader.id);
     GLERR;
-    simpleDepthShader.SetMat4fv((char*)"lightSpaceMatrix", glm::value_ptr(lightSpaceMatrix));
+    simpleDepthShader.SetMat4fv((char*)"lightSpaceMatrix", glm::value_ptr(aLightSpaceMatrix));
     GLERR;
     RenderSceneRaw(simpleDepthShader);
     GLERR;
 }
+
+
+static void CreateShadowFBO(unsigned int *inFBO, unsigned int *inTex, unsigned int resW, unsigned int resH)
+{
+    glGenFramebuffers(1, inFBO);
+    glGenTextures(1, inTex);
+
+    glBindTexture(GL_TEXTURE_2D, *inTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+                 resW, resH, 0, GL_DEPTH_COMPONENT,
+                 GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    float borderColour[] = {0.0f, 0.0f, 0.0f, 0.0f};
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColour);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, *inFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+                           *inTex, 0);
+    // Don't draw colours onto this buffer
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 
 
 void Render::AssimpAddLight(const aiLight *aLight, const aiNode *aNode, aiMatrix4x4 aTransform)
@@ -374,6 +402,9 @@ Render::SpotLight* Render::CreateSpotLight()
     }
     // If no null value, add to end
     spotLights.push_back(newSpotLight);
+    // Create shadow map for spotlight
+    CreateShadowFBO(&(newSpotLight->mShadowFBO), &(newSpotLight->mShadowTex),
+                    256, 256);
     return newSpotLight;
 }
 
@@ -382,6 +413,8 @@ void Render::DestroySpotLight(SpotLight *spotLight)
 {
     for (size_t i = 0; i < spotLights.size(); i++) {
         if (spotLights[i] == spotLight) {
+            glDeleteFramebuffers(1, &(spotLights[i]->mShadowFBO));
+            glDeleteTextures(1, &(spotLights[i]->mShadowTex));
             spotLights[i] = nullptr;
             delete spotLight;
             return;
@@ -516,28 +549,7 @@ bool Render::Init()
 
     // Shadow Map
     GLERR;
-    glGenFramebuffers(1, &depthMapFBO);
-    glGenTextures(1, &depthMap);
-    
-    glBindTexture(GL_TEXTURE_2D, depthMap);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-                 SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT,
-                 GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    float borderColour[] = {1.0f, 1.0f, 1.0f, 1.0f};
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColour);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                           depthMap, 0);
-    // Don't draw colours onto this buffer
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    CreateShadowFBO(&depthMapFBO, &depthMap, SHADOW_WIDTH, SHADOW_HEIGHT);
 
     GLERR;
 
@@ -638,6 +650,7 @@ void Render::RenderFrame()
             shadowOrigin, up);
     glm::mat4 lightProjection = glm::ortho(-40.0f, 40.0f, -40.0f, 40.0f, 
                                     nearPlane, farPlane);
+
     // Transforms world space to light space
     lightSpaceMatrix = lightProjection * lightView;
 
@@ -648,8 +661,28 @@ void Render::RenderFrame()
     glEnable(GL_DEPTH_TEST);
     glClear(GL_DEPTH_BUFFER_BIT);
     glCullFace(GL_FRONT);
-    RenderSceneShadow();
+    RenderSceneShadow(lightSpaceMatrix);
+    // Render shadows for all spotlights
+    for (size_t i = 0; i < spotLights.size(); i++) {
+        if (spotLights[i] == nullptr) continue;
+        lightView = glm::lookAt(
+                spotLights[i]->mPosition,
+                spotLights[i]->mPosition + spotLights[i]->mDirection,
+                up);
+        nearPlane = 1.0f;
+        farPlane = 40.0f;
+        lightProjection = glm::perspective(SDL_acosf(spotLights[i]->mCutoffOuter) * 2.0f,
+                                           1.0f, nearPlane, farPlane);
+        //lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 
+        //                            nearPlane, farPlane);
+        spotLights[i]->lightSpaceMatrix = lightProjection * lightView;
+        glBindFramebuffer(GL_FRAMEBUFFER, spotLights[i]->mShadowFBO);
+        glViewport(0, 0, 256, 256);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        RenderSceneShadow(spotLights[i]->lightSpaceMatrix);
+    }
     glCullFace(GL_BACK);
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     
     
@@ -679,6 +712,22 @@ void Render::RenderFrame()
     }
     glUseProgram(PbrShader.id);
     RenderScene(cam2.cam);
+
+    
+    /*
+    lightView = glm::lookAt(
+            spotLights[0]->mPosition,
+            spotLights[0]->mPosition + spotLights[0]->mDirection,
+            up);
+    nearPlane = 1.0f;
+    farPlane = 40.0f;
+    //lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 
+    //                            nearPlane, farPlane);
+    lightProjection = glm::perspective(SDL_acosf(spotLights[0]->mCutoffOuter)*2.0f,
+                                       1.0f, nearPlane, farPlane);
+    RenderScene(lightView, lightProjection);
+    */
+    
     
     // Render right screen
     
@@ -707,17 +756,23 @@ void Render::RenderFrame()
     glViewport(0, 0, fbWidth, fbHeight);
 
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     GLERR;
 
     glDisable(GL_DEPTH_TEST);
+    
     glUseProgram(screenShader.id);
     glBindVertexArray(quadVAO);
     glBindTexture(GL_TEXTURE_2D, textureColourBuffer);
     //glBindTexture(GL_TEXTURE_2D, depthMap);
+    //glBindTexture(GL_TEXTURE_2D, spotLights[0]->mShadowTex);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindTexture(GL_TEXTURE_2D, 0);
-    //RenderSceneShadow();
+    
+
+    //glEnable(GL_DEPTH_TEST);
+    //RenderSceneShadow(spotLights[0]->lightSpaceMatrix);
+    //RenderSceneShadow(lightSpaceMatrix);
 
     GLERR;
     //static bool showDemoWindow = true;
@@ -798,6 +853,16 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
 
     for (size_t i = 0; i < spotLights.size(); i++) {
         if (spotLights[i] == nullptr) continue;
+
+        // Spotlight shadow texture
+        glActiveTexture(GL_TEXTURE9 + i);
+        glBindTexture(GL_TEXTURE_2D, spotLights[i]->mShadowTex);
+        SDL_snprintf(uniformName, 64, "spotLights[%llu].shadowMap", i);
+        shader.SetInt(uniformName, 9 + i);
+        SDL_snprintf(uniformName, 64, "spotLightSpaceMatrix[%llu]", i);
+        shader.SetMat4fv(uniformName, glm::value_ptr(spotLights[i]->lightSpaceMatrix));
+        glActiveTexture(GL_TEXTURE0);
+
         glm::vec3 lightCol = spotLights[i]->mColour / glm::vec3(1.0);
         //glm::vec3 lightCol = glm::vec3(6000.0);
         SDL_snprintf(uniformName, 64, "spotLights[%llu].diffuse", i);

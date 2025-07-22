@@ -6,10 +6,13 @@ layout (location = 2) in vec2 aTexCoords;
 layout (location = 3) in vec3 aTangent;
 layout (location = 4) in vec3 aBitTangent;
 
+#define MAX_SPOT_SHADOWS 16
+
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 lightSpaceMatrix;
+uniform mat4 spotLightSpaceMatrix[MAX_SPOT_SHADOWS];
 
 out VS_OUT {
     //vec3 Normal;
@@ -17,6 +20,7 @@ out VS_OUT {
     vec2 TexCoords;
     mat3 TBN;
     vec4 FragPosLightSpace;
+    vec4 FragPosSpotLightSpace[MAX_SPOT_SHADOWS];
 } vs_out;
 
 void main() {
@@ -25,6 +29,10 @@ void main() {
     //vs_out.Normal = mat3(transpose(inverse(view * model))) * aNormal;
     vs_out.TexCoords = aTexCoords;
     vs_out.FragPosLightSpace = lightSpaceMatrix * model * vec4(aPos, 1.0);
+    for (int i = 0; i < MAX_SPOT_SHADOWS; i++) {
+        vs_out.FragPosSpotLightSpace[i] = spotLightSpaceMatrix[i] 
+                                        * model * vec4(aPos, 1.0f);
+    }
 
     vec3 T = normalize(vec3(view * model * vec4(aTangent,    0.0)));
     vec3 B = normalize(vec3(view * model * vec4(aBitTangent, 0.0)));

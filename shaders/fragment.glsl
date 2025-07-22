@@ -1,11 +1,14 @@
 #version 330 core
 
+#define MAX_SPOT_SHADOWS 16
+
 in VS_OUT {
     //in vec3 Normal;
     in vec3 FragPos;
     in vec2 TexCoords;
     in mat3 TBN;
     in vec4 FragPosLightSpace;
+    in vec4 FragPosSpotLightSpace[MAX_SPOT_SHADOWS];
 } fs_in;
 
 out vec4 FragColor;
@@ -44,6 +47,7 @@ struct SpotLight {
     float cutoffInner;
     float cutoffOuter;
     float quadratic;
+    sampler2D shadowMap;
 };
 
 
@@ -70,11 +74,11 @@ uniform sampler2D shadowMap;
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
+vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec4 fragPosLightSpace);
 
 #define PI 3.14159265359
 
-float ShadowCalculation(vec4 fragPosLightSpace, float bias)
+float ShadowCalculation(sampler2D shadMap, vec4 fragPosLightSpace, float bias)
 {
     // perform perspective divide
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
@@ -85,19 +89,21 @@ float ShadowCalculation(vec4 fragPosLightSpace, float bias)
     float currentDepth = projCoords.z;
     
     // Get cloest depth from lights perspective
-    //float closestDepth = texture(shadowMap, projCoords.xy).r;
+    //float closestDepth = texture(shadMap, projCoords.xy).r;
     //float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
     
+    
     float shadow = 0.0;
-    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+    vec2 texelSize = 1.0 / textureSize(shadMap, 0);
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {
-            float pcfDepth = texture(shadowMap,
+            float pcfDepth = texture(shadMap,
                                      projCoords.xy + vec2(x, y) * texelSize).r;
             shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
         }
     }
     shadow /= 9.0;
+    
 
     return shadow;
 }
@@ -131,7 +137,8 @@ void main() {
     
     
     for (int i = 0; i < NUM_SPOT_LIGHTS; i++) {
-        Lo += CalcSpotLight(spotLights[i], norm, fs_in.FragPos, viewDir);
+        Lo += CalcSpotLight(spotLights[i], norm, fs_in.FragPos, viewDir,
+                fs_in.FragPosSpotLightSpace[i]);
     }
 
     
@@ -243,7 +250,7 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     // Calculate shadows
     //float shadowBias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
     float shadowBias = -0.0005;
-    float shadow = ShadowCalculation(fs_in.FragPosLightSpace, shadowBias);
+    float shadow = ShadowCalculation(shadowMap, fs_in.FragPosLightSpace, shadowBias);
     vec3 radiance = light.diffuse * (1.0 - shadow);
     return CalcLightIntensity(normal, lightDir, viewDir, radiance);
 }
@@ -265,7 +272,8 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 }
 
 
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
+vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
+        vec4 fragPosLightSpace)
 {
     if (light.quadratic == 0.0) {
         return vec3(0.0);
@@ -275,7 +283,12 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 
     vec3 lightDir = normalize(light.position - fragPos);
     float cutoffMult = smoothstep(light.cutoffOuter, light.cutoffInner, dot(lightDir, normalize(-light.direction)));
-    vec3 radiance = light.diffuse * attenuation * cutoffMult;
+
+    // Calculate shadows
+    float shadow = ShadowCalculation(light.shadowMap, fragPosLightSpace, 0.0);
+    //return vec3(1.0 - shadow);
+
+    vec3 radiance = light.diffuse * attenuation * cutoffMult * (1.0 - shadow);
 
     return CalcLightIntensity(normal, lightDir, viewDir, radiance);
 }

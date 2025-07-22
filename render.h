@@ -32,6 +32,10 @@ namespace Render {
         float mQuadratic = 1.0;
         float mCutoffInner = 0.0;
         float mCutoffOuter = 0.0;
+
+        unsigned int mShadowTex;
+        unsigned int mShadowFBO;
+        glm::mat4 lightSpaceMatrix;
     };
         
 
