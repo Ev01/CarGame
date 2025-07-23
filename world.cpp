@@ -203,6 +203,9 @@ void World::PrePhysicsUpdate(float delta)
 
 void World::Update(float delta)
 {
+    car->PostPhysicsStep();
+    car2->PostPhysicsStep();
+
     ImGui::Begin("Maps");
     const char* items[] = {"Map01", "Map02", "simple_map"};
     static int currentItem = 0;

@@ -153,6 +153,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     else {
         ImGui::Text("Couldn't get GL swap interval (VSync)");
     }
+    static bool dontSkipPhysicsStep = false;
+    ImGui::Checkbox("Dont skip physics step", &dontSkipPhysicsStep);
     static double fpsLimit = 300.0;
     const double fpsSliderMin = 0.0;
     const double fpsSliderMax = 300.0;
@@ -164,14 +166,25 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         
     // Do physics step
     physicsTime += delta;
-    while (physicsTime >= PHYSICS_STEP_TIME) {
+    if (dontSkipPhysicsStep) {
         World::PrePhysicsUpdate(PHYSICS_STEP_TIME);
         World::ProcessInput();
         Phys::ProcessInput();
 
         Phys::PhysicsStep(PHYSICS_STEP_TIME);
         Render::PhysicsUpdate(PHYSICS_STEP_TIME);
-        physicsTime -= PHYSICS_STEP_TIME;
+        physicsTime = 0.0;
+    }
+    else {
+        while (physicsTime >= PHYSICS_STEP_TIME) {
+            World::PrePhysicsUpdate(PHYSICS_STEP_TIME);
+            World::ProcessInput();
+            Phys::ProcessInput();
+
+            Phys::PhysicsStep(PHYSICS_STEP_TIME);
+            Render::PhysicsUpdate(PHYSICS_STEP_TIME);
+            physicsTime -= PHYSICS_STEP_TIME;
+        }
     }
 
     // Update

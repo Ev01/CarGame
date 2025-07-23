@@ -380,15 +380,15 @@ void Vehicle::Init(VehicleSettings &settings)
     driftSnd = Audio::CreateSoundFromFile("sound/drift.wav");
 
     // Head Lights
-    const float cutoffInner = SDL_cos(SDL_PI_F / 6.0);
+    const float cutoffInner = SDL_cos(SDL_PI_F / 5.0);
     const float cutoffOuter = SDL_cos(SDL_PI_F / 4.0);
     headLightLeft = Render::CreateSpotLight();
-    headLightLeft->mColour = glm::vec3(300.0, 200.0, 100.0);
+    headLightLeft->mColour = glm::vec3(150.0, 100.0, 50.0);
     headLightLeft->mCutoffInner = cutoffInner;
     headLightLeft->mCutoffOuter = cutoffOuter;
 
     headLightRight = Render::CreateSpotLight();
-    headLightRight->mColour = glm::vec3(300.0, 200.0, 100.0);
+    headLightRight->mColour = glm::vec3(150.0, 100.0, 50.0);
     headLightRight->mCutoffInner = cutoffInner;
     headLightRight->mCutoffOuter = cutoffOuter;
     
@@ -636,6 +636,12 @@ void Vehicle::Update(float delta)
     SDL_SetAudioStreamFrequencyRatio(driftSnd->stream, driftPitch);
     SDL_SetAudioStreamGain(driftSnd->stream, driftGain);
 
+
+}
+
+
+void Vehicle::PostPhysicsStep()
+{
     JPH::RMat44 bodyTransform = mBody->GetWorldTransform();
 
     headLightLeft->mPosition = ToGlmVec3(JPH::Vec3(
@@ -647,8 +653,8 @@ void Vehicle::Update(float delta)
                 bodyTransform * headLightRightTransform * JPH::Vec4(0, 0, 0, 1)));
     headLightRight->mDirection = ToGlmVec3(JPH::Vec3(
                 bodyTransform * headLightRightTransform * JPH::Vec4(0, 1, 0, 0)));
-
 }
+
 
 
 void Vehicle::ProcessInput(bool useGamepad)

@@ -26,6 +26,7 @@
             SDL_Log("%s:%d glGetError() = 0x%04x", __FILE__, __LINE__, glerr);\
     } while (0)
 
+
 static std::vector<Render::Light> lights;
 static std::vector<Render::SpotLight*> spotLights;
 static Render::SunLight sunLight;
@@ -123,6 +124,7 @@ static unsigned int msTexColourBuffer;
 static unsigned int depthMapFBO;
 static unsigned int depthMap; // Depth map texture
 const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
+constexpr unsigned int SPOT_SHADOW_SIZE = 512;
 static glm::mat4 lightSpaceMatrix;
 
 static unsigned int quadVAO;
@@ -294,7 +296,7 @@ static void RenderSceneShadow(glm::mat4 aLightSpaceMatrix)
 }
 
 
-static void CreateShadowFBO(unsigned int *inFBO, unsigned int *inTex, unsigned int resW, unsigned int resH)
+static void CreateShadowFBO(unsigned int *inFBO, unsigned int *inTex, unsigned int resW, unsigned int resH, float defaultLighting = 0.0f)
 {
     glGenFramebuffers(1, inFBO);
     glGenTextures(1, inTex);
@@ -307,7 +309,8 @@ static void CreateShadowFBO(unsigned int *inFBO, unsigned int *inTex, unsigned i
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    float borderColour[] = {0.0f, 0.0f, 0.0f, 0.0f};
+    float borderColour[] = {defaultLighting, defaultLighting, 
+                            defaultLighting, defaultLighting};
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColour);
 
     glBindFramebuffer(GL_FRAMEBUFFER, *inFBO);
@@ -404,7 +407,7 @@ Render::SpotLight* Render::CreateSpotLight()
     spotLights.push_back(newSpotLight);
     // Create shadow map for spotlight
     CreateShadowFBO(&(newSpotLight->mShadowFBO), &(newSpotLight->mShadowTex),
-                    256, 256);
+                    SPOT_SHADOW_SIZE, SPOT_SHADOW_SIZE);
     return newSpotLight;
 }
 
@@ -549,7 +552,7 @@ bool Render::Init()
 
     // Shadow Map
     GLERR;
-    CreateShadowFBO(&depthMapFBO, &depthMap, SHADOW_WIDTH, SHADOW_HEIGHT);
+    CreateShadowFBO(&depthMapFBO, &depthMap, SHADOW_WIDTH, SHADOW_HEIGHT, 1.0f);
 
     GLERR;
 
@@ -669,7 +672,7 @@ void Render::RenderFrame()
                 spotLights[i]->mPosition,
                 spotLights[i]->mPosition + spotLights[i]->mDirection,
                 up);
-        nearPlane = 1.0f;
+        nearPlane = 0.2f;
         farPlane = 40.0f;
         lightProjection = glm::perspective(SDL_acosf(spotLights[i]->mCutoffOuter) * 2.0f,
                                            1.0f, nearPlane, farPlane);
@@ -677,7 +680,7 @@ void Render::RenderFrame()
         //                            nearPlane, farPlane);
         spotLights[i]->lightSpaceMatrix = lightProjection * lightView;
         glBindFramebuffer(GL_FRAMEBUFFER, spotLights[i]->mShadowFBO);
-        glViewport(0, 0, 256, 256);
+        glViewport(0, 0, SPOT_SHADOW_SIZE, SPOT_SHADOW_SIZE);
         glClear(GL_DEPTH_BUFFER_BIT);
         RenderSceneShadow(spotLights[i]->lightSpaceMatrix);
     }

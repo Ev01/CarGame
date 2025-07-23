@@ -84,6 +84,9 @@ float ShadowCalculation(sampler2D shadMap, vec4 fragPosLightSpace, float bias)
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     // Map [-1, 1] range to [0, 1] range
     projCoords = projCoords * 0.5 + 0.5;
+    if (projCoords.z > 1.0) {
+        return 0.0;
+    }
 
     // Get depth of current fragment from lights perspective
     float currentDepth = projCoords.z;
@@ -285,7 +288,10 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
     float cutoffMult = smoothstep(light.cutoffOuter, light.cutoffInner, dot(lightDir, normalize(-light.direction)));
 
     // Calculate shadows
-    float shadow = ShadowCalculation(light.shadowMap, fragPosLightSpace, 0.0);
+    //float shadowBias = 0.005 / fragPosLightSpace.w;
+    float shadowBias = 0.0;
+    float shadow = ShadowCalculation(light.shadowMap, fragPosLightSpace,
+            shadowBias);
     //return vec3(1.0 - shadow);
 
     vec3 radiance = light.diffuse * attenuation * cutoffMult * (1.0 - shadow);

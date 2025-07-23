@@ -106,7 +106,9 @@ fixed later.
 	- [x] Detect when car collides with checkpoint
 - [x] Transparency graphics
 
-
+22/07
+- [x] Sun shadow
+- [x] Spot light shadows
 
 
 - [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())
@@ -119,7 +121,20 @@ fixed later.
 - [ ] Adjust drift volume
 - [ ] Proper race start with countdown
 - [ ] Sprint race (not circuit)
-- [ ] Shadows
-	- [x] Sun shadow
-	- [ ] Shadows for all light sources
+- [ ] Point light shadows
+- [ ] Particles
+- [ ] Smoke particle
+- [ ] Metallic texture for car paint
+- [ ] Sun Shadow LOD?
+- [ ] Sun shadow for player 2
+- [ ] Rendering text without ImGui
+- [ ] Driving car AI
+- [ ] SSAO
+- [ ] Deferred shading
+- [ ] Bloom
+- [ ] Reflections from cubemap / IBL
+- [ ] Make tree with branch texture
+- [ ] Make bushes
+- [ ] Start on UI / menu screen
+- [ ] Render shadows from closest light sources only
 
