@@ -110,6 +110,10 @@ fixed later.
 - [x] Sun shadow
 - [x] Spot light shadows
 
+23/07
+- [x] Proper race start with countdown
+- [x] Sprint race (not circuit)
+
 
 - [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())
 - [ ] Get model from filename anywhere without loading it twice. When loading a
@@ -119,8 +123,6 @@ fixed later.
 - [ ] Luminosity
 - [ ] Crash sound effect
 - [ ] Adjust drift volume
-- [ ] Proper race start with countdown
-- [ ] Sprint race (not circuit)
 - [ ] Point light shadows
 - [ ] Particles
 - [ ] Smoke particle
@@ -137,4 +139,5 @@ fixed later.
 - [ ] Make bushes
 - [ ] Start on UI / menu screen
 - [ ] Render shadows from closest light sources only
+- [ ] Players can choose input device
 

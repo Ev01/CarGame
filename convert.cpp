@@ -96,3 +96,13 @@ JPH::RMat44 ToJoltMat4(glm::mat4 gMat)
          );
     return joltMat;
 }
+
+JPH::Quat ToJoltQuat(aiQuaternion aiQuat)
+{
+    JPH::Quat returnQuat;
+    returnQuat.mValue.SetX(aiQuat.x);
+    returnQuat.mValue.SetY(aiQuat.y);
+    returnQuat.mValue.SetZ(aiQuat.z);
+    returnQuat.mValue.SetW(aiQuat.w);
+    return returnQuat;
+}

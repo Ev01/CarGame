@@ -18,6 +18,11 @@ namespace JPH {
     struct Vec3;
 };
 
+enum RaceState {
+    RACE_NONE,
+    RACE_COUNTING_DOWN,
+    RACE_STARTED
+};
 
 struct Checkpoint {
     void Init(JPH::Vec3 position);
@@ -34,8 +39,10 @@ struct Checkpoint {
 struct RaceProgress {
     void CollectCheckpoint();
     void BeginRace();
+    void EndRace();
     Uint64 mRaceStartMS = 0;
     unsigned int mCheckpointsCollected = 0;
+    float mFinishTime = 0.0;
 };
 extern RaceProgress gPlayerRaceProgress;
 
@@ -56,4 +63,5 @@ namespace World {
     Vehicle& GetCar2();
     std::vector<Checkpoint>& GetCheckpoints();
     Model& GetCurrentMapModel();
+    RaceState GetRaceState();
 };

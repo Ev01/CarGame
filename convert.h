@@ -22,3 +22,4 @@ glm::mat4 ToGlmMat4(aiMatrix4x4 aiMat);
 
 JPH::RMat44 ToJoltMat4(aiMatrix4x4 aiMat);
 JPH::RMat44 ToJoltMat4(glm::mat4 gMat);
+JPH::Quat ToJoltQuat(aiQuaternion aiQuat);

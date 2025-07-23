@@ -504,7 +504,10 @@ void Vehicle::DebugGUI()
     
     ImGui::Text("Current Steering: %f", mSteer);
     JPH::Vec3 position = mBody->GetCenterOfMassPosition();
+    JPH::Vec3 velocity = mBody->GetLinearVelocity();
+    float speedKPH = velocity.Length() * 3.6;
     ImGui::Text("Position: %f, %f, %f", position.GetX(), position.GetY(), position.GetZ());
+    ImGui::Text("Speed: %.1f kph", speedKPH);
 
     ImGui::End();
 }
@@ -669,6 +672,7 @@ void Vehicle::ProcessInput(bool useGamepad)
         mSteerTarget = Input::GetScanAxis(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT);
         mBrake = (float) Input::IsScanDown(SDL_SCANCODE_DOWN);
         mForward = (float) Input::IsScanDown(SDL_SCANCODE_UP);
+        mHandbrake = (float) Input::IsScanDown(SDL_SCANCODE_SPACE);
     }
 }
 

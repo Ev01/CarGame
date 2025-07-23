@@ -1,7 +1,7 @@
 {
     "model_file": "models/silvia_s13_ver2.gltf",
     "wheel_model_file": "models/silvia_wheel.gltf",
-    "mass": 1300.0,
+    "mass": 1170.0,
     "front_camber": -0.5,
     "front_toe": 0.8,
     "front_caster": 1.0,
@@ -10,7 +10,7 @@
     "rear_toe": 0.0,
     "long_grip": 2.0,
     "lat_grip": 2.0,
-    "max_torque": 120.0,
+    "max_torque": 275.0,
     "suspension_min_length": 0.1,
     "suspension_max_length": 0.24,
     "suspension_frequency":  2.24,

@@ -33,6 +33,11 @@ static std::vector<Checkpoint> existingCheckpoints;
 static Audio::Sound *checkpointSound;
 
 RaceProgress gPlayerRaceProgress;
+JPH::Vec3 raceStartPos;
+JPH::Quat raceStartRot;
+
+RaceState raceState;
+static float raceCountdownTimer = 0.0;
 
 
 static void CreateCheckpoint(JPH::Vec3 position, unsigned int num)
@@ -71,6 +76,11 @@ static bool MapNodeCallback(const aiNode *node, const aiMatrix4x4 transform)
         CreateCheckpoint(position, num);
         SDL_Log("Create checkpoint num = %d, strNum = %s", num, strNum);
     }
+    else if (SDL_strcmp(node->mName.C_Str(), "RACE_START") == 0) {
+        raceStartPos = ToJoltVec3(aPosition);
+        raceStartRot = ToJoltQuat(aRotation);
+    }
+
     return true;
 }
 
@@ -105,6 +115,30 @@ static void ChangeMap(const char *modelFileName)
 }
 
 
+static void BeginRace()
+{
+    JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
+    bodyInterface.SetPositionRotationAndVelocity(World::GetCar().mBody->GetID(),
+                                                 raceStartPos,
+                                                 raceStartRot,
+                                                 JPH::Vec3(0, 0, 0), JPH::Vec3(0, 0, 0));
+    JPH::Vec3 p2Offset = raceStartRot.RotateAxisX() * -3.0;
+    bodyInterface.SetPositionRotationAndVelocity(World::GetCar2().mBody->GetID(),
+                                                 raceStartPos + p2Offset,
+                                                 raceStartRot,
+                                                 JPH::Vec3(0, 0, 0), JPH::Vec3(0, 0, 0));
+    bodyInterface.ActivateBody(World::GetCar().mBody->GetID());
+    bodyInterface.ActivateBody(World::GetCar2().mBody->GetID());
+    raceState = RACE_COUNTING_DOWN;
+    raceCountdownTimer = 3.0;
+}
+
+static void SEndRace()
+{
+    raceState = RACE_NONE;
+}
+
+
 /*
 static void ResetCheckpoints()
 {
@@ -114,17 +148,21 @@ static void ResetCheckpoints()
 }
 */
 
+void RaceProgress::EndRace()
+{
+    mFinishTime = (SDL_GetTicks() - mRaceStartMS) / 1000.0;
+    SDL_Log("Finished race in %f seconds", mFinishTime);
+}
+
+
 
 void RaceProgress::CollectCheckpoint()
 {
     mCheckpointsCollected++;
-    mCheckpointsCollected %= existingCheckpoints.size();
-    if (mCheckpointsCollected == 1) {
-        if (mRaceStartMS > 0) {
-            SDL_Log("Finished race in %f seconds",
-                    (SDL_GetTicks() - mRaceStartMS) / 1000.0);
-        }
-        BeginRace();
+    //mCheckpointsCollected %= existingCheckpoints.size();
+    if (mCheckpointsCollected == existingCheckpoints.size()) {
+        SEndRace();
+        EndRace();
     }
 }
 
@@ -132,6 +170,7 @@ void RaceProgress::CollectCheckpoint()
 void RaceProgress::BeginRace()
 {
     mRaceStartMS = SDL_GetTicks();
+    mCheckpointsCollected = 0;
 }
 
 
@@ -175,10 +214,11 @@ std::vector<Checkpoint>& World::GetCheckpoints()
 void World::OnContactAdded(const JPH::Body &inBody1, const JPH::Body &inBody2)
 {
     if (existingCheckpoints.size() == 0) return;
+    if (raceState != RACE_STARTED) return;
     //JPH::BodyInterface &bodyInterface = Phys::GetPhysicsSystem().GetBodyInterfaceNoLock();
     //for (Checkpoint &checkpoint : existingCheckpoints) {
 
-    Checkpoint &checkpoint = existingCheckpoints[gPlayerRaceProgress.mCheckpointsCollected];     
+    Checkpoint &checkpoint = existingCheckpoints[gPlayerRaceProgress.mCheckpointsCollected % existingCheckpoints.size()];     
     if (inBody1.GetID() == checkpoint.mBodyID 
             || inBody2.GetID() == checkpoint.mBodyID) {
         //checkpoint.Collect();
@@ -203,6 +243,24 @@ void World::PrePhysicsUpdate(float delta)
 
 void World::Update(float delta)
 {
+    float raceTime;
+    switch(raceState) {
+        case RACE_COUNTING_DOWN:
+            raceCountdownTimer -= delta;
+            if (raceCountdownTimer < 0) {
+                raceState = RACE_STARTED;
+                gPlayerRaceProgress.BeginRace();
+            }
+            raceTime = -raceCountdownTimer;
+            break;
+        case RACE_STARTED:
+            raceTime = (SDL_GetTicks() - gPlayerRaceProgress.mRaceStartMS) / 1000.0;
+            break;
+        case RACE_NONE:
+            raceTime = gPlayerRaceProgress.mFinishTime;
+            break;
+    }
+
     car->PostPhysicsStep();
     car2->PostPhysicsStep();
 
@@ -228,6 +286,10 @@ void World::Update(float delta)
                 break;
         }
     }
+    if (ImGui::Button("Begin Race")) {
+        BeginRace();
+    }
+    ImGui::Text("Race Time: %f", raceTime);
     ImGui::End();
     car->DebugGUI();
 }
@@ -235,8 +297,14 @@ void World::Update(float delta)
 
 void World::ProcessInput()
 {
-    car->ProcessInput(false);
-    car2->ProcessInput(true);
+    if (raceState != RACE_COUNTING_DOWN) {
+        car->ProcessInput(false);
+        car2->ProcessInput(true);
+    }
+    else {
+        car->mHandbrake = 1.0f;
+        car2->mHandbrake = 1.0f;
+    }
 }
 
 void World::Init()
@@ -369,3 +437,4 @@ void World::DestroyAllLights()
 
 
 Model& World::GetCurrentMapModel() { return *mapModel; }
+RaceState World::GetRaceState()           { return raceState; }

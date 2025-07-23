@@ -257,10 +257,11 @@ static void DrawCars(ShaderProg &shader)
 
 static void DrawCheckpoints(ShaderProg &shader)
 {
-    if (World::GetCheckpoints().size() > 0) {
-        Checkpoint &checkpoint = World::GetCheckpoints()[gPlayerRaceProgress.mCheckpointsCollected];
+    if (World::GetCheckpoints().size() > 0 && World::GetRaceState() != RACE_NONE) {
+        Checkpoint &checkpoint = World::GetCheckpoints()[gPlayerRaceProgress.mCheckpointsCollected % World::GetCheckpoints().size()];
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, ToGlmVec3(checkpoint.GetPosition()));
+        // TODO: Add variable for checkpoint size
         model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
         cubeModel->Draw(shader, model, &windowMat);
     }
@@ -672,6 +673,7 @@ void Render::RenderFrame()
                 spotLights[i]->mPosition,
                 spotLights[i]->mPosition + spotLights[i]->mDirection,
                 up);
+        // TODO: clean up and optimize
         nearPlane = 0.2f;
         farPlane = 40.0f;
         lightProjection = glm::perspective(SDL_acosf(spotLights[i]->mCutoffOuter) * 2.0f,
