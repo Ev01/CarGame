@@ -397,6 +397,7 @@ void Render::AssimpAddLight(const aiLight *aLight, const aiNode *aNode, aiMatrix
 Render::SpotLight* Render::CreateSpotLight()
 {
     SpotLight *newSpotLight = new SpotLight;
+    newSpotLight->Init();
     for (size_t i = 0; i < spotLights.size(); i++) {
         // Look for null value in spotLights vector
         if (spotLights[i] == nullptr) {
@@ -406,19 +407,25 @@ Render::SpotLight* Render::CreateSpotLight()
     }
     // If no null value, add to end
     spotLights.push_back(newSpotLight);
-    // Create shadow map for spotlight
-    CreateShadowFBO(&(newSpotLight->mShadowFBO), &(newSpotLight->mShadowTex),
-                    SPOT_SHADOW_SIZE, SPOT_SHADOW_SIZE);
     return newSpotLight;
 }
 
+void Render::SpotLight::Init()
+{
+    // Create shadow map for spotlight
+    CreateShadowFBO(&mShadowFBO, &mShadowTex,
+                    SPOT_SHADOW_SIZE, SPOT_SHADOW_SIZE);
+}
+Render::SpotLight::~SpotLight()
+{
+    glDeleteFramebuffers(1, &mShadowFBO);
+    glDeleteTextures(1, &mShadowTex);
+}
 
 void Render::DestroySpotLight(SpotLight *spotLight)
 {
     for (size_t i = 0; i < spotLights.size(); i++) {
         if (spotLights[i] == spotLight) {
-            glDeleteFramebuffers(1, &(spotLights[i]->mShadowFBO));
-            glDeleteTextures(1, &(spotLights[i]->mShadowTex));
             spotLights[i] = nullptr;
             delete spotLight;
             return;
@@ -665,8 +672,10 @@ void Render::RenderFrame()
     glEnable(GL_DEPTH_TEST);
     glClear(GL_DEPTH_BUFFER_BIT);
     glCullFace(GL_FRONT);
+    GLERR;
     RenderSceneShadow(lightSpaceMatrix);
     // Render shadows for all spotlights
+    int spotLightNum = 0;
     for (size_t i = 0; i < spotLights.size(); i++) {
         if (spotLights[i] == nullptr) continue;
         lightView = glm::lookAt(
@@ -681,10 +690,14 @@ void Render::RenderFrame()
         //lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 
         //                            nearPlane, farPlane);
         spotLights[i]->lightSpaceMatrix = lightProjection * lightView;
+        GLERR;
         glBindFramebuffer(GL_FRAMEBUFFER, spotLights[i]->mShadowFBO);
+        GLERR;
         glViewport(0, 0, SPOT_SHADOW_SIZE, SPOT_SHADOW_SIZE);
         glClear(GL_DEPTH_BUFFER_BIT);
+        GLERR;
         RenderSceneShadow(spotLights[i]->lightSpaceMatrix);
+        spotLightNum++;
     }
     glCullFace(GL_BACK);
 
@@ -733,7 +746,7 @@ void Render::RenderFrame()
     RenderScene(lightView, lightProjection);
     */
     
-    
+    GLERR; 
     // Render right screen
     
     if (doSplitScreen) {
@@ -816,12 +829,14 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
     shader.SetMat4fv((char*)"projection", glm::value_ptr(projection));
     shader.SetMat4fv((char*)"view", glm::value_ptr(view));
 
+    GLERR;
     // Shadow setup
     shader.SetMat4fv((char*)"lightSpaceMatrix", glm::value_ptr(lightSpaceMatrix));
     glActiveTexture(GL_TEXTURE8);
     glBindTexture(GL_TEXTURE_2D, depthMap);
     shader.SetInt((char*)"shadowMap", 8);
     glActiveTexture(GL_TEXTURE0);
+    GLERR;
 
     glm::vec3 sunCol = sunLight.mColour / glm::vec3(1.0);
     // Sunlight direction in view space
@@ -831,64 +846,71 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
     shader.SetVec3((char*)"dirLight.diffuse", glm::value_ptr(sunCol));
     shader.SetVec3((char*)"dirLight.specular", glm::value_ptr(sunCol));
 
+    GLERR;
     char uniformName[64];
+    int lightNum = 0;
     for (size_t i = 0; i < lights.size(); i++) {
-        SDL_snprintf(uniformName, 64, "pointLights[%llu].position", i);
+        SDL_snprintf(uniformName, 64, "pointLights[%d].position", lightNum);
         glm::vec3 viewPos = glm::vec3(view * glm::vec4(lights[i].mPosition, 1.0));
         shader.SetVec3(uniformName, glm::value_ptr(viewPos));
 
         glm::vec3 lightCol = lights[i].mColour / glm::vec3(1.0);
         //glm::vec3 lightCol = glm::vec3(6000.0);
-        SDL_snprintf(uniformName, 64, "pointLights[%llu].ambient", i);
+        SDL_snprintf(uniformName, 64, "pointLights[%d].ambient", lightNum);
         shader.SetVec3(uniformName, 0.0, 0.0, 0.0);
-        SDL_snprintf(uniformName, 64, "pointLights[%llu].diffuse", i);
+        SDL_snprintf(uniformName, 64, "pointLights[%d].diffuse", lightNum);
         shader.SetVec3(uniformName, glm::value_ptr(lightCol));
-        SDL_snprintf(uniformName, 64, "pointLights[%llu].specular", i);
+        SDL_snprintf(uniformName, 64, "pointLights[%d].specular", lightNum);
         shader.SetVec3(uniformName, glm::value_ptr(lightCol));
 
         //SDL_Log("Colour = (%f, %f, %f)", lights[i].mColour.x, lights[i].mColour.y, lights[i].mColour.z);
 
-        SDL_snprintf(uniformName, 64, "pointLights[%llu].quadratic", i);
+        SDL_snprintf(uniformName, 64, "pointLights[%d].quadratic", lightNum);
         shader.SetFloat(uniformName, 1.0f);
-        SDL_snprintf(uniformName, 64, "pointLights[%llu].constant", i);
+        SDL_snprintf(uniformName, 64, "pointLights[%d].constant", lightNum);
         shader.SetFloat(uniformName, 0.0f);
-        SDL_snprintf(uniformName, 64, "pointLights[%llu].linear", i);
+        SDL_snprintf(uniformName, 64, "pointLights[%d].linear", lightNum);
         shader.SetFloat(uniformName, 0.0f);
+        lightNum++;
     }
 
+    GLERR;
+    int spotLightNum = 0;
+    
     for (size_t i = 0; i < spotLights.size(); i++) {
         if (spotLights[i] == nullptr) continue;
-
         // Spotlight shadow texture
-        glActiveTexture(GL_TEXTURE9 + i);
+        glActiveTexture(GL_TEXTURE9 + spotLightNum);
         glBindTexture(GL_TEXTURE_2D, spotLights[i]->mShadowTex);
-        SDL_snprintf(uniformName, 64, "spotLights[%llu].shadowMap", i);
-        shader.SetInt(uniformName, 9 + i);
-        SDL_snprintf(uniformName, 64, "spotLightSpaceMatrix[%llu]", i);
+        SDL_snprintf(uniformName, 64, "spotLights[%d].shadowMap", spotLightNum);
+        shader.SetInt(uniformName, 9 + spotLightNum);
+        SDL_snprintf(uniformName, 64, "spotLightSpaceMatrix[%d]", spotLightNum);
         shader.SetMat4fv(uniformName, glm::value_ptr(spotLights[i]->lightSpaceMatrix));
         glActiveTexture(GL_TEXTURE0);
 
         glm::vec3 lightCol = spotLights[i]->mColour / glm::vec3(1.0);
         //glm::vec3 lightCol = glm::vec3(6000.0);
-        SDL_snprintf(uniformName, 64, "spotLights[%llu].diffuse", i);
+        SDL_snprintf(uniformName, 64, "spotLights[%d].diffuse", spotLightNum);
         shader.SetVec3(uniformName, glm::value_ptr(lightCol));
-        SDL_snprintf(uniformName, 64, "spotLights[%llu].specular", i);
+        SDL_snprintf(uniformName, 64, "spotLights[%d].specular", spotLightNum);
         shader.SetVec3(uniformName, glm::value_ptr(lightCol));
 
         glm::vec3 viewPos = glm::vec3(view * glm::vec4(spotLights[i]->mPosition, 1.0));
-        SDL_snprintf(uniformName, 64, "spotLights[%llu].position", i);
+        SDL_snprintf(uniformName, 64, "spotLights[%d].position", spotLightNum);
         shader.SetVec3(uniformName, glm::value_ptr(viewPos));
 
         glm::vec3 viewDir = glm::vec3(view * glm::vec4(spotLights[i]->mDirection, 0.0));
-        SDL_snprintf(uniformName, 64, "spotLights[%llu].direction", i);
+        SDL_snprintf(uniformName, 64, "spotLights[%d].direction", spotLightNum);
         shader.SetVec3(uniformName, glm::value_ptr(viewDir));
 
-        SDL_snprintf(uniformName, 64, "spotLights[%llu].quadratic", i);
+        SDL_snprintf(uniformName, 64, "spotLights[%d].quadratic", spotLightNum);
         shader.SetFloat(uniformName, spotLights[i]->mQuadratic);
-        SDL_snprintf(uniformName, 64, "spotLights[%llu].cutoffInner", i);
+        SDL_snprintf(uniformName, 64, "spotLights[%d].cutoffInner", spotLightNum);
         shader.SetFloat(uniformName, spotLights[i]->mCutoffInner);
-        SDL_snprintf(uniformName, 64, "spotLights[%llu].cutoffOuter", i);
+        SDL_snprintf(uniformName, 64, "spotLights[%d].cutoffOuter", spotLightNum);
         shader.SetFloat(uniformName, spotLights[i]->mCutoffOuter);
+        spotLightNum++;
+        GLERR;
     }
 
 

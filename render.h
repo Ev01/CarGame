@@ -25,6 +25,8 @@ namespace Render {
 
     struct SpotLight
     {
+        void Init();
+        ~SpotLight();
         glm::vec3 mPosition;
         glm::vec3 mDirection;
         glm::vec3 mColour;
@@ -33,8 +35,8 @@ namespace Render {
         float mCutoffInner = 0.0;
         float mCutoffOuter = 0.0;
 
-        unsigned int mShadowTex;
-        unsigned int mShadowFBO;
+        unsigned int mShadowTex = 0;
+        unsigned int mShadowFBO = 0;
         glm::mat4 lightSpaceMatrix;
     };
         
