@@ -6,7 +6,7 @@ layout (location = 2) in vec2 aTexCoords;
 layout (location = 3) in vec3 aTangent;
 layout (location = 4) in vec3 aBitTangent;
 
-#define MAX_SPOT_SHADOWS 16
+#define MAX_SPOT_SHADOWS 8
 
 uniform mat4 model;
 uniform mat4 view;

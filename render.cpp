@@ -19,6 +19,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <SDL3/SDL.h>
+#include <algorithm>
 
 #define GLERR do {\
         GLuint glerr;\
@@ -26,9 +27,11 @@
             SDL_Log("%s:%d glGetError() = 0x%04x", __FILE__, __LINE__, glerr);\
     } while (0)
 
+#define MAX_SPOT_SHADOWS 8
 
 static std::vector<Render::Light> lights;
 static std::vector<Render::SpotLight*> spotLights;
+static Render::SpotLightShadow spotLightShadows[MAX_SPOT_SHADOWS];
 static Render::SunLight sunLight;
 static ShaderProg PbrShader;
 static ShaderProg skyboxShader;
@@ -124,7 +127,7 @@ static unsigned int msTexColourBuffer;
 static unsigned int depthMapFBO;
 static unsigned int depthMap; // Depth map texture
 const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
-constexpr unsigned int SPOT_SHADOW_SIZE = 512;
+constexpr unsigned int SPOT_SHADOW_SIZE = 4096;
 static glm::mat4 lightSpaceMatrix;
 
 static unsigned int quadVAO;
@@ -134,6 +137,7 @@ static const int fbWidth = 1600;
 static const int fbHeight = 900;
 //static const int fbWidth = 800;
 //static const int fbHeight = 600;
+static unsigned int physFrameCounter = 0;
 
 
 //static const glm::vec3 sunDir = glm::vec3(0.1, -0.5, 0.1);
@@ -149,8 +153,8 @@ static void CreateFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned
     glGenTextures(1, aCbTex);
     glBindTexture(GL_TEXTURE_2D, *aCbTex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, fbWidth, fbHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -306,8 +310,10 @@ static void CreateShadowFBO(unsigned int *inFBO, unsigned int *inTex, unsigned i
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
                  resW, resH, 0, GL_DEPTH_COMPONENT,
                  GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     float borderColour[] = {defaultLighting, defaultLighting, 
@@ -325,6 +331,19 @@ static void CreateShadowFBO(unsigned int *inFBO, unsigned int *inTex, unsigned i
 }
 
 
+static float LengthSquared(const glm::vec3 v)
+{
+    return v.x * v.x + v.y * v.y + v.z * v.z;
+}
+
+static bool SpotLightDistComp(Render::SpotLight *s1, Render::SpotLight *s2) {
+    glm::vec3 playerPos = ToGlmVec3(World::GetCar().GetPos());
+    return LengthSquared(s1->mPosition - playerPos) < LengthSquared(s2->mPosition - playerPos);
+}
+static bool SpotLightDistComp2(Render::SpotLight *s1, Render::SpotLight *s2) {
+    glm::vec3 playerPos = ToGlmVec3(World::GetCar2().GetPos());
+    return LengthSquared(s1->mPosition - playerPos) < LengthSquared(s2->mPosition - playerPos);
+}
 
 void Render::AssimpAddLight(const aiLight *aLight, const aiNode *aNode, aiMatrix4x4 aTransform)
 {
@@ -413,13 +432,13 @@ Render::SpotLight* Render::CreateSpotLight()
 void Render::SpotLight::Init()
 {
     // Create shadow map for spotlight
-    CreateShadowFBO(&mShadowFBO, &mShadowTex,
-                    SPOT_SHADOW_SIZE, SPOT_SHADOW_SIZE);
+    //CreateShadowFBO(&mShadowFBO, &mShadowTex,
+    //                SPOT_SHADOW_SIZE, SPOT_SHADOW_SIZE);
 }
 Render::SpotLight::~SpotLight()
 {
-    glDeleteFramebuffers(1, &mShadowFBO);
-    glDeleteTextures(1, &mShadowTex);
+    //glDeleteFramebuffers(1, &mShadowFBO);
+    //glDeleteTextures(1, &mShadowTex);
 }
 
 void Render::DestroySpotLight(SpotLight *spotLight)
@@ -561,6 +580,11 @@ bool Render::Init()
     // Shadow Map
     GLERR;
     CreateShadowFBO(&depthMapFBO, &depthMap, SHADOW_WIDTH, SHADOW_HEIGHT, 1.0f);
+    // Spotlight shadows
+    for (SpotLightShadow &spotShadow : spotLightShadows) {
+        CreateShadowFBO(&(spotShadow.mShadowFBO), &(spotShadow.mShadowTex),
+                        SPOT_SHADOW_SIZE, SPOT_SHADOW_SIZE);
+    }
 
     GLERR;
 
@@ -617,6 +641,20 @@ void Render::PhysicsUpdate(double delta)
                         angleSmooth * delta, distSmooth * delta);
     cam3.SetFollowSmooth(yawOffset, camPitch, camDist, 
                         angleSmooth * delta, distSmooth * delta);
+
+    if (physFrameCounter % 30 == 0) {
+        // Sort spot lights from nearest to player to furthest from player.
+        // This doesn't need to happen very often.
+        std::sort(spotLights.begin(), spotLights.end(), SpotLightDistComp);
+        if (doSplitScreen) {
+            int endOffset = SDL_min(spotLights.size() / 2,
+                                    MAX_SPOT_SHADOWS  / 2);
+            std::sort(spotLights.begin() + endOffset, spotLights.end(),
+                      SpotLightDistComp2);
+        }
+    }
+
+    physFrameCounter++;
 }
 
 
@@ -674,9 +712,9 @@ void Render::RenderFrame()
     glCullFace(GL_FRONT);
     GLERR;
     RenderSceneShadow(lightSpaceMatrix);
-    // Render shadows for all spotlights
+    // Render shadows for some spotlights
     int spotLightNum = 0;
-    for (size_t i = 0; i < spotLights.size(); i++) {
+    for (size_t i = 0; i < MAX_SPOT_SHADOWS && i < spotLights.size(); i++) {
         if (spotLights[i] == nullptr) continue;
         lightView = glm::lookAt(
                 spotLights[i]->mPosition,
@@ -689,14 +727,17 @@ void Render::RenderFrame()
                                            1.0f, nearPlane, farPlane);
         //lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 
         //                            nearPlane, farPlane);
-        spotLights[i]->lightSpaceMatrix = lightProjection * lightView;
+        spotLightShadows[i].lightSpaceMatrix = lightProjection * lightView;
         GLERR;
-        glBindFramebuffer(GL_FRAMEBUFFER, spotLights[i]->mShadowFBO);
+        glBindTexture(GL_TEXTURE_2D, spotLightShadows[i].mShadowTex);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, spotLightShadows[i].mShadowFBO);
         GLERR;
         glViewport(0, 0, SPOT_SHADOW_SIZE, SPOT_SHADOW_SIZE);
         glClear(GL_DEPTH_BUFFER_BIT);
         GLERR;
-        RenderSceneShadow(spotLights[i]->lightSpaceMatrix);
+        RenderSceneShadow(spotLightShadows[i].lightSpaceMatrix);
         spotLightNum++;
     }
     glCullFace(GL_BACK);
@@ -880,12 +921,14 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
     for (size_t i = 0; i < spotLights.size(); i++) {
         if (spotLights[i] == nullptr) continue;
         // Spotlight shadow texture
-        glActiveTexture(GL_TEXTURE9 + spotLightNum);
-        glBindTexture(GL_TEXTURE_2D, spotLights[i]->mShadowTex);
-        SDL_snprintf(uniformName, 64, "spotLights[%d].shadowMap", spotLightNum);
-        shader.SetInt(uniformName, 9 + spotLightNum);
-        SDL_snprintf(uniformName, 64, "spotLightSpaceMatrix[%d]", spotLightNum);
-        shader.SetMat4fv(uniformName, glm::value_ptr(spotLights[i]->lightSpaceMatrix));
+        if (i < MAX_SPOT_SHADOWS) {
+            glActiveTexture(GL_TEXTURE9 + spotLightNum);
+            glBindTexture(GL_TEXTURE_2D, spotLightShadows[i].mShadowTex);
+            SDL_snprintf(uniformName, 64, "spotLightShadowMaps[%d]", spotLightNum);
+            shader.SetInt(uniformName, 9 + spotLightNum);
+            SDL_snprintf(uniformName, 64, "spotLightSpaceMatrix[%d]", spotLightNum);
+            shader.SetMat4fv(uniformName, glm::value_ptr(spotLightShadows[i].lightSpaceMatrix));
+        }
         glActiveTexture(GL_TEXTURE0);
 
         glm::vec3 lightCol = spotLights[i]->mColour / glm::vec3(1.0);
@@ -912,6 +955,7 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
         spotLightNum++;
         GLERR;
     }
+    //SDL_Log("Num spot lights: %d", spotLightNum);
 
 
     //shader.SetFloat((char*)"material.shininess", 32.0f);

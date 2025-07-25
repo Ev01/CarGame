@@ -113,6 +113,7 @@ fixed later.
 23/07
 - [x] Proper race start with countdown
 - [x] Sprint race (not circuit)
+- Fix bug regarding spotlights when reloading map
 
 
 - [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())

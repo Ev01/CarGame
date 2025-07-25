@@ -112,6 +112,7 @@ static void ChangeMap(const char *modelFileName)
     bodyInterface.SetPosition(World::GetCar2().mBody->GetID(),
                               ToJoltVec3(mapSpawnPoint) + JPH::Vec3(6.0, 0, 0),
                               JPH::EActivation::Activate);
+    SDL_Log("Map spot lights: %d", (int) spotLights.size());
 }
 
 
@@ -265,9 +266,9 @@ void World::Update(float delta)
     car2->PostPhysicsStep();
 
     ImGui::Begin("Maps");
-    const char* items[] = {"Map01", "Map02", "simple_map"};
+    const char* items[] = {"Map01", "Map02", "simple_map", "racetrack1"};
     static int currentItem = 0;
-    ImGui::Combo("Map", &currentItem, items, 3);
+    ImGui::Combo("Map", &currentItem, items, 4);
     if (ImGui::Button("Change map")) {
         World::DestroyAllLights();
         Render::DeleteAllLights();
@@ -284,6 +285,9 @@ void World::Update(float delta)
             case 2:
                 ChangeMap("models/simple_map.gltf");
                 break;
+            case 3:
+                ChangeMap("models/racetrack1.gltf");
+                break;
         }
     }
     if (ImGui::Button("Begin Race")) {
@@ -291,7 +295,8 @@ void World::Update(float delta)
     }
     ImGui::Text("Race Time: %f", raceTime);
     ImGui::End();
-    car->DebugGUI();
+    car->DebugGUI(0);
+    car2->DebugGUI(1);
 }
 
 
@@ -319,7 +324,7 @@ void World::Init()
     carSettings.Init();
     carSettings2.Init();
     car->Init(carSettings);
-    car2->Init(carSettings2);
+    car2->Init(carSettings);
     //CreateCheckpoint(JPH::Vec3(1, 2, 1));
 
     mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, LightCallback));
@@ -413,8 +418,6 @@ void World::AssimpAddLight(const aiLight *aLight, const aiNode *aNode,
             spotLight->mCutoffOuter = SDL_cos(aLight->mAngleOuterCone);
 
             SDL_Log("Dir %f, %f, %f", spotLight->mDirection.x, spotLight->mDirection.y, spotLight->mDirection.z);
-            SDL_Log("Col %f, %f, %f", spotLight->mColour.x, spotLight->mColour.y, spotLight->mColour.z);
-            SDL_Log("Cutoff inner, outer: %f, %f", spotLight->mCutoffInner, spotLight->mCutoffOuter);
             SDL_Log("pos: %f, %f, %f", spotLight->mPosition.x, spotLight->mPosition.y, spotLight->mPosition.z);
 
             spotLights.push_back(spotLight);

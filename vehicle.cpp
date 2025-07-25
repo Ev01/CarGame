@@ -402,7 +402,7 @@ void Vehicle::Init(VehicleSettings &settings)
 }
 
 
-void Vehicle::DebugGUI()
+void Vehicle::DebugGUI(unsigned int id)
 {
     JPH::Vec3 flipX = JPH::Vec3(-1, 1, 1);
     JPH::WheelSettings *fr = GetWheelFR();
@@ -410,7 +410,9 @@ void Vehicle::DebugGUI()
     JPH::WheelSettings *rr = GetWheelRR();
     JPH::WheelSettings *rl = GetWheelRL();
 
-    ImGui::Begin("Vehicle Debug");
+    char title[20];
+    SDL_snprintf(title, 20, "Vehicle Debug %d", id);
+    ImGui::Begin(title);
 
 
     // Front Camber
