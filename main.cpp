@@ -25,6 +25,7 @@
 #include "input.h"
 #include "audio.h"
 #include "render.h"
+#include "player.h"
 
 #define MOUSE_SENSITIVITY 0.001f
 #define CAM_SPEED 4.0f
@@ -62,8 +63,24 @@ static double GetSeconds()
 }
 
 
+static void DoPhysicsStep()
+{
+    World::PrePhysicsUpdate(PHYSICS_STEP_TIME);
+    World::ProcessInput();
+    Phys::ProcessInput();
+
+    Phys::PhysicsStep(PHYSICS_STEP_TIME);
+    Render::PhysicsUpdate(PHYSICS_STEP_TIME);
+    for (Player &p : gPlayers) {
+        p.PhysicsUpdate(PHYSICS_STEP_TIME);
+    }
+}
+
+
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_NAME_STRING, "Car Game");
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_TYPE_STRING, "game");
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO);
 
     if (!Render::Init()) {
@@ -93,6 +110,10 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     Phys::SetupSimulation();
 
     World::Init();
+
+    // Players
+    gPlayers[0].Init();
+    gPlayers[1].Init();
 
     glViewport(0, 0, 800, 600);
     glEnable(GL_DEPTH_TEST);
@@ -163,30 +184,25 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     ImGui::Text("Current FPS: %f", 1.0 / delta);
     ImGui::Text("Average %d frames: %f", FPS_RECORD_SIZE, averageFps);
     ImGui::End();
+
+    for (Player &player : gPlayers) {
+        player.ProcessInput();
+    }
         
     // Do physics step
     physicsTime += delta;
     if (dontSkipPhysicsStep) {
-        World::PrePhysicsUpdate(PHYSICS_STEP_TIME);
-        World::ProcessInput();
-        Phys::ProcessInput();
-
-        Phys::PhysicsStep(PHYSICS_STEP_TIME);
-        Render::PhysicsUpdate(PHYSICS_STEP_TIME);
+        DoPhysicsStep();
         physicsTime = 0.0;
     }
     else {
         while (physicsTime >= PHYSICS_STEP_TIME) {
-            World::PrePhysicsUpdate(PHYSICS_STEP_TIME);
-            World::ProcessInput();
-            Phys::ProcessInput();
-
-            Phys::PhysicsStep(PHYSICS_STEP_TIME);
-            Render::PhysicsUpdate(PHYSICS_STEP_TIME);
+            DoPhysicsStep();
             physicsTime -= PHYSICS_STEP_TIME;
         }
     }
 
+    Input::DebugGUI();
     // Update
     Audio::Update();
     Render::Update(delta);

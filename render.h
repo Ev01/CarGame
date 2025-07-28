@@ -59,6 +59,7 @@ namespace Render {
                      bool enableSkybox = true);
     void HandleEvent(SDL_Event *event);
     void DeleteAllLights();
+    /* Returns current aspect ratio of the window */
     float ScreenAspect();
     SDL_Window* GetWindow();
     SDL_GLContext& GetGLContext();

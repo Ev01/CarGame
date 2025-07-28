@@ -665,10 +665,10 @@ void Vehicle::PostPhysicsStep()
 void Vehicle::ProcessInput(bool useGamepad)
 {
     if (useGamepad && Input::GetGamepad()) {
-        mForward = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
-        mBrake = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER);
-        mSteerTarget = Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_LEFTX);
-        mHandbrake = (float) Input::GetGamepadButton(SDL_GAMEPAD_BUTTON_SOUTH);
+        mForward = Input::GetGamepadAxis(0, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
+        mBrake = Input::GetGamepadAxis(0, SDL_GAMEPAD_AXIS_LEFT_TRIGGER);
+        mSteerTarget = Input::GetGamepadAxis(0, SDL_GAMEPAD_AXIS_LEFTX);
+        mHandbrake = (float) Input::GetGamepadButton(0, SDL_GAMEPAD_BUTTON_SOUTH);
     }
     else if (!useGamepad) {
         mSteerTarget = Input::GetScanAxis(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT);

@@ -116,6 +116,14 @@ fixed later.
 - Fix bug regarding spotlights when reloading map
 
 
+26/07
+- Exclusive fullscreen
+
+28/07
+- [x] Players can choose input device
+
+
+
 - [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())
 - [ ] Get model from filename anywhere without loading it twice. When loading a
       model, it will save it to an array if loading it for the first time. Later
@@ -140,5 +148,4 @@ fixed later.
 - [ ] Make bushes
 - [ ] Start on UI / menu screen
 - [ ] Render shadows from closest light sources only
-- [ ] Players can choose input device
 

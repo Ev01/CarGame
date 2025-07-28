@@ -9,8 +9,9 @@ namespace Input
     // if neither or both keys are pressed. Can be used for left/right or
     // up/down keys.
     float GetScanAxis(SDL_Scancode negScan, SDL_Scancode posScan);
-    float GetGamepadAxis(SDL_GamepadAxis axis);
-    bool GetGamepadButton(SDL_GamepadButton button);
+    float GetGamepadAxis(SDL_Gamepad *gamepad, SDL_GamepadAxis axis);
+    bool GetGamepadButton(SDL_Gamepad *gamepad, SDL_GamepadButton button);
     void HandleEvent(SDL_Event *event);
     SDL_Gamepad* GetGamepad();
+    void DebugGUI();
 }

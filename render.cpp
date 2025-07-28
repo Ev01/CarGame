@@ -9,6 +9,7 @@
 #include "physics.h"
 #include "vehicle.h"
 #include "world.h"
+#include "player.h"
 
 #include "vendor/imgui/imgui.h"
 #include "vendor/imgui/backends/imgui_impl_opengl3.h"
@@ -50,12 +51,7 @@ static Model *quadModel;
 //static Camera cam;
 static VehicleCamera cam2;
 static VehicleCamera cam3;
-static int currentCamNum = 0;
-// Camera Settings
-static float camPitch = -0.4f;
-static float camDist = 3.7f;
-static float angleSmooth = 3.5f;
-static float distSmooth = 17.0f;
+//static int currentCamNum = 0;
 static bool doSplitScreen = false;
 
 static float skyboxVertices[] = {
@@ -565,8 +561,8 @@ bool Render::Init()
     const float fov = glm::radians(95.0);
     //const float pitch = 
     float aspect = ScreenAspect();
-    cam2.Init(fov, aspect, 0.1f, 1000.0f);
-    cam3.Init(fov, aspect, 0.1f, 1000.0f);
+
+    
     
     //cam2.cam.pos.z = 6.0f;
     //cam2.cam.SetYawPitch(-SDL_PI_F / 2.0, 0);
@@ -598,6 +594,16 @@ bool Render::Init()
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
+    
+    SDL_Log("Getting display modes...");
+    int numDisplayModes;
+    SDL_DisplayMode **displayModes = SDL_GetFullscreenDisplayModes(
+            SDL_GetDisplayForWindow(window), &numDisplayModes);
+    for (int i = 0; i < numDisplayModes; i++) {
+        SDL_Log("Display Mode: w = %d, h = %d @ %.1f Hz",
+                displayModes[i]->w, displayModes[i]->h,
+                displayModes[i]->refresh_rate);
+    }
 
     return true;
 }
@@ -621,26 +627,28 @@ float Render::ScreenAspect()
 
 Camera& Render::GetCamera()
 {
-    return cam2.cam;
+    return gPlayers[0].cam.cam;
 }
 
 
 void Render::PhysicsUpdate(double delta)
 {
+    /*
     float yawOffset = 0;
     if (Input::GetGamepad()) {
-        yawOffset = SDL_PI_F / 2.0f * Input::GetGamepadAxis(SDL_GAMEPAD_AXIS_RIGHTX);
+        yawOffset = SDL_PI_F / 2.0f * Input::GetGamepadAxis(0, SDL_GAMEPAD_AXIS_RIGHTX);
     }
     float yawOffset2 = SDL_PI_F / 2.0f * Input::GetScanAxis(SDL_SCANCODE_D, SDL_SCANCODE_A);
-    cam2.targetBody = World::GetCar().mBody;
-    cam3.targetBody = World::GetCar2().mBody;
+    */
+    //cam2.targetBody = World::GetCar().mBody;
+    //cam3.targetBody = World::GetCar2().mBody;
     //SDL_Log("Car yaw: %f, x: %f, z: %f", carYaw, carDir.GetX(), carDir.GetZ());
     //cam.SetFollowSmooth(carYaw + yawOffset, camPitch, camDist, carPos, 
     //                    angleSmooth * delta, distSmooth * delta);
-    cam2.SetFollowSmooth(yawOffset2, camPitch, camDist, 
-                        angleSmooth * delta, distSmooth * delta);
-    cam3.SetFollowSmooth(yawOffset, camPitch, camDist, 
-                        angleSmooth * delta, distSmooth * delta);
+    //gPlayers[0].cam.SetFollowSmooth(yawOffset2, camPitch, camDist, 
+    //                    angleSmooth * delta, distSmooth * delta);
+    //gPlayers[1].cam.SetFollowSmooth(yawOffset, camPitch, camDist, 
+    //                    angleSmooth * delta, distSmooth * delta);
 
     if (physFrameCounter % 30 == 0) {
         // Sort spot lights from nearest to player to furthest from player.
@@ -662,6 +670,7 @@ void Render::Update(double delta)
 {
     // Update Camera
     ImGui::Begin("Cool window");
+    /*
     float fovDegrees = glm::degrees(cam2.cam.fov);
     ImGui::SliderFloat("FOV", &fovDegrees, 20.0f, 140.0f);
     cam2.cam.SetFovAndRecalcProjection(glm::radians(fovDegrees));
@@ -674,15 +683,99 @@ void Render::Update(double delta)
 
     const char* items[] = {"Cam1", "Cam2"};
     ImGui::Combo("Camera", &currentCamNum, items, 2);
+    */
     bool splitBefore = doSplitScreen;
     ImGui::Checkbox("Splitscreen", &doSplitScreen);
     if (doSplitScreen != splitBefore) {
         float aspect = ScreenAspect();
-        cam2.cam.aspect = aspect;
-        cam3.cam.aspect = aspect;
-        cam2.cam.CalcProjection();
-        cam3.cam.CalcProjection();
+        for (Player &p : gPlayers) {
+            p.cam.cam.aspect = aspect;
+            p.cam.cam.CalcProjection();
+        }
     }
+    
+
+
+
+
+    
+    bool isFullscreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN;
+    //bool isFullscreenBefore = isFullscreen;
+    //ImGui::Checkbox("Fullscreen", &isFullscreen);
+    //if (isFullscreen != isFullscreenBefore) {
+    //    SDL_SetWindowFullscreen(window, isFullscreen);
+    //}
+    
+
+    const SDL_DisplayMode *currentDisplayMode = SDL_GetWindowFullscreenMode(window);
+    const char *windowModes[] = {"Windowed", "Fullscreen", "Exclusive Fullscreen"};
+    int currentWindowMode;
+    if (!isFullscreen) {
+        // Windowed
+        currentWindowMode = 0;
+    }
+    else if (currentDisplayMode == NULL) {
+        // Fullscreen
+        currentWindowMode = 1;
+    } 
+    else {
+        // Fullscreen exclusive
+        currentWindowMode = 2;
+
+    }
+
+    // Index of currently selected window mode. Must click apply to apply it
+    static int selectedWindowMode = currentWindowMode;
+    int numDisplayModes;
+    // Display modes (resolutions) supported by monitor
+    SDL_DisplayMode **displayModes = SDL_GetFullscreenDisplayModes(
+            SDL_GetDisplayForWindow(window), &numDisplayModes);
+
+    ImGui::Combo("Window Mode", &selectedWindowMode, windowModes, 3);
+
+    // List of display mode names, shown in drop down menu
+    char displayModeNames[numDisplayModes][32];
+    for (int i = 0; i < numDisplayModes; i++) {
+        SDL_snprintf(displayModeNames[i], 32,
+                     "%dx%d @ %.1f Hz",
+                     displayModes[i]->w,
+                     displayModes[i]->h,
+                     displayModes[i]->refresh_rate);
+    }
+
+
+    // index of currently selected display mode. Must click apply to apply it
+    static int selectedDisplayMode = 0;
+    if (selectedWindowMode == 2 
+        && displayModes != NULL && numDisplayModes > 0
+        && ImGui::BeginCombo("Resolution",
+                             displayModeNames[selectedDisplayMode])) 
+    {
+        for (int i = 0; i < numDisplayModes; i++) {
+            const bool isSelected = selectedDisplayMode == i;
+            if (ImGui::Selectable(displayModeNames[i], isSelected)) {
+                selectedDisplayMode = i;
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    if (ImGui::Button("Apply")) {
+        if (selectedWindowMode == 0) {
+            SDL_SetWindowFullscreen(window, false);
+        } else if (selectedWindowMode == 1) {
+            SDL_SetWindowFullscreen(window, true);
+            SDL_SetWindowFullscreenMode(window, NULL);
+        } else if (selectedWindowMode == 2) {
+            SDL_SetWindowFullscreen(window, true);
+            SDL_SetWindowFullscreenMode(window, displayModes[selectedDisplayMode]);
+        }
+    }
+
+
+
+
+    
     ImGui::End();
 }
 
@@ -692,7 +785,7 @@ void Render::RenderFrame()
     GLERR;
     // Shadow pass
     float nearPlane = 1.0f, farPlane = 140.0f;
-    const glm::vec3 shadowOrigin = cam2.cam.pos;
+    const glm::vec3 shadowOrigin = gPlayers[0].cam.cam.pos;
     constexpr float SHADOW_START_FAC = 70.0f;
     glm::mat4 lightView = glm::lookAt(
             shadowOrigin - sunLight.mDirection * SHADOW_START_FAC,
@@ -770,7 +863,7 @@ void Render::RenderFrame()
         glViewport(0, 0, playerScreenWidth, screenHeight);
     }
     glUseProgram(PbrShader.id);
-    RenderScene(cam2.cam);
+    RenderScene(gPlayers[0].cam.cam);
 
     
     /*
@@ -795,7 +888,7 @@ void Render::RenderFrame()
             glViewport(screenWidth/2, 0, playerScreenWidth, screenHeight);
         }
         glUseProgram(PbrShader.id);
-        RenderScene(cam3.cam);
+        RenderScene(gPlayers[1].cam.cam);
     }
     
 
@@ -968,6 +1061,11 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
     glDisable(GL_CULL_FACE);
 }
 
+static void ToggleFullscreen()
+{
+        SDL_SetWindowFullscreen(
+                window, !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN));
+}
 
 void Render::HandleEvent(SDL_Event *event)
 {
@@ -981,13 +1079,14 @@ void Render::HandleEvent(SDL_Event *event)
         if (doSplitScreen) {
             aspect /= 2;
         }
-        cam2.cam.aspect = aspect;
-        cam2.cam.CalcProjection();
-        cam3.cam.aspect = aspect;
-        cam3.cam.CalcProjection();
+
+        for (Player &p : gPlayers) {
+            p.cam.cam.aspect = aspect;
+            p.cam.cam.CalcProjection();
+        }
     }
     else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_F11) {
-        SDL_SetWindowFullscreen(window, !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN));
+        ToggleFullscreen();
     }
 }
 

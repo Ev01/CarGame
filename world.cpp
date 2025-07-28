@@ -5,6 +5,7 @@
 #include "model.h"
 #include "physics.h"
 #include "audio.h"
+#include "player.h"
 
 #include "vendor/imgui/imgui.h"
 
@@ -325,6 +326,9 @@ void World::Init()
     carSettings2.Init();
     car->Init(carSettings);
     car2->Init(carSettings);
+
+    gPlayers[0].SetVehicle(car);
+    gPlayers[1].SetVehicle(car2);
     //CreateCheckpoint(JPH::Vec3(1, 2, 1));
 
     mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, LightCallback));
