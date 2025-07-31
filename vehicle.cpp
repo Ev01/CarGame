@@ -515,7 +515,6 @@ void Vehicle::DebugGUI(unsigned int id)
 }
 
 
-
 void Vehicle::Update(float delta)
 {
     JPH::BodyInterface &bodyInterface = Phys::GetPhysicsSystem().GetBodyInterface();
@@ -659,7 +658,6 @@ void Vehicle::PostPhysicsStep()
     headLightRight->mDirection = ToGlmVec3(JPH::Vec3(
                 bodyTransform * headLightRightTransform * JPH::Vec4(0, 1, 0, 0)));
 }
-
 
 
 void Vehicle::ProcessInput(bool useGamepad)

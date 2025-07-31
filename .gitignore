@@ -8,3 +8,5 @@ imgui.ini
 vendor/imgui/examples/*
 vendor/imgui/.github/*
 backup/*
+.cache/*
+.clangd

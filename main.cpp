@@ -11,17 +11,11 @@
 #include "vendor/imgui/backends/imgui_impl_opengl3.h"
 #include "vendor/imgui/backends/imgui_impl_sdl3.h"
 
-#include <string>
-#include <memory>
 
 #include "physics.h"
-#include "vehicle.h"
-#include "convert.h"
 #include "world.h"
 
 #include "glad/glad.h"
-#include "model.h"
-#include "camera.h"
 #include "input.h"
 #include "audio.h"
 #include "render.h"
