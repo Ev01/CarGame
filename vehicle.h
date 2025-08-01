@@ -59,7 +59,6 @@ struct Vehicle
     bool IsWheelFlipped(int wheelIndex);
     void Update(float delta);
     void PostPhysicsStep();
-    void ProcessInput(bool useGamepad=false);
     void Init(VehicleSettings &settings);
     void Destroy();
 

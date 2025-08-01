@@ -25,23 +25,14 @@ void Player::ProcessInput()
     if (vehicle == nullptr) {
         return;
     }
-    if (gamepad != nullptr) {
-        vehicle->mForward     = Input::GetGamepadAxis(
-                                    gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
-        vehicle->mBrake       = Input::GetGamepadAxis(
-                                    gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER);
-        vehicle->mSteerTarget = Input::GetGamepadAxis(
-                                    gamepad, SDL_GAMEPAD_AXIS_LEFTX);
-        vehicle->mHandbrake   = (float) Input::GetGamepadButton(
-                                            gamepad, SDL_GAMEPAD_BUTTON_SOUTH);
-    }
-    else {
-        vehicle->mSteerTarget = Input::GetScanAxis(SDL_SCANCODE_LEFT,
-                                                   SDL_SCANCODE_RIGHT);
-        vehicle->mBrake = (float) Input::IsScanDown(SDL_SCANCODE_DOWN);
-        vehicle->mForward = (float) Input::IsScanDown(SDL_SCANCODE_UP);
-        vehicle->mHandbrake = (float) Input::IsScanDown(SDL_SCANCODE_SPACE);
-    }
+    vehicle->mForward = gDefaultControlScheme.GetInputForAction(
+            ACTION_FORWARD, gamepad);
+    vehicle->mSteerTarget = gDefaultControlScheme.GetSignedInputForAction(
+            ACTION_STEER_LEFT, ACTION_STEER_RIGHT, gamepad);
+    vehicle->mHandbrake = gDefaultControlScheme.GetInputForAction(
+            ACTION_HANDBRAKE, gamepad);
+    vehicle->mBrake = gDefaultControlScheme.GetInputForAction(
+            ACTION_BRAKE, gamepad);
 }
 
 
@@ -55,18 +46,30 @@ void Player::SetVehicle(Vehicle *aVehicle)
 void Player::PhysicsUpdate(double delta)
 {
     float yawOffset;
-    if (gamepad != nullptr) {
-        yawOffset = SDL_PI_F / 2.0f 
-                  * Input::GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTX);
-    } else {
-        yawOffset = SDL_PI_F / 2.0f 
-                  * Input::GetScanAxis(SDL_SCANCODE_D, SDL_SCANCODE_A);
-    }
+    yawOffset = SDL_PI_F / 2.0 
+                  * gDefaultControlScheme.GetSignedInputForAction(
+                        ACTION_LOOK_LEFT, ACTION_LOOK_RIGHT, gamepad);
     cam.SetFollowSmooth(yawOffset, camPitch, camDist,
                         angleSmooth * delta, distSmooth * delta);
+    
+
+    // Interpolate steering if using keyboard
+    if (gamepad == nullptr && vehicle != nullptr) {
+        float difference = glm::sign(vehicle->mSteerTarget - vehicle->mSteer)
+                            * 0.1f;
+        if (SDL_fabsf(difference) 
+                > SDL_fabsf(vehicle->mSteerTarget - vehicle->mSteer)) {
+            difference = vehicle->mSteerTarget - vehicle->mSteer;
+        }
+        vehicle->mSteer += difference;
+        vehicle->mSteer = SDL_clamp(vehicle->mSteer, -1.0f, 1.0f);
+    } else if (vehicle != nullptr) {
+        vehicle->mSteer = vehicle->mSteerTarget;
+    }
 }
 
 void Player::Init()
 {
     cam.Init(glm::radians(95.0), Render::ScreenAspect(), 0.1f, 1000.0f);
+    //keyboardMapping = &Input::gDefaultKeyboardMapping;
 }

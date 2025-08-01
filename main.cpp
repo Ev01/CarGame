@@ -105,6 +105,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     World::Init();
 
+    Input::Init();
     // Players
     gPlayers[0].Init();
     gPlayers[1].Init();
@@ -113,6 +114,14 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     glEnable(GL_DEPTH_TEST);
 
     lastFrame = GetSeconds();
+
+    int numKeyboards = 0;
+    SDL_KeyboardID *ids = SDL_GetKeyboards(&numKeyboards);
+    SDL_Log("Keyboards:");
+    for (int i = 0; i < numKeyboards; i++) {
+        SDL_Log(SDL_GetKeyboardNameForID(ids[i]));
+    }
+    SDL_Log("");
 
     return SDL_APP_CONTINUE;
 }

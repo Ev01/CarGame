@@ -522,17 +522,6 @@ void Vehicle::Update(float delta)
     // Longitudinal velocity local to the car
     float longVelocity = (mBody->GetRotation().Conjugated() * mBody->GetLinearVelocity()).GetZ();
 
-    //mSteer = mSteer + (mSteerTarget - mSteer) * 0.1f;
-    if (!Input::GetGamepad()) {
-        float difference = glm::sign(mSteerTarget - mSteer) * 0.1f;
-        if (SDL_fabsf(difference) > SDL_fabsf(mSteerTarget - mSteer)) {
-            difference = mSteerTarget - mSteer;
-        }
-        mSteer += difference;
-        mSteer = SDL_clamp(mSteer, -1.0f, 1.0f);
-    } else {
-        mSteer = mSteerTarget;
-    }
 
     // Limit steering angle based on velocity
     const float limitVelStart = 20.0;
@@ -659,22 +648,6 @@ void Vehicle::PostPhysicsStep()
                 bodyTransform * headLightRightTransform * JPH::Vec4(0, 1, 0, 0)));
 }
 
-
-void Vehicle::ProcessInput(bool useGamepad)
-{
-    if (useGamepad && Input::GetGamepad()) {
-        mForward = Input::GetGamepadAxis(0, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
-        mBrake = Input::GetGamepadAxis(0, SDL_GAMEPAD_AXIS_LEFT_TRIGGER);
-        mSteerTarget = Input::GetGamepadAxis(0, SDL_GAMEPAD_AXIS_LEFTX);
-        mHandbrake = (float) Input::GetGamepadButton(0, SDL_GAMEPAD_BUTTON_SOUTH);
-    }
-    else if (!useGamepad) {
-        mSteerTarget = Input::GetScanAxis(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT);
-        mBrake = (float) Input::IsScanDown(SDL_SCANCODE_DOWN);
-        mForward = (float) Input::IsScanDown(SDL_SCANCODE_UP);
-        mHandbrake = (float) Input::IsScanDown(SDL_SCANCODE_SPACE);
-    }
-}
 
 
 JPH::RMat44 Vehicle::GetWheelTransform(int wheelNum)

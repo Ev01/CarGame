@@ -1,6 +1,7 @@
 #pragma once
 
 #include "camera.h"
+#include "input.h"
 #include <SDL3/SDL.h>
 
 #define NUM_PLAYERS 2
@@ -12,6 +13,7 @@ struct VehicleSettings;
 
 struct Player {
     SDL_Gamepad *gamepad = nullptr;
+
     // The vehicle that this player controls
     Vehicle *vehicle = nullptr;
     VehicleCamera cam;

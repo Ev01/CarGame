@@ -304,8 +304,8 @@ void World::Update(float delta)
 void World::ProcessInput()
 {
     if (raceState != RACE_COUNTING_DOWN) {
-        car->ProcessInput(false);
-        car2->ProcessInput(true);
+        //car->ProcessInput(false);
+        //car2->ProcessInput(true);
     }
     else {
         car->mHandbrake = 1.0f;

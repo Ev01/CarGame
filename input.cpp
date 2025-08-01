@@ -10,6 +10,170 @@
 bool scancodesDown[SDL_SCANCODE_COUNT];
 SDL_Gamepad *gamepads[8];
 int numOpenedGamepads = 0;
+//InputMappingKeyboard gDefaultKeyboardMapping;
+
+
+ControlScheme gDefaultControlScheme;
+
+
+void InputMapping::AssignMapping(SDL_Scancode aScancode)
+{
+    mappingType = MAPPING_TYPE_SCANCODE;
+    scancode = aScancode;
+}
+void InputMapping::AssignMapping(SDL_GamepadButton aButton)
+{
+    mappingType = MAPPING_TYPE_GAMEPAD_BUTTON;
+    button = aButton;
+}
+void InputMapping::AssignMapping(SDL_GamepadAxis aAxis, bool isAxisPos)
+{
+    if (isAxisPos) {
+        mappingType = MAPPING_TYPE_GAMEPAD_AXIS_POS;
+    }
+    else {
+        mappingType = MAPPING_TYPE_GAMEPAD_AXIS_NEG;
+    }
+    axis = aAxis;
+}
+float InputMapping::GetValue(SDL_Gamepad *gamepad)
+{
+    if (gamepad == nullptr && mappingType != MAPPING_TYPE_SCANCODE) {
+        return 0.0;
+    }
+
+    switch (mappingType) {
+        case MAPPING_TYPE_SCANCODE:
+            // Only enable keyboard when not given controller to use
+            if (gamepad == nullptr) {
+                return (float) Input::IsScanDown(scancode);
+            }
+            break;
+        case MAPPING_TYPE_GAMEPAD_AXIS_POS:
+            return Input::GetGamepadAxisPos(gamepad, axis);
+        case MAPPING_TYPE_GAMEPAD_AXIS_NEG:
+            return Input::GetGamepadAxisNeg(gamepad, axis);
+        case MAPPING_TYPE_GAMEPAD_BUTTON:
+            return Input::GetGamepadButton(gamepad, button);
+        case MAPPING_TYPE_NONE:
+            return 0.0;
+    }
+
+    return 0.0;
+}
+
+void InputAction::AddMapping(SDL_Scancode scancode)
+{
+    numMappingsSet = SDL_min(numMappingsSet, 2);
+    mappings[numMappingsSet++].AssignMapping(scancode);
+}
+void InputAction::AddMapping(SDL_GamepadButton button)
+{
+    numMappingsSet = SDL_min(numMappingsSet, 2);
+    mappings[numMappingsSet++].AssignMapping(button);
+}
+void InputAction::AddMapping(SDL_GamepadAxis axis, bool isPosAxis)
+{
+    numMappingsSet = SDL_min(numMappingsSet, 2);
+    mappings[numMappingsSet++].AssignMapping(axis, isPosAxis);
+}
+
+float InputAction::GetValue(SDL_Gamepad *gamepad) {
+    float toReturn = 0.0;
+    for (int i = 0; i < numMappingsSet; i++) {
+        // Choose the mapping with the greatest input value. This should
+        // work fine in most occasions
+        toReturn = SDL_max(toReturn, mappings[i].GetValue(gamepad));
+    }
+    return toReturn;
+}
+
+
+void InputAction::HandleEvent(SDL_Event *event)
+{
+    /*
+    for (int i = 0; i < numMappingsSet; i++) {
+        switch (mappings[i].mappingType) {
+            case MAPPING_TYPE_SCANCODE:
+                if (event->type == SDL_EVENT_KEY_DOWN 
+                        || event->type == SDL_EVENT_KEY_UP) {
+                    lastPressed = i;
+                    return;
+                }
+                break;
+
+            case MAPPING_TYPE_GAMEPAD_BUTTON:
+                if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
+                        || event->type == SDL_EVENT_GAMEPAD_BUTTON_UP) {
+                    lastPressed = i;
+                    return;
+                }
+                break;
+            
+            case MAPPING_TYPE_GAMEPAD_AXIS_NEG:
+            case MAPPING_TYPE_GAMEPAD_AXIS_POS:
+                if (event->type == SDL_EVENT_GAMEPAD_AXIS_MOTION) {
+                    lastPressed = i;
+                    return;
+                }
+                break;
+            case MAPPING_TYPE_NONE:
+        }
+    }
+    */
+}
+
+
+float ControlScheme::GetInputForAction(GameAction action, SDL_Gamepad *gamepad)
+{
+    return actions[action].GetValue(gamepad);
+}
+float ControlScheme::GetSignedInputForAction(GameAction negAction,
+                                             GameAction posAction, 
+                                             SDL_Gamepad *gamepad)
+{
+    return actions[posAction].GetValue(gamepad) 
+         - actions[negAction].GetValue(gamepad);
+}
+
+
+void Input::Init()
+{
+    gDefaultControlScheme.actions[ACTION_STEER_LEFT].AddMapping(
+            SDL_GAMEPAD_AXIS_LEFTX, false);
+    gDefaultControlScheme.actions[ACTION_STEER_LEFT].AddMapping(
+            SDL_SCANCODE_LEFT);
+    gDefaultControlScheme.actions[ACTION_STEER_RIGHT].AddMapping(
+            SDL_GAMEPAD_AXIS_LEFTX, true);
+    gDefaultControlScheme.actions[ACTION_STEER_RIGHT].AddMapping(
+            SDL_SCANCODE_RIGHT);
+
+    gDefaultControlScheme.actions[ACTION_BRAKE].AddMapping(
+            SDL_GAMEPAD_AXIS_LEFT_TRIGGER);
+    gDefaultControlScheme.actions[ACTION_BRAKE].AddMapping(
+            SDL_SCANCODE_DOWN);
+
+    gDefaultControlScheme.actions[ACTION_FORWARD].AddMapping(
+            SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
+    gDefaultControlScheme.actions[ACTION_FORWARD].AddMapping(
+            SDL_SCANCODE_UP);
+
+    gDefaultControlScheme.actions[ACTION_HANDBRAKE].AddMapping(
+            SDL_GAMEPAD_BUTTON_SOUTH);
+    gDefaultControlScheme.actions[ACTION_HANDBRAKE].AddMapping(
+            SDL_SCANCODE_SPACE);
+
+    
+    gDefaultControlScheme.actions[ACTION_LOOK_LEFT].AddMapping(
+            SDL_SCANCODE_A);
+    gDefaultControlScheme.actions[ACTION_LOOK_LEFT].AddMapping(
+            SDL_GAMEPAD_AXIS_RIGHTX, false);
+
+    gDefaultControlScheme.actions[ACTION_LOOK_RIGHT].AddMapping(
+            SDL_SCANCODE_D);
+    gDefaultControlScheme.actions[ACTION_LOOK_RIGHT].AddMapping(
+            SDL_GAMEPAD_AXIS_RIGHTX, true);
+}
 
 
 bool Input::IsScanDown(SDL_Scancode scancode)
@@ -72,6 +236,14 @@ float Input::GetGamepadAxis(SDL_Gamepad *gamepad, SDL_GamepadAxis axis)
         normAmount = 0.0;
     }
     return normAmount;
+}
+float Input::GetGamepadAxisPos(SDL_Gamepad *gamepad, SDL_GamepadAxis axis)
+{
+    return SDL_max(GetGamepadAxis(gamepad, axis), 0);
+}
+float Input::GetGamepadAxisNeg(SDL_Gamepad *gamepad, SDL_GamepadAxis axis)
+{
+    return -SDL_min(GetGamepadAxis(gamepad, axis), 0);
 }
 
 
