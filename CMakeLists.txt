@@ -34,6 +34,7 @@ add_executable(car)
 target_sources(car
 PRIVATE
     main.cpp
+    main_game.cpp
     model.cpp
     shader.cpp
     texture.cpp

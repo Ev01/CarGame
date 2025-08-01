@@ -514,8 +514,17 @@ void Vehicle::DebugGUI(unsigned int id)
     ImGui::End();
 }
 
+void Vehicle::HoldInPlace()
+{
+    mIsHeldInPlace = true;
+}
+    
+void Vehicle::ReleaseFromHold()
+{
+    mIsHeldInPlace = false;
+}
 
-void Vehicle::Update(float delta)
+void Vehicle::PrePhysicsUpdate(float delta)
 {
     JPH::BodyInterface &bodyInterface = Phys::GetPhysicsSystem().GetBodyInterface();
 
@@ -534,8 +543,10 @@ void Vehicle::Update(float delta)
     steerLimitFactor = SDL_clamp(steerLimitFactor, minSteerLimitFactor, 1.0);
     mSteer *= steerLimitFactor;
 
-    //RVec3 com = Phys::GetCarPos();
-    //SDL_Log("car com (%f, %f, %f)", com.GetX(), com.GetY(), com.GetZ());
+    if (mIsHeldInPlace) {
+        mForward = 0.0;
+        mHandbrake = 1.0;
+    }
 
     if (mSteer || mForward || mBrake)
         bodyInterface.ActivateBody(mBody->GetID());
@@ -572,12 +583,6 @@ void Vehicle::Update(float delta)
             mForward = 0.0f;
         }
     }
-
-    /*
-    if (mHandbrake) {
-        mForward = 0.0;
-    }
-    */
 
 
     controller->SetDriverInput(mForward, mSteer, mBrake, mHandbrake);
@@ -633,7 +638,7 @@ void Vehicle::Update(float delta)
 }
 
 
-void Vehicle::PostPhysicsStep()
+void Vehicle::Update()
 {
     JPH::RMat44 bodyTransform = mBody->GetWorldTransform();
 

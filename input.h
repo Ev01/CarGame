@@ -3,27 +3,6 @@
 #include <SDL3/SDL.h>
 
 
-
-struct InputState {
-    float carSteer = 0.0;
-    float carForward = 0.0;
-    float carBrake = 0.0;
-    float carHandbrake = 0.0;
-};
-
-struct InputMappingKeyboard {
-    SDL_Scancode carSteerRight = SDL_SCANCODE_RIGHT;
-    SDL_Scancode carSteerLeft  = SDL_SCANCODE_LEFT;
-    SDL_Scancode carForward    = SDL_SCANCODE_UP;
-    SDL_Scancode carBrake      = SDL_SCANCODE_DOWN;
-    SDL_Scancode carHandbrake  = SDL_SCANCODE_SPACE;
-};
-
-// Actions that one or more keys/buttons/axis can be bound to
-//enum InputAction {
-//
-//};
-
 enum MappingType {
     MAPPING_TYPE_NONE,
     MAPPING_TYPE_SCANCODE,
@@ -114,6 +93,5 @@ namespace Input
     void HandleEvent(SDL_Event *event);
     SDL_Gamepad* GetGamepad();
     void DebugGUI();
-
-    extern InputMappingKeyboard gDefaultKeyboardMapping;
+    void Update();
 }

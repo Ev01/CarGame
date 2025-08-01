@@ -57,10 +57,14 @@ struct VehicleSettings
 struct Vehicle
 {
     bool IsWheelFlipped(int wheelIndex);
-    void Update(float delta);
-    void PostPhysicsStep();
+    void PrePhysicsUpdate(float delta);
+    void Update();
     void Init(VehicleSettings &settings);
     void Destroy();
+
+    // Puts on the handbrake and disables driving
+    void HoldInPlace();
+    void ReleaseFromHold();
 
     JPH::RMat44 GetWheelTransform(int wheelNum);
     JPH::RVec3 GetPos();
@@ -77,6 +81,7 @@ struct Vehicle
     float mSteerTarget = 0;
     float mHandbrake = 0;
     float mDrivingDir = 1.0f;
+    bool mIsHeldInPlace = false;
 
     Audio::Sound *engineSnd;
     Audio::Sound *driftSnd;

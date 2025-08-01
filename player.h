@@ -21,8 +21,9 @@ struct Player {
     // Create a vehicle and set it as the vehicle this player controls
     void CreateAndUseVehicle(VehicleSettings &settings);
     void SetVehicle(Vehicle *aVehicle);
-    void ProcessInput();
+    void InputUpdate();
     void PhysicsUpdate(double delta);
+    // Must be called before using the player's camera
     void Init();
     //SDL_Gamepad* GetGamepad() { return gamepad; }
 };

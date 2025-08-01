@@ -20,7 +20,7 @@ void Player::CreateAndUseVehicle(VehicleSettings &settings)
 }
 
 
-void Player::ProcessInput()
+void Player::InputUpdate()
 {
     if (vehicle == nullptr) {
         return;

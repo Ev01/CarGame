@@ -237,8 +237,8 @@ void World::OnContactAdded(const JPH::Body &inBody1, const JPH::Body &inBody2)
 
 void World::PrePhysicsUpdate(float delta)
 {
-    car->Update(delta);
-    car2->Update(delta);
+    car->PrePhysicsUpdate(delta);
+    car2->PrePhysicsUpdate(delta);
 
 }
 
@@ -263,8 +263,8 @@ void World::Update(float delta)
             break;
     }
 
-    car->PostPhysicsStep();
-    car2->PostPhysicsStep();
+    car->Update();
+    car2->Update();
 
     ImGui::Begin("Maps");
     const char* items[] = {"Map01", "Map02", "simple_map", "racetrack1"};
@@ -301,15 +301,15 @@ void World::Update(float delta)
 }
 
 
-void World::ProcessInput()
+void World::InputUpdate()
 {
     if (raceState != RACE_COUNTING_DOWN) {
-        //car->ProcessInput(false);
-        //car2->ProcessInput(true);
+        car->ReleaseFromHold();
+        car2->ReleaseFromHold();
     }
     else {
-        car->mHandbrake = 1.0f;
-        car2->mHandbrake = 1.0f;
+        car->HoldInPlace();
+        car2->HoldInPlace();
     }
 }
 

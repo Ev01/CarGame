@@ -317,7 +317,7 @@ void Phys::PhysicsStep(float delta)
 }
 
 
-void Phys::ProcessInput()
+void Phys::InputUpdate()
 {
 }
 
@@ -332,10 +332,6 @@ void Phys::CleanUp()
 	delete Factory::sInstance;
 	Factory::sInstance = nullptr;
 }
-
-
-
-
 
 
 JPH::PhysicsSystem& Phys::GetPhysicsSystem()

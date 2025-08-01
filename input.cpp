@@ -4,7 +4,7 @@
 #include "vendor/imgui/imgui.h"
 #include <SDL3/SDL.h>
 
-#define DEADZONE 0.10
+#define DEADZONE 0.03
 #define MAX_GAMEPADS 8
 
 bool scancodesDown[SDL_SCANCODE_COUNT];
@@ -86,6 +86,12 @@ float InputAction::GetValue(SDL_Gamepad *gamepad) {
         toReturn = SDL_max(toReturn, mappings[i].GetValue(gamepad));
     }
     return toReturn;
+}
+
+
+void InputAction::ClearMappings()
+{
+    numMappingsSet = 0;
 }
 
 
@@ -220,6 +226,12 @@ float Input::GetScanAxis(SDL_Scancode negScan, SDL_Scancode posScan)
     bool isDownNeg = Input::IsScanDown(negScan);
     bool isDownPos = Input::IsScanDown(posScan);
     return (float)isDownPos - (float)isDownNeg;
+}
+
+
+void Input::Update()
+{
+    DebugGUI();
 }
 
 

@@ -55,7 +55,7 @@ namespace World {
     void PrePhysicsUpdate(float delta);
     void OnContactAdded(const JPH::Body &inBody1, const JPH::Body &inBody2);
     void Update(float delta);
-    void ProcessInput();
+    void InputUpdate();
     void Init();
     void CleanUp();
     void CreateCars();

@@ -65,7 +65,7 @@ namespace Phys {
                  const JPH::BodyFilter &inBodyFilter = { });
 
     void CleanUp();
-    void ProcessInput();
+    void InputUpdate();
     JPH::PhysicsSystem& GetPhysicsSystem();
     JPH::BodyInterface&  GetBodyInterface();
 }
