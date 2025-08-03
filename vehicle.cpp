@@ -4,6 +4,7 @@
 #include "physics.h"
 #include "render.h"
 #include "convert.h"
+#include "model.h"
 
 #include "vendor/imgui/imgui.h"
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>

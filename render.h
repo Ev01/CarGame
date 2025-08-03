@@ -1,12 +1,14 @@
 #pragma once
 
 #include "camera.h"
-#include "model.h"
 
 #include <glm/glm.hpp>
 #include <assimp/scene.h>
 #include <assimp/light.h>
 #include <SDL3/SDL.h>
+
+// forward declarations
+struct ShaderProg;
 
 namespace Render {
 
@@ -57,6 +59,9 @@ namespace Render {
     void RenderScene(const Camera &cam);
     void RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
                      bool enableSkybox = true);
+    void RenderText(ShaderProg &s, std::string text, float x, float y,
+                    float scale, glm::vec3 colour);
+
     void HandleEvent(SDL_Event *event);
     void DeleteAllLights();
     /* Returns current aspect ratio of the window */

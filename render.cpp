@@ -10,6 +10,7 @@
 #include "vehicle.h"
 #include "world.h"
 #include "player.h"
+#include "font.h"
 
 #include "vendor/imgui/imgui.h"
 #include "vendor/imgui/backends/imgui_impl_opengl3.h"
@@ -18,6 +19,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 #include <SDL3/SDL.h>
 #include <algorithm>
@@ -37,10 +41,13 @@ static Render::SunLight sunLight;
 static ShaderProg PbrShader;
 static ShaderProg skyboxShader;
 static ShaderProg screenShader;
+static ShaderProg rawScreenShader;
 static ShaderProg simpleDepthShader;
+static ShaderProg textShader;
 static SDL_Window *window;
 static SDL_GLContext context;
 
+//static Texture textTex;
 static Texture skyboxTex;
 static Texture grassTex;
 static Material grassMat;
@@ -134,6 +141,11 @@ static const int fbHeight = 900;
 //static const int fbWidth = 800;
 //static const int fbHeight = 600;
 static unsigned int physFrameCounter = 0;
+
+//std::map<char, Character> characters;
+Character characters[96];
+glm::mat4 uiProj;
+unsigned int textVAO, textVBO;
 
 
 //static const glm::vec3 sunDir = glm::vec3(0.1, -0.5, 0.1);
@@ -452,6 +464,125 @@ void Render::DestroySpotLight(SpotLight *spotLight)
 }
 
 
+static bool LoadFont()
+{
+    FT_Library ft;
+    if (FT_Init_FreeType(&ft)) {
+        SDL_Log("Could not init FreeType Library");
+        return false;
+    }
+
+    FT_Face face;
+    if (FT_New_Face(ft, "fonts/liberation_sans/LiberationSans-Regular.ttf", 0, &face)) {
+        SDL_Log("Failed to load font");
+    }
+
+    FT_Set_Pixel_Sizes(face, 0, 48);
+    if (FT_Load_Char(face, 'X', FT_LOAD_RENDER)) {
+        SDL_Log("Failed to load glyph");
+    }
+
+    GLERR;
+    // disable byte-alignment restriction
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    // Loop through first 128 ascii characters (0-31 are control characters)
+    for (unsigned char c = 32; c < 128; c++) {
+        // load character glyph
+        if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
+            SDL_Log("Failed to load glyph");
+        }
+        Texture tex;
+        glGenTextures(1, &tex.id);
+        glBindTexture(GL_TEXTURE_2D, tex.id);
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RED,
+            face->glyph->bitmap.width,
+            face->glyph->bitmap.rows,
+            0,
+            GL_RED,
+            GL_UNSIGNED_BYTE,
+            face->glyph->bitmap.buffer
+        );
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        GLERR;
+        // Store character for later
+        Character character = {
+            tex,
+            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+            glm::ivec2(face->glyph->bitmap_left,  face->glyph->bitmap_top),
+            static_cast<unsigned int>(face->glyph->advance.x)
+        };
+        characters[c - 32] = character;
+    }
+
+    FT_Done_Face(face);
+    FT_Done_FreeType(ft);
+
+    uiProj = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
+    GLERR;
+    glUseProgram(textShader.id);
+    textShader.SetMat4fv((char*)"projection", glm::value_ptr(uiProj));
+    GLERR;
+    GLERR;
+
+    glGenVertexArrays(1, &textVAO);
+    glGenBuffers(1, &textVBO);
+    glBindVertexArray(textVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+    // Need 6 vertices of 4 floats each for a quad.
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    GLERR;
+    return true;
+}
+
+
+static void LoadShaders()
+{
+    GLERR;
+    // Create shaders
+    unsigned int vShader = CreateShaderFromFile("shaders/vertex.glsl", 
+                                                 GL_VERTEX_SHADER);
+    unsigned int fShader = CreateShaderFromFile("shaders/fragment.glsl", 
+                                                 GL_FRAGMENT_SHADER);
+    PbrShader = CreateAndLinkShaderProgram(vShader, fShader);
+
+    unsigned int vSkybox = CreateShaderFromFile("shaders/v_skybox.glsl",
+                                                GL_VERTEX_SHADER);
+    unsigned int fSkybox = CreateShaderFromFile("shaders/f_skybox.glsl",
+                                                GL_FRAGMENT_SHADER);
+    skyboxShader = CreateAndLinkShaderProgram(vSkybox, fSkybox);
+
+    unsigned int vScreen = CreateShaderFromFile("shaders/v_screen.glsl",
+                                                GL_VERTEX_SHADER);
+    unsigned int fScreen = CreateShaderFromFile("shaders/f_screen.glsl",
+                                                GL_FRAGMENT_SHADER);
+    screenShader = CreateAndLinkShaderProgram(vScreen, fScreen);
+
+    unsigned int fScreenRaw = CreateShaderFromFile("shaders/f_screen_raw.glsl",
+                                                   GL_FRAGMENT_SHADER);
+
+    rawScreenShader = CreateAndLinkShaderProgram(vScreen, fScreenRaw);
+
+    unsigned int vSimpleDepth = CreateShaderFromFile("shaders/v_simple_depth.glsl", GL_VERTEX_SHADER);
+    unsigned int fSimpleDepth = CreateShaderFromFile("shaders/f_simple_depth.glsl", GL_FRAGMENT_SHADER);
+    simpleDepthShader = CreateAndLinkShaderProgram(vSimpleDepth, fSimpleDepth);
+
+    unsigned int vText = CreateShaderFromFile("shaders/v_text.glsl", GL_VERTEX_SHADER);
+    unsigned int fText = CreateShaderFromFile("shaders/f_text.glsl", GL_FRAGMENT_SHADER);
+    textShader = CreateAndLinkShaderProgram(vText, fText);
+}
+
+
 bool Render::Init()
 {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -481,30 +612,7 @@ bool Render::Init()
         SDL_Log("Could not turn on VSync");
     }
 
-    GLERR;
-    // Create shaders
-    unsigned int vShader = CreateShaderFromFile("shaders/vertex.glsl", 
-                                                 GL_VERTEX_SHADER);
-    unsigned int fShader = CreateShaderFromFile("shaders/fragment.glsl", 
-                                                 GL_FRAGMENT_SHADER);
-    PbrShader = CreateAndLinkShaderProgram(vShader, fShader);
-
-    unsigned int vSkybox = CreateShaderFromFile("shaders/v_skybox.glsl",
-                                                GL_VERTEX_SHADER);
-    unsigned int fSkybox = CreateShaderFromFile("shaders/f_skybox.glsl",
-                                                GL_FRAGMENT_SHADER);
-    skyboxShader = CreateAndLinkShaderProgram(vSkybox, fSkybox);
-
-    unsigned int vScreen = CreateShaderFromFile("shaders/v_screen.glsl",
-                                                GL_VERTEX_SHADER);
-    unsigned int fScreen = CreateShaderFromFile("shaders/f_screen.glsl",
-                                                GL_FRAGMENT_SHADER);
-    screenShader = CreateAndLinkShaderProgram(vScreen, fScreen);
-
-    unsigned int vSimpleDepth = CreateShaderFromFile("shaders/v_simple_depth.glsl", GL_VERTEX_SHADER);
-    unsigned int fSimpleDepth = CreateShaderFromFile("shaders/f_simple_depth.glsl", GL_FRAGMENT_SHADER);
-    simpleDepthShader = CreateAndLinkShaderProgram(vSimpleDepth, fSimpleDepth);
-
+    LoadShaders();
     GLERR;
     // Skybox VAO
     glGenVertexArrays(1, &skyboxVAO);
@@ -524,12 +632,14 @@ bool Render::Init()
                                        "texture/Lycksele/negy.jpg",
                                        "texture/Lycksele/posz.jpg",
                                        "texture/Lycksele/negz.jpg");
+    /*
     grassTex = CreateTextureFromFile("texture/grass.png");
     grassTex.SetWrapClamp();
     grassMat.texture = grassTex;
     grassMat.normalMap = gDefaultNormalMap;
     grassMat.roughnessMap = gDefaultTexture;
     grassMat.diffuseColour = glm::vec3(1.0f);
+    */
 
     windowMat.texture = CreateTextureFromFile("texture/blending_transparent_window.png");
     //windowMat.texture.SetWrapClamp();
@@ -554,18 +664,11 @@ bool Render::Init()
     cubeModel = LoadModel("models/cube.gltf");
     quadModel = LoadModel("models/quad.gltf");
 
-    // Camera
-    /*
-    cam.Init(SDL_PI_F / 4.0, 800.0f / 600.0f, 0.1f, 1000.0f);
-    */
-    const float fov = glm::radians(95.0);
-    //const float pitch = 
-    float aspect = ScreenAspect();
-
-    
-    
-    //cam2.cam.pos.z = 6.0f;
-    //cam2.cam.SetYawPitch(-SDL_PI_F / 2.0, 0);
+    GLERR;
+    if (!LoadFont()) {
+        return false;
+    }
+    //glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(uiProj));
 
     GLERR;
     // ----- Framebuffer -----
@@ -865,21 +968,6 @@ void Render::RenderFrame()
     glUseProgram(PbrShader.id);
     RenderScene(gPlayers[0].cam.cam);
 
-    
-    /*
-    lightView = glm::lookAt(
-            spotLights[0]->mPosition,
-            spotLights[0]->mPosition + spotLights[0]->mDirection,
-            up);
-    nearPlane = 1.0f;
-    farPlane = 40.0f;
-    //lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 
-    //                            nearPlane, farPlane);
-    lightProjection = glm::perspective(SDL_acosf(spotLights[0]->mCutoffOuter)*2.0f,
-                                       1.0f, nearPlane, farPlane);
-    RenderScene(lightView, lightProjection);
-    */
-    
     GLERR; 
     // Render right screen
     
@@ -893,6 +981,7 @@ void Render::RenderFrame()
     
 
     GLERR;
+    
     
     // Blit multisampled framebuffer onto the regular framebuffer
     glBindFramebuffer(GL_READ_FRAMEBUFFER, msFBO);
@@ -919,6 +1008,8 @@ void Render::RenderFrame()
     //glBindTexture(GL_TEXTURE_2D, depthMap);
     //glBindTexture(GL_TEXTURE_2D, spotLights[0]->mShadowTex);
     glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    RenderText(textShader, "Hello!!! This is a sentence.", 25.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f));
     glBindTexture(GL_TEXTURE_2D, 0);
     
 
@@ -1060,6 +1151,50 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
     }
     glDisable(GL_CULL_FACE);
 }
+
+
+void Render::RenderText(ShaderProg &s, std::string text, float x, float y,
+                        float scale, glm::vec3 colour)
+{
+    glUseProgram(s.id);
+    s.SetVec3((char*)"textColour", colour.x, colour.y, colour.z);
+    glActiveTexture(GL_TEXTURE0);
+    glBindVertexArray(textVAO);
+
+    std::string::const_iterator c;
+    for (c = text.begin(); c != text.end(); c++) {
+        Character ch = characters[*c - 32];
+
+        float xPos = x + ch.bearing.x * scale;
+        float yPos = y - (ch.size.y - ch.bearing.y) * scale;
+        float w = ch.size.x * scale;
+        float h = ch.size.y * scale;
+        // Update VBO for each character
+        float vertices[6][4] = {
+            { xPos,     yPos + h, 0.0f, 0.0f },
+            { xPos,     yPos,     0.0f, 1.0f },
+            { xPos + w, yPos,     1.0f, 1.0f },
+
+            { xPos,     yPos + h, 0.0f, 0.0f },
+            { xPos + w, yPos,     1.0f, 1.0f },
+            { xPos + w, yPos + h, 1.0f, 0.0f }
+        };
+        // render glyph texture over quad
+        glBindTexture(GL_TEXTURE_2D, ch.texture.id);
+        // Update content of VBO memory
+        glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        // render quad
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // Advance cursors for next glyph (advance is in 1/64 pixels)
+        x += (ch.advance >> 6) * scale;
+    }
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+
 
 static void ToggleFullscreen()
 {

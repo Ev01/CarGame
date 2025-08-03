@@ -13,12 +13,17 @@
 
 #include "physics.h"
 #include "world.h"
+#include "texture.h"
 
 #include "glad/glad.h"
 #include "input.h"
 #include "audio.h"
 #include "render.h"
 #include "player.h"
+#include "font.h"
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 
 
@@ -38,6 +43,7 @@ static float physicsTime = 0;
 
 static bool dontSkipPhysicsStep = false;
 static double fpsLimit = 300.0;
+
 
 
 /*
@@ -180,6 +186,9 @@ SDL_AppResult MainGame::Init()
     ImGui_ImplOpenGL3_Init(nullptr);
 
     InitDefaultTexture();
+
+
+
 
     // Audio
     Audio::Init();

@@ -14,6 +14,7 @@ extern Texture gDefaultTexture;
 extern Texture gDefaultNormalMap;
 
 Texture CreateTextureFromFile(const char* filename);
+Texture CreateTextureFromSurface(const SDL_Surface *surf, bool isSRGB);
 Texture CreateTextureFromFile(const char* filename, bool isSRGB);
 Texture CreateCubemapFromFiles(const char* fileRight, const char* fileLeft, 
                                const char* fileTop, const char* fileBottom, 

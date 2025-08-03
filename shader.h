@@ -8,6 +8,7 @@ struct ShaderProg {
     void SetMat4fv(char uniformName[], const float *matrix);
     void SetVec3(char uniformName[], const float *vec3);
     void SetVec3(char uniformName[], float x, float y, float z);
+    void SetVec4(char uniformName[], float x, float y, float z, float w);
 };
 
 unsigned int CreateShaderFromFile(const char* filename, const int shaderType);
