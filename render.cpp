@@ -11,6 +11,7 @@
 #include "world.h"
 #include "player.h"
 #include "font.h"
+#include "main_game.h"
 
 #include "vendor/imgui/imgui.h"
 #include "vendor/imgui/backends/imgui_impl_opengl3.h"
@@ -46,6 +47,7 @@ static ShaderProg simpleDepthShader;
 static ShaderProg textShader;
 static SDL_Window *window;
 static SDL_GLContext context;
+int screenWidth, screenHeight;
 
 //static Texture textTex;
 static Texture skyboxTex;
@@ -714,11 +716,12 @@ bool Render::Init()
 
 float Render::ScreenAspect()
 {
-    int screenWidth, screenHeight;
-    bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
+    // Screen width and height
+    int sw, sh;
+    bool screenSuccess = SDL_GetWindowSize(window, &sw, &sh);
     if (screenSuccess) {
         // Divide aspect by 2.0 for split screen
-        float aspect = (float) screenWidth / (float) screenHeight;
+        float aspect = (float) sw / (float) sh;
         if (doSplitScreen) {
             aspect /= 2.0;
         }
@@ -736,23 +739,6 @@ Camera& Render::GetCamera()
 
 void Render::PhysicsUpdate(double delta)
 {
-    /*
-    float yawOffset = 0;
-    if (Input::GetGamepad()) {
-        yawOffset = SDL_PI_F / 2.0f * Input::GetGamepadAxis(0, SDL_GAMEPAD_AXIS_RIGHTX);
-    }
-    float yawOffset2 = SDL_PI_F / 2.0f * Input::GetScanAxis(SDL_SCANCODE_D, SDL_SCANCODE_A);
-    */
-    //cam2.targetBody = World::GetCar().mBody;
-    //cam3.targetBody = World::GetCar2().mBody;
-    //SDL_Log("Car yaw: %f, x: %f, z: %f", carYaw, carDir.GetX(), carDir.GetZ());
-    //cam.SetFollowSmooth(carYaw + yawOffset, camPitch, camDist, carPos, 
-    //                    angleSmooth * delta, distSmooth * delta);
-    //gPlayers[0].cam.SetFollowSmooth(yawOffset2, camPitch, camDist, 
-    //                    angleSmooth * delta, distSmooth * delta);
-    //gPlayers[1].cam.SetFollowSmooth(yawOffset, camPitch, camDist, 
-    //                    angleSmooth * delta, distSmooth * delta);
-
     if (physFrameCounter % 30 == 0) {
         // Sort spot lights from nearest to player to furthest from player.
         // This doesn't need to happen very often.
@@ -768,8 +754,7 @@ void Render::PhysicsUpdate(double delta)
     physFrameCounter++;
 }
 
-
-void Render::Update(double delta)
+static void DebugGUI()
 {
     // Update Camera
     ImGui::Begin("Cool window");
@@ -790,7 +775,7 @@ void Render::Update(double delta)
     bool splitBefore = doSplitScreen;
     ImGui::Checkbox("Splitscreen", &doSplitScreen);
     if (doSplitScreen != splitBefore) {
-        float aspect = ScreenAspect();
+        float aspect = Render::ScreenAspect();
         for (Player &p : gPlayers) {
             p.cam.cam.aspect = aspect;
             p.cam.cam.CalcProjection();
@@ -874,19 +859,17 @@ void Render::Update(double delta)
             SDL_SetWindowFullscreenMode(window, displayModes[selectedDisplayMode]);
         }
     }
-
-
-
-
-    
     ImGui::End();
 }
 
-
-void Render::RenderFrame()
+void Render::Update(double delta)
 {
-    GLERR;
-    // Shadow pass
+    DebugGUI();
+}
+
+
+static void ShadowPass()
+{
     float nearPlane = 1.0f, farPlane = 140.0f;
     const glm::vec3 shadowOrigin = gPlayers[0].cam.cam.pos;
     constexpr float SHADOW_START_FAC = 70.0f;
@@ -942,13 +925,69 @@ void Render::RenderFrame()
     
     
     GLERR;
+}
 
-    // Get screen width and height
-    int screenWidth, screenHeight;
+
+static void GuiPass()
+{
+    if (MainGame::gGameState == GAME_PRESS_START_SCREEN) {
+        Render::RenderText(textShader, "Hello!!! This is a sentence.",
+                           25.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f));
+        Render::RenderText(textShader, "Press Enter to start...", 
+                           100.0f, 100.0f, 0.5f, glm::vec3(0.0, 0.0f, 0.0f));
+    }
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+
+static void RenderSceneSplitScreen()
+{
+    // Render left screen
+    int playerScreenWidth = doSplitScreen ? screenWidth / 2 : screenWidth;
+    //if (screenSuccess) {
+    glViewport(0, 0, playerScreenWidth, screenHeight);
+    //}
+    glUseProgram(PbrShader.id);
+    Render::RenderScene(gPlayers[0].cam.cam);
+
+    GLERR; 
+    // Render right screen
+    
+    if (doSplitScreen) {
+        //if (screenSuccess) {
+            glViewport(screenWidth/2, 0, playerScreenWidth, screenHeight);
+        //}
+        glUseProgram(PbrShader.id);
+        Render::RenderScene(gPlayers[1].cam.cam);
+    }
+}
+
+
+static void UpdateWindowSize()
+{
     bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
     if (screenSuccess) {
         glViewport(0, 0, screenWidth, screenHeight);
     }
+    else {
+        SDL_Log("Could not get screen size.");
+    }
+}
+
+
+
+void Render::RenderFrame()
+{
+    GLERR;
+
+    if (MainGame::gGameState == GAME_IN_WORLD) {
+        ShadowPass();
+    }
+
+    // Get screen width and height
+    UpdateWindowSize();
 
     GLERR;
 
@@ -960,28 +999,12 @@ void Render::RenderFrame()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     GLERR;
-    // Render left screen
-    int playerScreenWidth = doSplitScreen ? screenWidth / 2 : screenWidth;
-    if (screenSuccess) {
-        glViewport(0, 0, playerScreenWidth, screenHeight);
-    }
-    glUseProgram(PbrShader.id);
-    RenderScene(gPlayers[0].cam.cam);
-
-    GLERR; 
-    // Render right screen
     
-    if (doSplitScreen) {
-        if (screenSuccess) {
-            glViewport(screenWidth/2, 0, playerScreenWidth, screenHeight);
-        }
-        glUseProgram(PbrShader.id);
-        RenderScene(gPlayers[1].cam.cam);
+    if (MainGame::gGameState == GAME_IN_WORLD) {
+        RenderSceneSplitScreen();
     }
-    
 
     GLERR;
-    
     
     // Blit multisampled framebuffer onto the regular framebuffer
     glBindFramebuffer(GL_READ_FRAMEBUFFER, msFBO);
@@ -989,41 +1012,26 @@ void Render::RenderFrame()
     glBlitFramebuffer(0, 0, screenWidth, screenHeight,
                       0, 0, screenWidth, screenHeight,
                       GL_COLOR_BUFFER_BIT, GL_NEAREST);
-
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    GLERR;
 
-    //glViewport(0, 0, screenWidth, screenHeight);
+
+    // Render the regular framebuffer to the screen on a quad
     glViewport(0, 0, fbWidth, fbHeight);
-
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    GLERR;
-
     glDisable(GL_DEPTH_TEST);
     
     glUseProgram(screenShader.id);
     glBindVertexArray(quadVAO);
     glBindTexture(GL_TEXTURE_2D, textureColourBuffer);
-    //glBindTexture(GL_TEXTURE_2D, depthMap);
-    //glBindTexture(GL_TEXTURE_2D, spotLights[0]->mShadowTex);
     glDrawArrays(GL_TRIANGLES, 0, 6);
-
-    RenderText(textShader, "Hello!!! This is a sentence.", 25.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f));
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Do UI pass afterwards to avoid postprocessing on UI
+    GuiPass();
     
-
-    //glEnable(GL_DEPTH_TEST);
-    //RenderSceneShadow(spotLights[0]->lightSpaceMatrix);
-    //RenderSceneShadow(lightSpaceMatrix);
-
     GLERR;
-    //static bool showDemoWindow = true;
-    //ImGui::ShowDemoWindow(&showDemoWindow);
-    
 
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     
     SDL_GL_SwapWindow(window);
 }

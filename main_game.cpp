@@ -44,7 +44,7 @@ static float physicsTime = 0;
 static bool dontSkipPhysicsStep = false;
 static double fpsLimit = 300.0;
 
-
+GameState MainGame::gGameState = GAME_PRESS_START_SCREEN;
 
 /*
  * Records the newFps into the fpsRecords array and updates the average FPS.
@@ -162,6 +162,16 @@ static void DebugGUI()
 }
 
 
+static void StartWorld()
+{
+    Phys::SetupSimulation();
+    World::Init();
+    MainGame::gGameState = GAME_IN_WORLD;
+}
+
+
+
+
 SDL_AppResult MainGame::Init()
 {
     SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_NAME_STRING, "Car Game");
@@ -187,22 +197,18 @@ SDL_AppResult MainGame::Init()
 
     InitDefaultTexture();
 
-
-
-
     // Audio
     Audio::Init();
+    // Input
+    Input::Init();
 
     // Init physics system
     Phys::SetupJolt();
-    Phys::SetupSimulation();
 
-    World::Init();
-
-    Input::Init();
     // Players
     gPlayers[0].Init();
     gPlayers[1].Init();
+
 
     glViewport(0, 0, 800, 600);
     glEnable(GL_DEPTH_TEST);
@@ -242,6 +248,10 @@ SDL_AppResult MainGame::HandleEvent(SDL_Event *event)
         return SDL_APP_CONTINUE;
     }
 
+    if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_RETURN) {
+        StartWorld();
+    }
+
     Input::HandleEvent(event);
     Render::HandleEvent(event);
 
@@ -260,13 +270,21 @@ SDL_AppResult MainGame::Update()
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    DebugGUI();
+    switch (gGameState) {
+        case GAME_PRESS_START_SCREEN:
+            break;
+        case GAME_IN_WORLD:
+            DebugGUI();
 
-    InputUpdate();
-    PhysicsUpdate();
-    FrameUpdate(); 
-    
+            InputUpdate();
+            PhysicsUpdate();
+            FrameUpdate(); 
+            break;
+    }
+
     Render::RenderFrame();
+
+    
     LimitFPS();
 
     return SDL_APP_CONTINUE;
