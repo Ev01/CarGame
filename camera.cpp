@@ -138,6 +138,7 @@ void VehicleCamera::SetFollowSmooth(float yaw, float pitch, float dist,
                                     double distSmoothing)
 {
     JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
+    SDL_assert(targetBody != nullptr);
     JPH::Vec3 targJolt = bodyInterface.GetCenterOfMassPosition(targetBody->GetID());
     JPH::Quat rot = bodyInterface.GetRotation(targetBody->GetID());
     JPH::Vec3 targDir = rot.RotateAxisX();

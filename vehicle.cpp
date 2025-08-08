@@ -716,3 +716,37 @@ void DestroyVehicle(Vehicle *toDestroy)
 
     
 
+std::vector<Vehicle*>& Vehicle::GetExistingVehicles()
+{
+    return existingVehicles;
+}
+
+void Vehicle::PrePhysicsUpdateAllVehicles(float delta)
+{
+    for (Vehicle *v : existingVehicles) {
+        v->PrePhysicsUpdate(delta);
+    }
+}
+
+void Vehicle::UpdateAllVehicles()
+{
+    for (Vehicle *v : existingVehicles) {
+        v->Update();
+    }
+}
+
+
+
+int Vehicle::NumExistingVehicles()
+{
+    return existingVehicles.size();
+}
+
+
+void Vehicle::DestroyAllVehicles()
+{
+    for (Vehicle *v : existingVehicles) {
+        DestroyVehicle(v);
+    }
+    existingVehicles.clear();
+}

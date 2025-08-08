@@ -5,7 +5,8 @@
 #include "camera.h"
 #include "render.h"
 
-Player gPlayers[NUM_PLAYERS];
+Player gPlayers[MAX_PLAYERS];
+int gNumPlayers = 0;
 
 // Camera Settings
 static float camPitch = -0.4f;
@@ -15,8 +16,9 @@ static float distSmooth = 17.0f;
 
 void Player::CreateAndUseVehicle(VehicleSettings &settings)
 {
-    SetVehicle(CreateVehicle());
-    vehicle->Init(settings);
+    Vehicle *v = CreateVehicle();
+    v->Init(settings);
+    SetVehicle(v);
 }
 
 
@@ -72,4 +74,27 @@ void Player::Init()
 {
     cam.Init(glm::radians(95.0), Render::ScreenAspect(), 0.1f, 1000.0f);
     //keyboardMapping = &Input::gDefaultKeyboardMapping;
+}
+
+
+void Player::AddPlayer()
+{
+    gPlayers[gNumPlayers].Init();
+    gNumPlayers++;
+}
+
+
+void Player::PhysicsUpdateAllPlayers(double delta)
+{
+    for (int i = 0; i < gNumPlayers; i++) {
+        gPlayers[i].PhysicsUpdate(delta);
+    }
+}
+
+
+void Player::InputUpdateAllPlayers()
+{
+    for (int i = 0; i < gNumPlayers; i++) {
+        gPlayers[i].InputUpdate();
+    }
 }

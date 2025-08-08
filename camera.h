@@ -38,7 +38,7 @@ struct Camera {
 
 struct VehicleCamera {
     Camera cam;
-    JPH::Body *targetBody;
+    JPH::Body *targetBody = nullptr;
 
     void SetFollowSmooth(float yaw, float pitch, float dist, double angleSmoothing, double distSmoothing);
     void Init(float aFov, float aAspect, float aNear, float aFar);

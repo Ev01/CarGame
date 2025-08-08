@@ -1,10 +1,9 @@
 #pragma once
 
 #include "camera.h"
-#include "input.h"
 #include <SDL3/SDL.h>
 
-#define NUM_PLAYERS 2
+#define MAX_PLAYERS 4
 
 // Forward declarations:
 struct Vehicle;
@@ -20,12 +19,19 @@ struct Player {
 
     // Create a vehicle and set it as the vehicle this player controls
     void CreateAndUseVehicle(VehicleSettings &settings);
+    // Must call Init on vehicle before using this function
     void SetVehicle(Vehicle *aVehicle);
     void InputUpdate();
     void PhysicsUpdate(double delta);
     // Must be called before using the player's camera
     void Init();
     //SDL_Gamepad* GetGamepad() { return gamepad; }
+    
+
+    static void AddPlayer();
+    static void PhysicsUpdateAllPlayers(double delta);
+    static void InputUpdateAllPlayers();
 };
 
-extern Player gPlayers[NUM_PLAYERS];
+extern Player gPlayers[MAX_PLAYERS];
+extern int gNumPlayers;

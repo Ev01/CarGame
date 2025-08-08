@@ -76,9 +76,7 @@ static void DoPhysicsStep()
     Phys::PhysicsStep(PHYSICS_STEP_TIME);
 
     Render::PhysicsUpdate(PHYSICS_STEP_TIME);
-    for (Player &p : gPlayers) {
-        p.PhysicsUpdate(PHYSICS_STEP_TIME);
-    }
+    Player::PhysicsUpdateAllPlayers(PHYSICS_STEP_TIME);
 }
 
 
@@ -105,9 +103,7 @@ static void InputUpdate()
 {
     World::InputUpdate();
     Phys::InputUpdate();
-    for (Player &player : gPlayers) {
-        player.InputUpdate();
-    }
+    Player::InputUpdateAllPlayers();
 }
 
 
@@ -206,8 +202,11 @@ SDL_AppResult MainGame::Init()
     Phys::SetupJolt();
 
     // Players
-    gPlayers[0].Init();
-    gPlayers[1].Init();
+    //gPlayers[0].Init();
+    //gPlayers[1].Init();
+    Player::AddPlayer();
+    Player::AddPlayer();
+    Player::AddPlayer();
 
 
     glViewport(0, 0, 800, 600);

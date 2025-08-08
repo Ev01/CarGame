@@ -23,8 +23,6 @@
 #include <algorithm>
 
 static std::vector<Render::SpotLight*> spotLights;
-static Vehicle *car;
-static Vehicle *car2;
 static VehicleSettings carSettings;
 static VehicleSettings carSettings2;
 
@@ -95,24 +93,42 @@ static void LightCallback(const aiLight *aLight, const aiNode *aNode,
 }
 
 
+static void RespawnVehicles()
+{
+    JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
+    for (int i = 0; i < Vehicle::NumExistingVehicles(); i++) {
+        Vehicle *v = Vehicle::GetExistingVehicles()[i];
+        bodyInterface.SetPosition(
+                v->mBody->GetID(),
+                ToJoltVec3(mapSpawnPoint) + JPH::Vec3(3*i, 0, 0),
+                JPH::EActivation::Activate
+        );
+    }
+
+}
+
+
 static void ChangeMap(const char *modelFileName)
 {
     // Remove all checkpoints
     existingCheckpoints.clear();
     // Load the map
-    JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
     mapModel.reset(LoadModel(modelFileName, MapNodeCallback, LightCallback));
     Phys::LoadMap(*mapModel);
     // Sort checkpoints
     //std::sort(existingCheckpoints.begin(), existingCheckpoints.end(),
     //        [] (Checkpoint const& a, Checkpoint const& b) {
     // Respawn cars
+    RespawnVehicles();
+    
+    /*
     bodyInterface.SetPosition(World::GetCar().mBody->GetID(),
                               ToJoltVec3(mapSpawnPoint),
                               JPH::EActivation::Activate);
     bodyInterface.SetPosition(World::GetCar2().mBody->GetID(),
                               ToJoltVec3(mapSpawnPoint) + JPH::Vec3(6.0, 0, 0),
                               JPH::EActivation::Activate);
+    */
     SDL_Log("Map spot lights: %d", (int) spotLights.size());
 }
 
@@ -120,6 +136,20 @@ static void ChangeMap(const char *modelFileName)
 static void BeginRace()
 {
     JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
+
+    for (int i = 0; i < Vehicle::NumExistingVehicles(); i++) {
+        JPH::Vec3 offset = raceStartRot.RotateAxisX() * -3.0 * i;
+        bodyInterface.SetPositionRotationAndVelocity(
+                Vehicle::GetExistingVehicles()[i]->mBody->GetID(),
+                raceStartPos + offset,
+                raceStartRot,
+                JPH::Vec3(0, 0, 0), JPH::Vec3(0, 0, 0)
+        );
+        bodyInterface.ActivateBody(
+                Vehicle::GetExistingVehicles()[i]->mBody->GetID());
+    }
+
+    /*
     bodyInterface.SetPositionRotationAndVelocity(World::GetCar().mBody->GetID(),
                                                  raceStartPos,
                                                  raceStartRot,
@@ -131,6 +161,7 @@ static void BeginRace()
                                                  JPH::Vec3(0, 0, 0), JPH::Vec3(0, 0, 0));
     bodyInterface.ActivateBody(World::GetCar().mBody->GetID());
     bodyInterface.ActivateBody(World::GetCar2().mBody->GetID());
+    */
     raceState = RACE_COUNTING_DOWN;
     raceCountdownTimer = 3.0;
 }
@@ -237,9 +268,7 @@ void World::OnContactAdded(const JPH::Body &inBody1, const JPH::Body &inBody2)
 
 void World::PrePhysicsUpdate(float delta)
 {
-    car->PrePhysicsUpdate(delta);
-    car2->PrePhysicsUpdate(delta);
-
+    Vehicle::PrePhysicsUpdateAllVehicles(delta);
 }
 
 
@@ -263,8 +292,7 @@ void World::Update(float delta)
             break;
     }
 
-    car->Update();
-    car2->Update();
+    Vehicle::UpdateAllVehicles();
 
     ImGui::Begin("Maps");
     const char* items[] = {"Map01", "Map02", "simple_map", "racetrack1"};
@@ -296,20 +324,23 @@ void World::Update(float delta)
     }
     ImGui::Text("Race Time: %f", raceTime);
     ImGui::End();
-    car->DebugGUI(0);
-    car2->DebugGUI(1);
+    for (int i = 0; i < Vehicle::NumExistingVehicles(); i++) {
+        Vehicle::GetExistingVehicles()[i]->DebugGUI(i);
+    }
 }
 
 
 void World::InputUpdate()
 {
     if (raceState != RACE_COUNTING_DOWN) {
-        car->ReleaseFromHold();
-        car2->ReleaseFromHold();
+        for (Vehicle *v : Vehicle::GetExistingVehicles()) {
+            v->ReleaseFromHold();
+        }
     }
     else {
-        car->HoldInPlace();
-        car2->HoldInPlace();
+        for (Vehicle *v : Vehicle::GetExistingVehicles()) {
+            v->HoldInPlace();
+        }
     }
 }
 
@@ -319,52 +350,58 @@ void World::Init()
     checkpointSound = Audio::CreateSoundFromFile("sound/sound2.wav");
     checkpointSound->doRepeat = false;
 
-    CreateCars();
     carSettings = GetVehicleSettingsFromFile("data/car.json");
-    carSettings2 = GetVehicleSettingsFromFile("data/car2.json");
     carSettings.Init();
-    carSettings2.Init();
-    car->Init(carSettings);
-    car2->Init(carSettings);
 
-    gPlayers[0].SetVehicle(car);
-    gPlayers[1].SetVehicle(car2);
+    CreateCars();
+    //carSettings2 = GetVehicleSettingsFromFile("data/car2.json");
+    //carSettings2.Init();
+    //car->Init(carSettings);
+    //car2->Init(carSettings);
+
+    //gPlayers[0].SetVehicle(car);
+    //gPlayers[1].SetVehicle(car2);
     //CreateCheckpoint(JPH::Vec3(1, 2, 1));
 
     mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, LightCallback));
     Phys::LoadMap(*mapModel);
     
-    // Spawn second car away from first car
-    Phys::GetBodyInterface().SetPosition(GetCar2().mBody->GetID(),
-                                         JPH::Vec3(6.0, 0, 0),
-                                         JPH::EActivation::Activate);
+    RespawnVehicles();
 }
 
 
 void World::CleanUp()
 {
-    DestroyVehicle(car);
-    DestroyVehicle(car2);
+    Vehicle::DestroyAllVehicles();
 }
 
 
 void World::CreateCars()
 {
-    car = CreateVehicle();
-    car2 = CreateVehicle();
+    //car = CreateVehicle();
+    //car2 = CreateVehicle();
+    // Create a car for each player
+    for (int i = 0; i < gNumPlayers; i++) {
+        gPlayers[i].CreateAndUseVehicle(carSettings);
+    }
+        
 }
 
 
+/*
 Vehicle& World::GetCar()
 {
-    return *car;
+    //return *car;
+    return *gPlayers[0].vehicle;
 }
 
 
 Vehicle& World::GetCar2()
 {
-    return *car2;
+    //return *car2;
+    return *gPlayers[1].vehicle;
 }
+*/
 
 
 void World::AssimpAddLight(const aiLight *aLight, const aiNode *aNode,

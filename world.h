@@ -59,8 +59,10 @@ namespace World {
     void Init();
     void CleanUp();
     void CreateCars();
+    /*
     Vehicle& GetCar();
     Vehicle& GetCar2();
+    */
     std::vector<Checkpoint>& GetCheckpoints();
     Model& GetCurrentMapModel();
     RaceState GetRaceState();

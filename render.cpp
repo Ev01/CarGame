@@ -346,14 +346,22 @@ static float LengthSquared(const glm::vec3 v)
     return v.x * v.x + v.y * v.y + v.z * v.z;
 }
 
+static glm::vec3 spotLightDistCompTargetPos = glm::vec3(0.0, 0.0, 0.0);
+// Returns true if s1 is closer to spotLightDistCompTargetPos than s2.
+// This is for use in sort functions such as std::sort. Before using this
+// function, don't forget to change spotLightDistCompTargetPos to whatever you
+// want to compare spot light distances to (e.g. player position)
 static bool SpotLightDistComp(Render::SpotLight *s1, Render::SpotLight *s2) {
-    glm::vec3 playerPos = ToGlmVec3(World::GetCar().GetPos());
-    return LengthSquared(s1->mPosition - playerPos) < LengthSquared(s2->mPosition - playerPos);
+    //glm::vec3 playerPos = ToGlmVec3(World::GetCar().GetPos());
+    return LengthSquared(s1->mPosition - spotLightDistCompTargetPos) 
+        < LengthSquared(s2->mPosition - spotLightDistCompTargetPos);
 }
+/*
 static bool SpotLightDistComp2(Render::SpotLight *s1, Render::SpotLight *s2) {
     glm::vec3 playerPos = ToGlmVec3(World::GetCar2().GetPos());
     return LengthSquared(s1->mPosition - playerPos) < LengthSquared(s2->mPosition - playerPos);
 }
+*/
 
 void Render::AssimpAddLight(const aiLight *aLight, const aiNode *aNode, aiMatrix4x4 aTransform)
 {
@@ -731,6 +739,7 @@ float Render::ScreenAspect()
 }
 
 
+// TODO: Remove this function
 Camera& Render::GetCamera()
 {
     return gPlayers[0].cam.cam;
@@ -742,13 +751,27 @@ void Render::PhysicsUpdate(double delta)
     if (physFrameCounter % 30 == 0) {
         // Sort spot lights from nearest to player to furthest from player.
         // This doesn't need to happen very often.
-        std::sort(spotLights.begin(), spotLights.end(), SpotLightDistComp);
-        if (doSplitScreen) {
-            int endOffset = SDL_min(spotLights.size() / 2,
-                                    MAX_SPOT_SHADOWS  / 2);
-            std::sort(spotLights.begin() + endOffset, spotLights.end(),
-                      SpotLightDistComp2);
+        
+        int numSplitScreens = doSplitScreen && gNumPlayers >= 2 ? 2 : 1;
+        for (int i = 0; i < numSplitScreens; i++) {
+            int beginOffset = SDL_min(spotLights.size(), MAX_SPOT_SHADOWS) 
+                              * i / numSplitScreens;
+            spotLightDistCompTargetPos = ToGlmVec3(
+                    gPlayers[i].vehicle->GetPos());
+            std::sort(spotLights.begin() + beginOffset, spotLights.end(),
+                      SpotLightDistComp);
         }
+
+        /*
+        spotLightDistCompTargetPos = ToGlmVec3(gPlayers[0].vehicle->GetPos());
+        std::sort(spotLights.begin(), spotLights.end(), SpotLightDistComp);
+        if (doSplitScreen && gNumPlayers >= 2) {
+          spotLightDistCompTargetPos = ToGlmVec3(gPlayers[1].vehicle->GetPos());
+          int endOffset = SDL_min(spotLights.size() / 2, MAX_SPOT_SHADOWS / 2);
+          std::sort(spotLights.begin() + endOffset, spotLights.end(),
+                    SpotLightDistComp);
+        }
+        */
     }
 
     physFrameCounter++;
@@ -776,9 +799,9 @@ static void DebugGUI()
     ImGui::Checkbox("Splitscreen", &doSplitScreen);
     if (doSplitScreen != splitBefore) {
         float aspect = Render::ScreenAspect();
-        for (Player &p : gPlayers) {
-            p.cam.cam.aspect = aspect;
-            p.cam.cam.CalcProjection();
+        for (int i = 0; i < gNumPlayers; i++) {
+            gPlayers[i].cam.cam.aspect = aspect;
+            gPlayers[i].cam.cam.CalcProjection();
         }
     }
     
@@ -870,7 +893,9 @@ void Render::Update(double delta)
 
 static void ShadowPass()
 {
+    // For sunlight shadows
     float nearPlane = 1.0f, farPlane = 140.0f;
+    // TODO: Make sunlight shadow work in splitscreen
     const glm::vec3 shadowOrigin = gPlayers[0].cam.cam.pos;
     constexpr float SHADOW_START_FAC = 70.0f;
     glm::mat4 lightView = glm::lookAt(
@@ -944,23 +969,39 @@ static void GuiPass()
 
 static void RenderSceneSplitScreen()
 {
-    // Render left screen
-    int playerScreenWidth = doSplitScreen ? screenWidth / 2 : screenWidth;
-    //if (screenSuccess) {
-    glViewport(0, 0, playerScreenWidth, screenHeight);
-    //}
+    int playerScreenWidth = screenWidth;
+    int playerScreenHeight = screenHeight;
+    if (doSplitScreen) {
+        playerScreenWidth = screenWidth / 2;
+        if (gNumPlayers >= 3) {
+            playerScreenHeight = screenHeight / 2;
+        }
+    }
+    // Render player 1 screen (left or topleft)
+    int yOffset = screenHeight - playerScreenHeight;
+    glViewport(0, yOffset, playerScreenWidth, playerScreenHeight);
     glUseProgram(PbrShader.id);
     Render::RenderScene(gPlayers[0].cam.cam);
 
     GLERR; 
-    // Render right screen
-    
-    if (doSplitScreen) {
-        //if (screenSuccess) {
-            glViewport(screenWidth/2, 0, playerScreenWidth, screenHeight);
-        //}
+    // Render player 2 screen (right or topright)
+    if (doSplitScreen && gNumPlayers >= 2) {
+        glViewport(screenWidth/2, yOffset, 
+                   playerScreenWidth, playerScreenHeight);
         glUseProgram(PbrShader.id);
         Render::RenderScene(gPlayers[1].cam.cam);
+    }
+    // Render player 3 screen (bottom left)
+    if (doSplitScreen && gNumPlayers >= 3) {
+        glViewport(0, 0, playerScreenWidth, playerScreenHeight);
+        glUseProgram(PbrShader.id);
+        Render::RenderScene(gPlayers[2].cam.cam);
+    }
+    // Render player 4 screen (bottom right)
+    if (doSplitScreen && gNumPlayers >= 4) {
+        glViewport(screenWidth/2, 0, playerScreenWidth, playerScreenHeight);
+        glUseProgram(PbrShader.id);
+        Render::RenderScene(gPlayers[3].cam.cam);
     }
 }
 
@@ -1218,14 +1259,16 @@ void Render::HandleEvent(SDL_Event *event)
         glViewport(0, 0, width, height);
 
         // Divide aspect by 2.0 for split screen
+        // TODO: Make this code less hacky
         float aspect = (float) width / height;
-        if (doSplitScreen) {
+        if (doSplitScreen && gNumPlayers == 2) {
             aspect /= 2;
         }
 
-        for (Player &p : gPlayers) {
-            p.cam.cam.aspect = aspect;
-            p.cam.cam.CalcProjection();
+        // TODO: Add function for this in players file
+        for (int i = 0; i < gNumPlayers; i++) {
+            gPlayers[i].cam.cam.aspect = aspect;
+            gPlayers[i].cam.cam.CalcProjection();
         }
     }
     else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_F11) {

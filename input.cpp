@@ -280,7 +280,7 @@ void Input::DebugGUI()
     }
 
     char comboTitle[32];
-    for (int i = 0; i < NUM_PLAYERS; i++) {
+    for (int i = 0; i < gNumPlayers; i++) {
         SDL_snprintf(comboTitle, 32, "Player %i Input Device", i);
 
         char comboValueString[32];

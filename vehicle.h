@@ -83,14 +83,14 @@ struct Vehicle
     float mDrivingDir = 1.0f;
     bool mIsHeldInPlace = false;
 
-    Audio::Sound *engineSnd;
-    Audio::Sound *driftSnd;
-    Render::SpotLight *headLightLeft;
-    Render::SpotLight *headLightRight;
+    Audio::Sound *engineSnd = nullptr;
+    Audio::Sound *driftSnd = nullptr;
+    Render::SpotLight *headLightLeft = nullptr;
+    Render::SpotLight *headLightRight = nullptr;
     JPH::RMat44 headLightLeftTransform;
     JPH::RMat44 headLightRightTransform;
 
-    JPH::Body *mBody;
+    JPH::Body *mBody = nullptr;
 
     // The below 4 could probably be removed and just have a pointer to
     // VehicleSettings object instead.
@@ -103,6 +103,14 @@ struct Vehicle
 
     JPH::Ref<JPH::VehicleConstraint> mVehicleConstraint;
     JPH::Ref<JPH::VehicleCollisionTester> mColTester;
+
+
+    static std::vector<Vehicle*>& GetExistingVehicles();
+    static int NumExistingVehicles();
+    static void PrePhysicsUpdateAllVehicles(float delta);
+    static void UpdateAllVehicles();
+    static void DestroyAllVehicles();
+
 };
 
 VehicleSettings GetVehicleSettingsFromFile(const char* filename);
