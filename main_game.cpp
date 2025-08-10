@@ -195,7 +195,11 @@ SDL_AppResult MainGame::Init()
 
     // Audio
     Audio::Init();
+
     // Input
+    // Allow multiple keyboards
+    const char temp = 1;
+    SDL_SetHint(SDL_HINT_WINDOWS_RAW_KEYBOARD, &temp);
     Input::Init();
 
     // Init physics system
@@ -206,7 +210,6 @@ SDL_AppResult MainGame::Init()
     //gPlayers[1].Init();
     Player::AddPlayer();
     Player::AddPlayer();
-    Player::AddPlayer();
 
 
     glViewport(0, 0, 800, 600);
@@ -214,14 +217,14 @@ SDL_AppResult MainGame::Init()
 
     lastFrame = GetSeconds();
 
-    /*
+    
     int numKeyboards = 0;
     SDL_KeyboardID *ids = SDL_GetKeyboards(&numKeyboards);
     SDL_Log("Keyboards:");
     for (int i = 0; i < numKeyboards; i++) {
-        SDL_Log(SDL_GetKeyboardNameForID(ids[i]));
+        SDL_Log("%s with id %d", SDL_GetKeyboardNameForID(ids[i]), ids[i]);
     }
-    */
+    
 
     return SDL_APP_CONTINUE;
 }
@@ -247,7 +250,9 @@ SDL_AppResult MainGame::HandleEvent(SDL_Event *event)
         return SDL_APP_CONTINUE;
     }
 
-    if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_RETURN) {
+    //if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_RETURN
+    if (Input::GetNumRealKeyboards() > 0
+            && gGameState == GAME_PRESS_START_SCREEN) {
         StartWorld();
     }
 
@@ -269,22 +274,22 @@ SDL_AppResult MainGame::Update()
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
+    InputUpdate();
+    DebugGUI();
+
     switch (gGameState) {
         case GAME_PRESS_START_SCREEN:
             break;
         case GAME_IN_WORLD:
-            DebugGUI();
-
-            InputUpdate();
             PhysicsUpdate();
-            FrameUpdate(); 
             break;
     }
 
+    FrameUpdate(); 
     Render::RenderFrame();
 
-    
     LimitFPS();
+    Input::NewFrame();
 
     return SDL_APP_CONTINUE;
 }

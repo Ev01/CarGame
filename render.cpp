@@ -728,15 +728,17 @@ float Render::ScreenAspect()
     int sw, sh;
     bool screenSuccess = SDL_GetWindowSize(window, &sw, &sh);
     if (screenSuccess) {
-        // Divide aspect by 2.0 for split screen
         float aspect = (float) sw / (float) sh;
-        if (doSplitScreen) {
+        // Divide aspect by 2.0 for split screen
+        if (doSplitScreen && gNumPlayers == 2) {
             aspect /= 2.0;
         }
         return aspect;
     }
     return 0.0;
 }
+
+
 
 
 // TODO: Remove this function
@@ -752,7 +754,8 @@ void Render::PhysicsUpdate(double delta)
         // Sort spot lights from nearest to player to furthest from player.
         // This doesn't need to happen very often.
         
-        int numSplitScreens = doSplitScreen && gNumPlayers >= 2 ? 2 : 1;
+        //int numSplitScreens = doSplitScreen && gNumPlayers >= 2 ? 2 : 1;
+        int numSplitScreens = doSplitScreen ? gNumPlayers : 1;
         for (int i = 0; i < numSplitScreens; i++) {
             int beginOffset = SDL_min(spotLights.size(), MAX_SPOT_SHADOWS) 
                               * i / numSplitScreens;
@@ -777,6 +780,16 @@ void Render::PhysicsUpdate(double delta)
     physFrameCounter++;
 }
 
+
+static void UpdatePlayerCamAspectRatios()
+{
+        float aspect = Render::ScreenAspect();
+        for (int i = 0; i < gNumPlayers; i++) {
+            gPlayers[i].cam.cam.SetAspectRatio(aspect);
+        }
+}
+
+
 static void DebugGUI()
 {
     // Update Camera
@@ -798,11 +811,7 @@ static void DebugGUI()
     bool splitBefore = doSplitScreen;
     ImGui::Checkbox("Splitscreen", &doSplitScreen);
     if (doSplitScreen != splitBefore) {
-        float aspect = Render::ScreenAspect();
-        for (int i = 0; i < gNumPlayers; i++) {
-            gPlayers[i].cam.cam.aspect = aspect;
-            gPlayers[i].cam.cam.CalcProjection();
-        }
+        UpdatePlayerCamAspectRatios();
     }
     
 
@@ -958,7 +967,7 @@ static void GuiPass()
     if (MainGame::gGameState == GAME_PRESS_START_SCREEN) {
         Render::RenderText(textShader, "Hello!!! This is a sentence.",
                            25.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f));
-        Render::RenderText(textShader, "Press Enter to start...", 
+        Render::RenderText(textShader, "Press Enter and up arrow to start...", 
                            100.0f, 100.0f, 0.5f, glm::vec3(0.0, 0.0f, 0.0f));
     }
 
@@ -971,7 +980,7 @@ static void RenderSceneSplitScreen()
 {
     int playerScreenWidth = screenWidth;
     int playerScreenHeight = screenHeight;
-    if (doSplitScreen) {
+    if (doSplitScreen && gNumPlayers >= 2) {
         playerScreenWidth = screenWidth / 2;
         if (gNumPlayers >= 3) {
             playerScreenHeight = screenHeight / 2;
@@ -1258,18 +1267,7 @@ void Render::HandleEvent(SDL_Event *event)
         int height = event->window.data2;
         glViewport(0, 0, width, height);
 
-        // Divide aspect by 2.0 for split screen
-        // TODO: Make this code less hacky
-        float aspect = (float) width / height;
-        if (doSplitScreen && gNumPlayers == 2) {
-            aspect /= 2;
-        }
-
-        // TODO: Add function for this in players file
-        for (int i = 0; i < gNumPlayers; i++) {
-            gPlayers[i].cam.cam.aspect = aspect;
-            gPlayers[i].cam.cam.CalcProjection();
-        }
+        UpdatePlayerCamAspectRatios();
     }
     else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_F11) {
         ToggleFullscreen();

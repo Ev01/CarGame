@@ -68,6 +68,12 @@ glm::vec3 Camera::Right(glm::vec3 up) const
     return -glm::normalize(glm::cross(up, dir));
 }
 
+void Camera::SetAspectRatio(float aAspect)
+{
+    aspect = aAspect;
+    CalcProjection();
+}
+
 void Camera::SetYawPitch(float yaw, float pitch) {
     dir.y = SDL_sinf(pitch);
     dir.x = SDL_cosf(yaw);// * SDL_cosf(pitch);

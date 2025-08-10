@@ -24,6 +24,8 @@ struct Camera {
 
     glm::vec3 Target() const;
     glm::vec3 Right(glm::vec3 up) const;
+    // Sets the aspect ratio of the camera and updates the projection matrix.
+    void SetAspectRatio(float aAspect);
     void SetYawPitch(float yaw, float pitch);
     void SetFollow(float yaw, float pitch, float dist, glm::vec3 targ);
     void SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, double smoothing);
