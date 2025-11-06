@@ -143,7 +143,7 @@ static void DebugGUI()
         ImGui::Checkbox("VSync", &vSync);
         interval = (int) vSync;
         SDL_GL_SetSwapInterval(interval);
-        SDL_Log("VSync: %d", interval);
+        //SDL_Log("VSync: %d", interval);
     }
     else {
         ImGui::Text("Couldn't get GL swap interval (VSync)");

@@ -59,5 +59,5 @@ PRIVATE
 #target_include_directories(car PUBLIC ../JoltPhysics)
 target_link_libraries(car PRIVATE SDL3::SDL3 SDL3_image::SDL3_image
     SDL3_mixer::SDL3_mixer Freetype::Freetype assimp::assimp Jolt::Jolt imgui
-    -static -static-libgcc -static-libstdc++)
+    -static-libgcc -static-libstdc++)
 #target_link_libraries(physics_test PRIVATE SDL3::SDL3)

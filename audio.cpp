@@ -16,7 +16,8 @@ static SDL_AudioDeviceID audioDevice;
 static std::vector<SoundFile> loadedSounds;
 static std::vector<Audio::Sound*> existingSounds;
 
-static Mix_Music *music;
+static MIX_Audio *music;
+static MIX_Mixer *mixer;
 
 static bool openAudioDevice()
 {
@@ -26,7 +27,8 @@ static bool openAudioDevice()
         return false;
     }
     
-    if (!Mix_OpenAudio(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL)) {
+    mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
+    if (!mixer) {
         SDL_Log("SDL_mixer could not open audio: %s", SDL_GetError());
     }
     
@@ -68,22 +70,19 @@ static Audio::SoundData getSoundDataFromFile(const char* filename)
 
 void Audio::Init()
 {
+    MIX_Init();
     openAudioDevice();
-    music = Mix_LoadMUS("sound/basam2w2.mp3");
+    music = MIX_LoadAudio(mixer, "sound/basam2w2.mp3", true);
     if (music == NULL) {
         SDL_Log("Couldn't load music: %s", SDL_GetError());
-    }
-    else {
-        //Mix_FadeInMusic(music, -1, 2000);
-        //Mix_PlayMusic(music, -1);
-        //Mix_VolumeMusic(MIX_MAX_VOLUME);
     }
 }
 
 
 void Audio::CleanUp()
 {
-    Mix_FreeMusic(music);
+    MIX_DestroyAudio(music);
+    MIX_Quit();
 }
 
 
