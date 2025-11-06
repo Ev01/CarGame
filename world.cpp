@@ -110,8 +110,14 @@ static void RespawnVehicles()
 
 static void ChangeMap(const char *modelFileName)
 {
+    World::DestroyAllLights();
+    Render::DeleteAllLights();
+    mapSpawnPoint = glm::vec3(0.0f);
+    Phys::UnloadMap();
     // Remove all checkpoints
     existingCheckpoints.clear();
+    // Reset shader spotlights to prevent phantom lights.
+    Render::ResetSpotLightsGPU();
     // Load the map
     mapModel.reset(LoadModel(modelFileName, MapNodeCallback, LightCallback));
     Phys::LoadMap(*mapModel);
@@ -121,14 +127,6 @@ static void ChangeMap(const char *modelFileName)
     // Respawn cars
     RespawnVehicles();
     
-    /*
-    bodyInterface.SetPosition(World::GetCar().mBody->GetID(),
-                              ToJoltVec3(mapSpawnPoint),
-                              JPH::EActivation::Activate);
-    bodyInterface.SetPosition(World::GetCar2().mBody->GetID(),
-                              ToJoltVec3(mapSpawnPoint) + JPH::Vec3(6.0, 0, 0),
-                              JPH::EActivation::Activate);
-    */
     SDL_Log("Map spot lights: %d", (int) spotLights.size());
 }
 
@@ -299,10 +297,6 @@ void World::Update(float delta)
     static int currentItem = 0;
     ImGui::Combo("Map", &currentItem, items, 4);
     if (ImGui::Button("Change map")) {
-        World::DestroyAllLights();
-        Render::DeleteAllLights();
-        mapSpawnPoint = glm::vec3(0.0f);
-        Phys::UnloadMap();
         switch(currentItem) {
             case 0:
                 SDL_Log("sizeof: %lld", sizeof(*mapModel));

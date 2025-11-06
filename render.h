@@ -62,6 +62,8 @@ namespace Render {
     void RenderText(ShaderProg &s, std::string text, float x, float y,
                     float scale, glm::vec3 colour);
 
+    // Reset the spotlight shader values.
+    void ResetSpotLightsGPU();
     void HandleEvent(SDL_Event *event);
     void DeleteAllLights();
     /* Returns current aspect ratio of the window */

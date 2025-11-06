@@ -33,7 +33,9 @@
             SDL_Log("%s:%d glGetError() = 0x%04x", __FILE__, __LINE__, glerr);\
     } while (0)
 
+// These must align with defines in shader
 #define MAX_SPOT_SHADOWS 8
+#define MAX_SPOT_LIGHTS 32
 
 static std::vector<Render::Light> lights;
 static std::vector<Render::SpotLight*> spotLights;
@@ -756,12 +758,14 @@ void Render::PhysicsUpdate(double delta)
         
         //int numSplitScreens = doSplitScreen && gNumPlayers >= 2 ? 2 : 1;
         int numSplitScreens = doSplitScreen ? gNumPlayers : 1;
+        int endOffset = SDL_min(spotLights.size(), MAX_SPOT_SHADOWS);
         for (int i = 0; i < numSplitScreens; i++) {
             int beginOffset = SDL_min(spotLights.size(), MAX_SPOT_SHADOWS) 
                               * i / numSplitScreens;
             spotLightDistCompTargetPos = ToGlmVec3(
                     gPlayers[i].vehicle->GetPos());
-            std::sort(spotLights.begin() + beginOffset, spotLights.end(),
+            std::sort(spotLights.begin() + beginOffset,
+                      spotLights.begin() + endOffset,
                       SpotLightDistComp);
         }
 
@@ -1093,6 +1097,28 @@ void Render::RenderScene(const Camera &cam)
 }
 
 
+void Render::ResetSpotLightsGPU()
+{
+    char uniformName[64];
+    glm::vec3 zero = glm::vec3(0, 0, 0);
+    for (int i = 0; i < MAX_SPOT_LIGHTS; i++) {
+        SDL_snprintf(uniformName, 64, "spotLights[%d].diffuse", i);
+        PbrShader.SetVec3(uniformName, glm::value_ptr(zero));
+        SDL_snprintf(uniformName, 64, "spotLights[%d].specular", i);
+        PbrShader.SetVec3(uniformName, glm::value_ptr(zero));
+        SDL_snprintf(uniformName, 64, "spotLights[%d].position", i);
+        PbrShader.SetVec3(uniformName, glm::value_ptr(zero));
+        SDL_snprintf(uniformName, 64, "spotLights[%d].direction", i);
+        PbrShader.SetVec3(uniformName, glm::value_ptr(zero));
+        SDL_snprintf(uniformName, 64, "spotLights[%d].cutoffInner", i);
+        PbrShader.SetFloat(uniformName, 0.0);
+        SDL_snprintf(uniformName, 64, "spotLights[%d].cutoffOuter", i);
+        PbrShader.SetFloat(uniformName, 0.0);
+        GLERR;
+    }
+}
+
+
 void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection, 
                          bool enableSkybox)
 {
@@ -1160,7 +1186,7 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
     GLERR;
     int spotLightNum = 0;
     
-    for (size_t i = 0; i < spotLights.size(); i++) {
+    for (size_t i = 0; i < spotLights.size() && i < MAX_SPOT_LIGHTS; i++) {
         if (spotLights[i] == nullptr) continue;
         // Spotlight shadow texture
         if (i < MAX_SPOT_SHADOWS) {

@@ -55,16 +55,16 @@ static void RecordFps(double newFps)
     if (fpsRecordPosition >= FPS_RECORD_SIZE) {
         fpsRecordPosition -= FPS_RECORD_SIZE; 
     }
-    averageFps -= fpsRecords[fpsRecordPosition] / (double) FPS_RECORD_SIZE;
+    averageFps -= fpsRecords[fpsRecordPosition] / FPS_RECORD_SIZE;
     fpsRecords[fpsRecordPosition] = newFps;
-    averageFps += newFps / (double) FPS_RECORD_SIZE;
+    averageFps += newFps / FPS_RECORD_SIZE;
 }
 
 
 // Return seconds since application start (accurate)
 static double GetSeconds()
 {
-    return (double) SDL_GetTicksNS() / (double) SDL_NS_PER_SECOND;
+    return (double) SDL_GetTicksNS() / SDL_NS_PER_SECOND;
 }
 
 
@@ -126,6 +126,7 @@ static void LimitFPS()
         double spf = 1.0 / fpsLimit;
         if (delta2 < spf) {
             double toDelaySeconds = (spf - delta2);
+            SDL_Log("to delay: %f", toDelaySeconds);
             SDL_DelayPrecise((Uint64)(toDelaySeconds * SDL_NS_PER_SECOND));
         }
     }
@@ -142,6 +143,7 @@ static void DebugGUI()
         ImGui::Checkbox("VSync", &vSync);
         interval = (int) vSync;
         SDL_GL_SetSwapInterval(interval);
+        SDL_Log("VSync: %d", interval);
     }
     else {
         ImGui::Text("Couldn't get GL swap interval (VSync)");
