@@ -252,8 +252,8 @@ SDL_AppResult MainGame::HandleEvent(SDL_Event *event)
         return SDL_APP_CONTINUE;
     }
 
-    //if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_RETURN
-    if (Input::GetNumRealKeyboards() > 0
+    if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_RETURN
+    //if (Input::GetNumRealKeyboards() > 0
             && gGameState == GAME_PRESS_START_SCREEN) {
         StartWorld();
     }

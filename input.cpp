@@ -84,8 +84,14 @@ float InputMapping::GetValue(SDL_Gamepad *gamepad)
 }
 float InputMapping::GetValue(int realKeyboardID)
 {
-    if (realKeyboardID == 0 || mappingType != MAPPING_TYPE_SCANCODE) {
+    //if (realKeyboardID == 0 || mappingType != MAPPING_TYPE_SCANCODE) {
+    if (mappingType != MAPPING_TYPE_SCANCODE) {
         return 0.0;
+    }
+    if (realKeyboardID == 0) {
+        // If the keyboard ID is invalid, default to SDL's internal keyboard
+        // state, which does not differentiate between different keyboards.
+        return (float) SDL_GetKeyboardState(NULL)[scancode];
     }
     
     RealKeyboard *realKeyboard = RealKeyboard::GetByID(realKeyboardID);
@@ -124,9 +130,11 @@ float InputAction::GetValue(SDL_Gamepad *gamepad)
 }
 float InputAction::GetValue(int realKeyboardID) 
 {
+    /*
     if (realKeyboardID == 0) {
         return 0.0;
     }
+    */
     float toReturn = 0.0;
     for (int i = 0; i < numMappingsSet; i++) {
         // Choose the mapping with the greatest input value. This should
@@ -290,7 +298,7 @@ static void RegisterRealKeyboard(const SDL_KeyboardID *rawIDs,
 
     realKeyboards[idx].Init();   
     SDL_Log("Registering real keyboard...");
-    for (int i = 0; i < count; i++) {
+    for (unsigned int i = 0; i < count; i++) {
         SDL_Log("Raw keyboard id %d", rawIDs[i]);
         realKeyboards[idx].rawKeyboardIDs.insert(rawIDs[i]);
     }
@@ -530,7 +538,7 @@ void Input::HandleEvent(SDL_Event *event)
         realKeyboards[i].HandleEvent(event);
     }
     if (event->type == SDL_EVENT_KEYBOARD_ADDED) {
-        SDL_Log("keyboard added. id %d at time %llu",
+        SDL_Log("keyboard added. id %d at time %lu",
                 event->kdevice.which, event->kdevice.timestamp);
     }
     else if (event->type == SDL_EVENT_KEYBOARD_REMOVED) {
@@ -687,7 +695,7 @@ void Input::DebugGUI()
                     gPlayers[i].realKeyboardID);
 
             const char* keyboardName = keyboardUsed != nullptr ?
-                keyboardUsed->GetName() : "invalid keyboard";
+                keyboardUsed->GetName() : "Any keyboard";
 
             SDL_snprintf(
                     comboValueString, 32, "%s %d",
@@ -718,6 +726,13 @@ void Input::DebugGUI()
             if (ImGui::Selectable(comboValueString, isSelected)) {
                 gPlayers[i].UseGamepad(gamepads[j]);
             }
+        }
+        // Any keyboard option (selects keyboard with ID 0, which defaults to
+        // using SDL's internal keyboard state)
+        SDL_snprintf(comboValueString, 32, "Any keyboard");
+        const bool isSelected = gPlayers[i].IsUsingKeyboard(0);
+        if (ImGui::Selectable(comboValueString, isSelected)) {
+            gPlayers[i].UseKeyboard(0);
         }
         // Options for keyboards (WIP)
         for (int j = 0; j < MAX_KEYBOARDS; j++) {
