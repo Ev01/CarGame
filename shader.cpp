@@ -1,5 +1,6 @@
 #include "shader.h"
 #include "glad/glad.h"
+#include "glerr.h"
 
 #include <SDL3/SDL.h>
 
@@ -41,6 +42,9 @@ ShaderProg CreateAndLinkShaderProgram(unsigned int vertexShader,
         glGetProgramInfoLog(shaderProgId, 512, NULL, infoLog);
         SDL_Log("Shader program creation failed: %s", infoLog);
     }
+    else {
+        SDL_Log("Successfully created shader program %u", shaderProgId);
+    }
 
     ShaderProg program;
     program.id = shaderProgId;
@@ -60,7 +64,10 @@ void ShaderProg::SetFloat(char uniformName[], float value)
 
 void ShaderProg::SetMat4fv(char uniformName[], const float *matrix)
 {
-    glUniformMatrix4fv(glGetUniformLocation(id, uniformName), 1, GL_FALSE, matrix);
+    GLint loc = glGetUniformLocation(id, uniformName); 
+    GLERR;
+    glUniformMatrix4fv(loc, 1, GL_FALSE, matrix);
+    GLERR;
 }
 
 

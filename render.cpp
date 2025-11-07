@@ -12,6 +12,7 @@
 #include "player.h"
 #include "font.h"
 #include "main_game.h"
+#include "glerr.h"
 
 #include "vendor/imgui/imgui.h"
 #include "vendor/imgui/backends/imgui_impl_opengl3.h"
@@ -27,11 +28,6 @@
 #include <SDL3/SDL.h>
 #include <algorithm>
 
-#define GLERR do {\
-        GLuint glerr;\
-        while((glerr = glGetError()) != GL_NO_ERROR)\
-            SDL_Log("%s:%d glGetError() = 0x%04x", __FILE__, __LINE__, glerr);\
-    } while (0)
 
 // These must align with defines in shader
 #define MAX_SPOT_SHADOWS 8
@@ -1141,9 +1137,13 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
     GLERR;
     // Shadow setup
     shader.SetMat4fv((char*)"lightSpaceMatrix", glm::value_ptr(lightSpaceMatrix));
+    GLERR;
     glActiveTexture(GL_TEXTURE8);
+    GLERR;
     glBindTexture(GL_TEXTURE_2D, depthMap);
+    GLERR;
     shader.SetInt((char*)"shadowMap", 8);
+    GLERR;
     glActiveTexture(GL_TEXTURE0);
     GLERR;
 

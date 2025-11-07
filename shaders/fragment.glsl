@@ -278,6 +278,9 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 }
 
 
+
+
+
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
         vec4 fragPosLightSpace, int shadowMapNum)
 {
@@ -293,11 +296,45 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
     // Calculate shadows
     //float shadowBias = 0.005 / fragPosLightSpace.w;
     float shadowBias = 0.0;
-    float shadow = shadowMapNum >= 0
-        ? ShadowCalculation(spotLightShadowMaps[shadowMapNum],
-                          fragPosLightSpace, shadowBias) 
-        : 0.0;
-    //return vec3(1.0 - shadow);
+    float shadow = 0.0;
+    // This is just the worst thing ever, but I had to do it to get around the
+    // error "sampler arrays indexed with non-constant expressions are
+    // forbidden in GLSL 1.30 and later".
+    // TODO: Could use an Array Texture to solve this properly.
+    switch (shadowMapNum) {
+        case 0: 
+            shadow = ShadowCalculation(spotLightShadowMaps[0],
+                              fragPosLightSpace, shadowBias);
+            break;
+        case 1: 
+            shadow = ShadowCalculation(spotLightShadowMaps[1],
+                              fragPosLightSpace, shadowBias);
+            break;
+        case 2: 
+            shadow = ShadowCalculation(spotLightShadowMaps[2],
+                              fragPosLightSpace, shadowBias);
+            break;
+        case 3: 
+            shadow = ShadowCalculation(spotLightShadowMaps[3],
+                              fragPosLightSpace, shadowBias);
+            break;
+        case 4: 
+            shadow = ShadowCalculation(spotLightShadowMaps[4],
+                              fragPosLightSpace, shadowBias);
+            break;
+        case 5: 
+            shadow = ShadowCalculation(spotLightShadowMaps[5],
+                              fragPosLightSpace, shadowBias);
+            break;
+        case 6: 
+            shadow = ShadowCalculation(spotLightShadowMaps[6],
+                              fragPosLightSpace, shadowBias);
+            break;
+        case 7: 
+            shadow = ShadowCalculation(spotLightShadowMaps[7],
+                              fragPosLightSpace, shadowBias);
+            break;
+    }
 
     vec3 radiance = light.diffuse * attenuation * cutoffMult * (1.0 - shadow);
 
