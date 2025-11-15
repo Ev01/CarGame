@@ -74,6 +74,10 @@ Texture CreateTextureFromFile(const char* filename, bool isSRGB) {
         return texture;
     }
 
+    // Flip the image vertically because OpenGL expects uv coord of 0 to be at
+    // the bottom of the image.
+    SDL_FlipSurface(surf, SDL_FLIP_VERTICAL);
+
     glGenTextures(1, &textureId);
     glBindTexture(GL_TEXTURE_2D, textureId);
 

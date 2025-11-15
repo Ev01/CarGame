@@ -525,6 +525,17 @@ void Vehicle::ReleaseFromHold()
     mIsHeldInPlace = false;
 }
 
+
+float Vehicle::GetEngineRPM()
+{
+    JPH::WheeledVehicleController *controller = static_cast<JPH::WheeledVehicleController*>
+        (mVehicleConstraint->GetController());
+    JPH::VehicleEngine &engine = controller->GetEngine();
+    float rpm = engine.GetCurrentRPM();
+    return rpm;
+}
+
+
 void Vehicle::PrePhysicsUpdate(float delta)
 {
     JPH::BodyInterface &bodyInterface = Phys::GetPhysicsSystem().GetBodyInterface();

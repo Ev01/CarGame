@@ -43,6 +43,7 @@ static ShaderProg screenShader;
 static ShaderProg rawScreenShader;
 static ShaderProg simpleDepthShader;
 static ShaderProg textShader;
+static ShaderProg uiShader;
 static SDL_Window *window;
 static SDL_GLContext context;
 int screenWidth, screenHeight;
@@ -50,6 +51,9 @@ int screenWidth, screenHeight;
 //static Texture textTex;
 static Texture skyboxTex;
 static Texture grassTex;
+static Texture tachoMeterTex;
+static Texture tachoNeedleTex;
+
 static Material grassMat;
 static Material windowMat;
 
@@ -588,6 +592,10 @@ static void LoadShaders()
     unsigned int vText = CreateShaderFromFile("shaders/v_text.glsl", GL_VERTEX_SHADER);
     unsigned int fText = CreateShaderFromFile("shaders/f_text.glsl", GL_FRAGMENT_SHADER);
     textShader = CreateAndLinkShaderProgram(vText, fText);
+
+    unsigned int vUI = CreateShaderFromFile("shaders/v_ui.glsl", GL_VERTEX_SHADER);
+    unsigned int fUI = CreateShaderFromFile("shaders/f_ui.glsl", GL_FRAGMENT_SHADER);
+    uiShader = CreateAndLinkShaderProgram(vUI, fUI);
 }
 
 
@@ -654,6 +662,9 @@ bool Render::Init()
     windowMat.normalMap = gDefaultNormalMap;
     windowMat.roughnessMap = gDefaultTexture;
     windowMat.diffuseColour = glm::vec3(1.0f);
+
+    tachoMeterTex = CreateTextureFromFile("data/texture/tachometer.png");
+    tachoNeedleTex = CreateTextureFromFile("data/texture/tachometer_needle.png");
 
     GLERR;
     // ----- Quad VAO -----
@@ -735,8 +746,6 @@ float Render::ScreenAspect()
     }
     return 0.0;
 }
-
-
 
 
 // TODO: Remove this function
@@ -894,6 +903,7 @@ static void DebugGUI()
     ImGui::End();
 }
 
+
 void Render::Update(double delta)
 {
     DebugGUI();
@@ -970,6 +980,43 @@ static void GuiPass()
         Render::RenderText(textShader, "Press Enter and up arrow to start...", 
                            100.0f, 100.0f, 0.5f, glm::vec3(0.0, 0.0f, 0.0f));
     }
+
+    glm::mat4 trans = glm::mat4(1.0);
+    trans = glm::translate(trans, glm::vec3(64, 64, 0));
+    trans = glm::scale(trans, glm::vec3(64, 64, 1));
+
+    glm::mat4 proj = glm::mat4(1.0);
+    proj = glm::ortho(0.0, 800.0, 0.0, 600.0, -1.0, 1.0);
+
+    // Draw the tachometer
+    glUseProgram(uiShader.id);
+    uiShader.SetMat4fv((char*)"trans", glm::value_ptr(trans));
+    uiShader.SetMat4fv((char*)"proj", glm::value_ptr(proj));
+    glBindVertexArray(quadVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tachoMeterTex.id);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    // Draw the needle
+    if (gPlayers[0].vehicle != NULL) {
+        float rpm = gPlayers[0].vehicle->GetEngineRPM();
+        // Change these constants based on the tachometer graphic.
+        const float zeroAngle = 0.74;
+        const float angleRange = 4.28;
+        const float rpmRange = 8000.0;
+        float needleAngle = zeroAngle - rpm / rpmRange * angleRange;
+        trans = glm::mat4(1.0);
+        trans = glm::translate(trans, glm::vec3(64, 64, 0));
+        trans = glm::rotate(trans, needleAngle, glm::vec3(0, 0, 1));
+        trans = glm::scale(trans, glm::vec3(64, 64, 1));
+        uiShader.SetMat4fv((char*)"trans", glm::value_ptr(trans));
+        glBindTexture(GL_TEXTURE_2D, tachoNeedleTex.id);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
