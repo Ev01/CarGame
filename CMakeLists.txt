@@ -15,6 +15,9 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 #set(SDL3_ttf_ROOT "~/Lib/SDL_ttf/build/Debug")
 #set(Freetype_ROOT "~/cmake/freetype-2.13.3-win64/")
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
+
 
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
@@ -61,3 +64,41 @@ target_link_libraries(car PRIVATE SDL3::SDL3 SDL3_image::SDL3_image
     SDL3_mixer::SDL3_mixer Freetype::Freetype assimp::assimp Jolt::Jolt imgui
     -static-libgcc -static-libstdc++)
 #target_link_libraries(physics_test PRIVATE SDL3::SDL3)
+
+
+# CPack stuff
+
+install(TARGETS car RUNTIME_DEPENDENCY_SET deps
+    RUNTIME DESTINATION bin)
+# Install dependencies but exclude system libraries
+IF (WIN32)
+    install(RUNTIME_DEPENDENCY_SET deps
+        PRE_EXCLUDE_REGEXES "api-ms" "ext-ms-"
+        POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
+        DIRECTORIES
+            $<TARGET_FILE_DIR:SDL3::SDL3>
+            $<TARGET_FILE_DIR:SDL3_image::SDL3_image>
+            $<TARGET_FILE_DIR:SDL3_mixer::SDL3_mixer>
+            $<TARGET_FILE_DIR:Jolt::Jolt>
+            $<TARGET_FILE_DIR:Freetype::Freetype>
+            $<TARGET_FILE_DIR:assimp::assimp>
+        )
+ELSE()
+    install(RUNTIME_DEPENDENCY_SET deps 
+        PRE_EXCLUDE_REGEXES "libc\\.so" "libm\\.so" "ld-linux"
+    )
+ENDIF()
+
+# Put shaders in the install directory
+install(DIRECTORY shaders DESTINATION .)
+# Put data in install directory
+install(DIRECTORY data DESTINATION .)
+# Enable packaging
+IF (WIN32)
+    set(CPACK_GENERATOR "ZIP")
+ELSE()
+    set(CPACK_GENERATOR "TGZ")
+ENDIF()
+
+include(CPack)
+
