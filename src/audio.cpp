@@ -72,7 +72,7 @@ void Audio::Init()
 {
     MIX_Init();
     openAudioDevice();
-    music = MIX_LoadAudio(mixer, "sound/basam2w2.mp3", true);
+    music = MIX_LoadAudio(mixer, "data/sound/basam2w2.mp3", true);
     if (music == NULL) {
         SDL_Log("Couldn't load music: %s", SDL_GetError());
     }

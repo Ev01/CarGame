@@ -2,7 +2,7 @@
 #include "texture.h"
 #include "shader.h"
 #include "convert.h"
-#include "glad/glad.h"
+#include "../glad/glad.h"
 
 #include <SDL3/SDL.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -228,7 +228,7 @@ void Model::LoadSceneMaterials(const aiScene *scene)
             aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &str);
 
             char filepath[256];
-            SDL_snprintf(filepath, 256, "models/%s", str.C_Str());
+            SDL_snprintf(filepath, 256, "data/models/%s", str.C_Str());
             SDL_Log("Loading texture %s", filepath);
             Texture texture = CreateTextureFromFile(filepath);
             //Texture texture = gDefaultTexture;
@@ -239,7 +239,7 @@ void Model::LoadSceneMaterials(const aiScene *scene)
             aiMat->GetTexture(aiTextureType_NORMALS, 0, &str);
 
             char filepath[256];
-            SDL_snprintf(filepath, 256, "models/%s", str.C_Str());
+            SDL_snprintf(filepath, 256, "data/models/%s", str.C_Str());
             SDL_Log("Loading texture %s", filepath);
             Texture normalMap = CreateTextureFromFile(filepath, false);
             // Linearly interpolate normal maps
@@ -256,7 +256,7 @@ void Model::LoadSceneMaterials(const aiScene *scene)
             aiMat->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &str);
 
             char filepath[256];
-            SDL_snprintf(filepath, 256, "models/%s", str.C_Str());
+            SDL_snprintf(filepath, 256, "data/models/%s", str.C_Str());
             SDL_Log("Loading texture %s", filepath);
             Texture roughnessMap = CreateTextureFromFile(filepath, false);
             //Texture roughnessMap = gDefaultTexture;
@@ -505,7 +505,7 @@ std::vector<Texture> LoadMaterialTextures(aiMaterial *mat,
         mat->GetTexture(type, i, &str);
 
         char filepath[256];
-        SDL_snprintf(filepath, 256, "models/%s", str.C_Str());
+        SDL_snprintf(filepath, 256, "data/models/%s", str.C_Str());
         Texture texture = CreateTextureFromFile(filepath);
 
         textures.push_back(texture);

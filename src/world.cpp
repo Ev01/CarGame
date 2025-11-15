@@ -7,7 +7,7 @@
 #include "audio.h"
 #include "player.h"
 
-#include "vendor/imgui/imgui.h"
+#include "../vendor/imgui/imgui.h"
 
 #include <assimp/matrix4x4.h>
 #include <assimp/types.h>
@@ -300,16 +300,16 @@ void World::Update(float delta)
         switch(currentItem) {
             case 0:
                 SDL_Log("sizeof: %lld", sizeof(*mapModel));
-                ChangeMap("models/no_tex_map.gltf");
+                ChangeMap("data/models/no_tex_map.gltf");
                 break;
             case 1:
-                ChangeMap("models/map1.gltf");
+                ChangeMap("data/models/map1.gltf");
                 break;
             case 2:
-                ChangeMap("models/simple_map.gltf");
+                ChangeMap("data/models/simple_map.gltf");
                 break;
             case 3:
-                ChangeMap("models/racetrack1.gltf");
+                ChangeMap("data/models/racetrack1.gltf");
                 break;
         }
     }
@@ -341,7 +341,7 @@ void World::InputUpdate()
 void World::Init()
 {
     // Audio
-    checkpointSound = Audio::CreateSoundFromFile("sound/sound2.wav");
+    checkpointSound = Audio::CreateSoundFromFile("data/sound/sound2.wav");
     checkpointSound->doRepeat = false;
 
     carSettings = GetVehicleSettingsFromFile("data/car.json");
@@ -357,7 +357,7 @@ void World::Init()
     //gPlayers[1].SetVehicle(car2);
     //CreateCheckpoint(JPH::Vec3(1, 2, 1));
 
-    mapModel = std::unique_ptr<Model>(LoadModel("models/no_tex_map.gltf", MapNodeCallback, LightCallback));
+    mapModel = std::unique_ptr<Model>(LoadModel("data/models/no_tex_map.gltf", MapNodeCallback, LightCallback));
     Phys::LoadMap(*mapModel);
     
     RespawnVehicles();

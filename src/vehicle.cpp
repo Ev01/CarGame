@@ -6,7 +6,7 @@
 #include "convert.h"
 #include "model.h"
 
-#include "vendor/imgui/imgui.h"
+#include "../vendor/imgui/imgui.h"
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
@@ -377,8 +377,8 @@ void Vehicle::Init(VehicleSettings &settings)
 
     //RVec3 com = Phys::GetCarPos();
     //SDL_Log("car com (%f, %f, %f)", com.GetX(), com.GetY(), com.GetZ());
-    engineSnd = Audio::CreateSoundFromFile("sound/car_engine.wav");
-    driftSnd = Audio::CreateSoundFromFile("sound/drift.wav");
+    engineSnd = Audio::CreateSoundFromFile("data/sound/car_engine.wav");
+    driftSnd = Audio::CreateSoundFromFile("data/sound/drift.wav");
 
     // Head Lights
     const float cutoffInner = SDL_cos(SDL_PI_F / 5.0);

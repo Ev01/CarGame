@@ -5,7 +5,7 @@
 #include "input.h"
 #include "model.h"
 #include "shader.h"
-#include "glad/glad.h"
+#include "../glad/glad.h"
 #include "physics.h"
 #include "vehicle.h"
 #include "world.h"
@@ -14,9 +14,9 @@
 #include "main_game.h"
 #include "glerr.h"
 
-#include "vendor/imgui/imgui.h"
-#include "vendor/imgui/backends/imgui_impl_opengl3.h"
-#include "vendor/imgui/backends/imgui_impl_sdl3.h"
+#include "../vendor/imgui/imgui.h"
+#include "../vendor/imgui/backends/imgui_impl_opengl3.h"
+#include "../vendor/imgui/backends/imgui_impl_sdl3.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -481,7 +481,7 @@ static bool LoadFont()
     }
 
     FT_Face face;
-    if (FT_New_Face(ft, "fonts/liberation_sans/LiberationSans-Regular.ttf", 0, &face)) {
+    if (FT_New_Face(ft, "data/fonts/liberation_sans/LiberationSans-Regular.ttf", 0, &face)) {
         SDL_Log("Failed to load font");
     }
 
@@ -634,12 +634,12 @@ bool Render::Init()
     //glDisableVertexAttribArray(1);
     //glDisableVertexAttribArray(2);
     // Texture and Materials
-    skyboxTex = CreateCubemapFromFiles("texture/Lycksele/posx.jpg",
-                                       "texture/Lycksele/negx.jpg",
-                                       "texture/Lycksele/posy.jpg",
-                                       "texture/Lycksele/negy.jpg",
-                                       "texture/Lycksele/posz.jpg",
-                                       "texture/Lycksele/negz.jpg");
+    skyboxTex = CreateCubemapFromFiles("data/texture/Lycksele/posx.jpg",
+                                       "data/texture/Lycksele/negx.jpg",
+                                       "data/texture/Lycksele/posy.jpg",
+                                       "data/texture/Lycksele/negy.jpg",
+                                       "data/texture/Lycksele/posz.jpg",
+                                       "data/texture/Lycksele/negz.jpg");
     /*
     grassTex = CreateTextureFromFile("texture/grass.png");
     grassTex.SetWrapClamp();
@@ -649,7 +649,7 @@ bool Render::Init()
     grassMat.diffuseColour = glm::vec3(1.0f);
     */
 
-    windowMat.texture = CreateTextureFromFile("texture/blending_transparent_window.png");
+    windowMat.texture = CreateTextureFromFile("data/texture/blending_transparent_window.png");
     //windowMat.texture.SetWrapClamp();
     windowMat.normalMap = gDefaultNormalMap;
     windowMat.roughnessMap = gDefaultTexture;
@@ -669,8 +669,8 @@ bool Render::Init()
     glBindVertexArray(0);
 
     // Models
-    cubeModel = LoadModel("models/cube.gltf");
-    quadModel = LoadModel("models/quad.gltf");
+    cubeModel = LoadModel("data/models/cube.gltf");
+    quadModel = LoadModel("data/models/quad.gltf");
 
     GLERR;
     if (!LoadFont()) {

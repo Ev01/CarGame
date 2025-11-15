@@ -39,20 +39,20 @@ add_executable(car)
 
 target_sources(car
 PRIVATE
-    main.cpp
-    main_game.cpp
-    model.cpp
-    shader.cpp
-    texture.cpp
-    camera.cpp
-    convert.cpp
-    physics.cpp
-    vehicle.cpp
-    input.cpp
-    audio.cpp
-    render.cpp
-    world.cpp
-    player.cpp
+    src/main.cpp
+    src/main_game.cpp
+    src/model.cpp
+    src/shader.cpp
+    src/texture.cpp
+    src/camera.cpp
+    src/convert.cpp
+    src/physics.cpp
+    src/vehicle.cpp
+    src/input.cpp
+    src/audio.cpp
+    src/render.cpp
+    src/world.cpp
+    src/player.cpp
     glad/glad.c
 )
 

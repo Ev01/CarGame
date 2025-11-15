@@ -1,6 +1,6 @@
 {
-    "model_file": "models/silvia_s13_ver2.gltf",
-    "wheel_model_file": "models/silvia_wheel.gltf",
+    "model_file": "data/models/silvia_s13_ver2.gltf",
+    "wheel_model_file": "data/models/silvia_wheel.gltf",
     "mass": 1170.0,
     "front_camber": -0.5,
     "front_toe": 0.8,

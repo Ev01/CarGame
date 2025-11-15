@@ -1,7 +1,7 @@
 #include "input.h"
 #include "player.h"
 
-#include "vendor/imgui/imgui.h"
+#include "../vendor/imgui/imgui.h"
 #include <SDL3/SDL.h>
 
 #include <unordered_set>
@@ -734,7 +734,7 @@ void Input::DebugGUI()
         if (ImGui::Selectable(comboValueString, isSelected)) {
             gPlayers[i].UseKeyboard(0);
         }
-        // Options for keyboards (WIP)
+        // Options for keyboards
         for (int j = 0; j < MAX_KEYBOARDS; j++) {
             if (!realKeyboards[j].IsValid()) continue;
             SDL_snprintf(comboValueString, 32, "%s %d",

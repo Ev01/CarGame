@@ -6,16 +6,16 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "vendor/imgui/imgui.h"
-#include "vendor/imgui/backends/imgui_impl_opengl3.h"
-#include "vendor/imgui/backends/imgui_impl_sdl3.h"
+#include "../vendor/imgui/imgui.h"
+#include "../vendor/imgui/backends/imgui_impl_opengl3.h"
+#include "../vendor/imgui/backends/imgui_impl_sdl3.h"
 
 
 #include "physics.h"
 #include "world.h"
 #include "texture.h"
 
-#include "glad/glad.h"
+#include "../glad/glad.h"
 #include "input.h"
 #include "audio.h"
 #include "render.h"
