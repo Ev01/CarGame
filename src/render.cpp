@@ -1103,10 +1103,11 @@ static void GuiPass()
                            100.0f, 100.0f, 0.5f, glm::vec3(0.0, 0.0f, 0.0f));
     }
 
-    // TODO: Make this work for 3 and 4 players
-    RenderPlayerTachometer(0);
-    if (doSplitScreen) {
-        RenderPlayerTachometer(1);
+    // Render the tachometer for all players
+    for (int i = 0; i < gNumPlayers; i++) {
+        RenderPlayerTachometer(i);
+        // Only render player 1 if doSplitScreen is off.
+        if (!doSplitScreen) break;
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -1121,40 +1122,18 @@ static void GuiPass()
 static void RenderSceneSplitScreen()
 {
     // TODO: Use GetPlayerSplitScreenBounds function.
-    int playerScreenWidth = screenWidth;
-    int playerScreenHeight = screenHeight;
-    if (doSplitScreen && gNumPlayers >= 2) {
-        playerScreenWidth = screenWidth / 2;
-        if (gNumPlayers >= 3) {
-            playerScreenHeight = screenHeight / 2;
-        }
-    }
-    // Render player 1 screen (left or topleft)
-    int yOffset = screenHeight - playerScreenHeight;
-    glViewport(0, yOffset, playerScreenWidth, playerScreenHeight);
+    
     glUseProgram(PbrShader.id);
-    Render::RenderScene(gPlayers[0].cam.cam);
-
-    GLERR; 
-    // Render player 2 screen (right or topright)
-    if (doSplitScreen && gNumPlayers >= 2) {
-        glViewport(screenWidth/2, yOffset, 
-                   playerScreenWidth, playerScreenHeight);
-        glUseProgram(PbrShader.id);
-        Render::RenderScene(gPlayers[1].cam.cam);
+    int playerScreenWidth, playerScreenHeight, xOffset, yOffset;
+    for (int i = 0; i < gNumPlayers; i++) {
+        GetPlayerSplitScreenBounds(i, &xOffset, &yOffset, 
+                                   &playerScreenWidth, &playerScreenHeight);
+        glViewport(xOffset, yOffset, playerScreenWidth, playerScreenHeight);
+        Render::RenderScene(gPlayers[i].cam.cam);
+        // Only render player 1 if doSplitScreen is off.
+        if (!doSplitScreen) break;
     }
-    // Render player 3 screen (bottom left)
-    if (doSplitScreen && gNumPlayers >= 3) {
-        glViewport(0, 0, playerScreenWidth, playerScreenHeight);
-        glUseProgram(PbrShader.id);
-        Render::RenderScene(gPlayers[2].cam.cam);
-    }
-    // Render player 4 screen (bottom right)
-    if (doSplitScreen && gNumPlayers >= 4) {
-        glViewport(screenWidth/2, 0, playerScreenWidth, playerScreenHeight);
-        glUseProgram(PbrShader.id);
-        Render::RenderScene(gPlayers[3].cam.cam);
-    }
+                                   
 }
 
 

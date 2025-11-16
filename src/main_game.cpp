@@ -208,8 +208,8 @@ SDL_AppResult MainGame::Init()
     Phys::SetupJolt();
 
     // Players
-    //gPlayers[0].Init();
-    //gPlayers[1].Init();
+    Player::AddPlayer();
+    Player::AddPlayer();
     Player::AddPlayer();
     Player::AddPlayer();
 
