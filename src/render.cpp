@@ -148,7 +148,7 @@ static unsigned int physFrameCounter = 0;
 
 //std::map<char, Character> characters;
 Character characters[96];
-glm::mat4 uiProj;
+static glm::mat4 uiProj;
 unsigned int textVAO, textVBO;
 
 
@@ -535,7 +535,6 @@ static bool LoadFont()
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
 
-    uiProj = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
     GLERR;
     glUseProgram(textShader.id);
     textShader.SetMat4fv((char*)"projection", glm::value_ptr(uiProj));
@@ -628,6 +627,7 @@ bool Render::Init()
         SDL_Log("Could not turn on VSync");
     }
 
+    uiProj = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
     LoadShaders();
     GLERR;
     // Skybox VAO
@@ -971,6 +971,128 @@ static void ShadowPass()
     GLERR;
 }
 
+enum UIAnchor {
+    UI_ANCHOR_BOTTOM_LEFT  = 0b00,
+    UI_ANCHOR_TOP_LEFT     = 0b01,
+    UI_ANCHOR_BOTTOM_RIGHT = 0b10,
+    UI_ANCHOR_TOP_RIGHT    = 0b11,
+};
+
+static void RenderUIAnchored(Texture tex, glm::vec2 scale, glm::vec2 margin,
+                             float rotation, UIAnchor anchor,
+                             float boundX=0.0, float boundY=0.0,
+                             float boundW=0.0, float boundH=0.0)
+{
+    glm::mat4 trans = glm::mat4(1.0);
+    glm::vec2 pos;
+    //float boundW  = (float)screenWidth;
+    //float boundH = (float)screenHeight;
+    if (boundW == 0.0) boundW = (float)screenWidth;
+    if (boundH == 0.0) boundH = (float)screenHeight;
+    float boundR = boundX + boundW; /* right boundary */
+    float boundT = boundY + boundH; /* top boundary   */
+    // Divide scale because the quad is originally 2 wide and 2 high.
+    scale = scale / 2.0f;
+    switch (anchor) {
+        case UI_ANCHOR_BOTTOM_LEFT:
+            pos = glm::vec2(boundX + margin.x + scale.x,
+                            boundY + margin.y + scale.y);
+            break;
+        case UI_ANCHOR_TOP_LEFT:
+            pos = glm::vec2(boundX + margin.x + scale.x,
+                            boundT + margin.y - scale.y);
+            break;
+        case UI_ANCHOR_BOTTOM_RIGHT:
+            pos = glm::vec2(boundR + margin.x - scale.x,
+                            boundY + margin.y + scale.y);
+            break;
+        case UI_ANCHOR_TOP_RIGHT:
+            pos = glm::vec2(boundR  + margin.x - scale.x,
+                            boundT + margin.y - scale.y);
+            break;
+    }
+    trans = glm::translate(trans, glm::vec3(pos.x, pos.y, 0.0f));
+    trans = glm::rotate(trans, rotation, glm::vec3(0, 0, 1));
+    trans = glm::scale(trans, glm::vec3(scale.x, scale.y, 1.0f));
+
+    glViewport(0, 0, screenWidth, screenHeight);
+
+    // Draw the texture
+    glUseProgram(uiShader.id);
+    uiShader.SetMat4fv((char*)"trans", glm::value_ptr(trans));
+    uiShader.SetMat4fv((char*)"proj", glm::value_ptr(uiProj));
+    glBindVertexArray(quadVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex.id);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+}
+
+
+static void GetPlayerSplitScreenBounds(int playerNum, int *outX, int *outY,
+                                       int *outW, int *outH)
+{
+    int w = screenWidth;
+    int h = screenHeight;
+    if (doSplitScreen && gNumPlayers >= 2) {
+        w = screenWidth / 2;
+        if (gNumPlayers >= 3) {
+            h = screenHeight / 2;
+        }
+    }
+    // Bottom left of screen
+    int x, y;
+    switch (playerNum) {
+        case 0: /* Player 1 */
+            x = 0;
+            y = screenHeight - h;
+            break;
+        case 1: /* Player 2 */
+            x = screenWidth / 2;
+            y = screenHeight - h;
+            break;
+        case 2: /* Player 3 */
+            x = 0;
+            y = 0;
+            break;
+        case 3: /* Player 4 */
+            x = screenWidth / 2;
+            y = 0;
+            break;
+    }
+
+    *outX = x;
+    *outY = y;
+    *outW = w;
+    *outH = h;
+}
+
+
+static void RenderPlayerTachometer(int playerNum)
+{
+    int boundX, boundY, boundW, boundH;
+    GetPlayerSplitScreenBounds(playerNum, &boundX, &boundY, &boundW, &boundH);
+    RenderUIAnchored(tachoMeterTex, glm::vec2(256.0f, 256.0f),
+                     glm::vec2(-32.0f, 32.0f), 0.0, UI_ANCHOR_BOTTOM_RIGHT,
+                     boundX, boundY, boundW, boundH);
+
+    // Draw the needle
+    Player &p = gPlayers[playerNum];
+    if (p.vehicle != NULL) {
+        float rpm = p.vehicle->GetEngineRPM();
+        // Change these constants based on the tachometer graphic.
+        const float zeroAngle = 0.74;
+        const float angleRange = 4.28;
+        const float rpmRange = 8000.0;
+        float needleAngle = zeroAngle - rpm / rpmRange * angleRange;
+        RenderUIAnchored(
+                tachoNeedleTex, glm::vec2(256.0f, 256.0f),
+                glm::vec2(-32.0f, 32.0f), needleAngle, UI_ANCHOR_BOTTOM_RIGHT,
+                boundX, boundY, boundW, boundH);
+    }
+}
+
+
+
 
 static void GuiPass()
 {
@@ -981,50 +1103,24 @@ static void GuiPass()
                            100.0f, 100.0f, 0.5f, glm::vec3(0.0, 0.0f, 0.0f));
     }
 
-    glm::mat4 trans = glm::mat4(1.0);
-    trans = glm::translate(trans, glm::vec3(64, 64, 0));
-    trans = glm::scale(trans, glm::vec3(64, 64, 1));
-
-    glm::mat4 proj = glm::mat4(1.0);
-    proj = glm::ortho(0.0, 800.0, 0.0, 600.0, -1.0, 1.0);
-
-    // Draw the tachometer
-    glUseProgram(uiShader.id);
-    uiShader.SetMat4fv((char*)"trans", glm::value_ptr(trans));
-    uiShader.SetMat4fv((char*)"proj", glm::value_ptr(proj));
-    glBindVertexArray(quadVAO);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, tachoMeterTex.id);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-
-    // Draw the needle
-    if (gPlayers[0].vehicle != NULL) {
-        float rpm = gPlayers[0].vehicle->GetEngineRPM();
-        // Change these constants based on the tachometer graphic.
-        const float zeroAngle = 0.74;
-        const float angleRange = 4.28;
-        const float rpmRange = 8000.0;
-        float needleAngle = zeroAngle - rpm / rpmRange * angleRange;
-        trans = glm::mat4(1.0);
-        trans = glm::translate(trans, glm::vec3(64, 64, 0));
-        trans = glm::rotate(trans, needleAngle, glm::vec3(0, 0, 1));
-        trans = glm::scale(trans, glm::vec3(64, 64, 1));
-        uiShader.SetMat4fv((char*)"trans", glm::value_ptr(trans));
-        glBindTexture(GL_TEXTURE_2D, tachoNeedleTex.id);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+    // TODO: Make this work for 3 and 4 players
+    RenderPlayerTachometer(0);
+    if (doSplitScreen) {
+        RenderPlayerTachometer(1);
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);
     
-
-
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 
+
+
 static void RenderSceneSplitScreen()
 {
+    // TODO: Use GetPlayerSplitScreenBounds function.
     int playerScreenWidth = screenWidth;
     int playerScreenHeight = screenHeight;
     if (doSplitScreen && gNumPlayers >= 2) {
@@ -1067,6 +1163,7 @@ static void UpdateWindowSize()
     bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
     if (screenSuccess) {
         glViewport(0, 0, screenWidth, screenHeight);
+        uiProj = glm::ortho(0.0f, (float)screenWidth, 0.0f, (float)screenHeight);
     }
     else {
         SDL_Log("Could not get screen size.");
