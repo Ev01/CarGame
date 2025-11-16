@@ -1121,8 +1121,6 @@ static void GuiPass()
 
 static void RenderSceneSplitScreen()
 {
-    // TODO: Use GetPlayerSplitScreenBounds function.
-    
     glUseProgram(PbrShader.id);
     int playerScreenWidth, playerScreenHeight, xOffset, yOffset;
     for (int i = 0; i < gNumPlayers; i++) {
