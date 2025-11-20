@@ -114,6 +114,8 @@ static void FrameUpdate()
     Audio::Update();
     Render::Update(delta);
     World::Update(delta);
+
+    gPlayers[0].DebugGUI();
 }
 
 
@@ -208,8 +210,6 @@ SDL_AppResult MainGame::Init()
     Phys::SetupJolt();
 
     // Players
-    Player::AddPlayer();
-    Player::AddPlayer();
     Player::AddPlayer();
     Player::AddPlayer();
 

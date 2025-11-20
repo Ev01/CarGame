@@ -74,6 +74,7 @@ struct Vehicle
     JPH::WheelSettings* GetWheelRR();
     JPH::WheelSettings* GetWheelRL();
     float GetEngineRPM();
+    float GetLongVelocity();
     void DebugGUI(unsigned int id);
 
     float mForward = 0;

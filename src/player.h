@@ -29,6 +29,7 @@ struct Player {
     // The vehicle that this player controls
     Vehicle *vehicle = nullptr;
     VehicleCamera cam;
+    CameraSettings camSettings;
 
     // Create a vehicle and set it as the vehicle this player controls
     void CreateAndUseVehicle(VehicleSettings &settings);
@@ -47,6 +48,7 @@ struct Player {
     bool IsUsingKeyboard(int aRealKeyboardID);
     float GetInputForAction(GameAction action);
     float GetSignedInputForAction(GameAction negAction, GameAction posAction);
+    void DebugGUI();
 
     static void AddPlayer();
     static void AddPlayerAndVehicle(VehicleSettings &settings);

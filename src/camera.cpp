@@ -88,16 +88,18 @@ glm::mat4 Camera::LookAtMatrix(glm::vec3 up) const
 }
 
 
-void Camera::SetFollow(float yaw, float pitch, float dist, glm::vec3 targ)
+void Camera::SetFollow(float yaw, float pitch, float dist, glm::vec3 targ, float lift)
 {
     SetYawPitch(yaw, pitch);
     dir = glm::normalize(dir);
     glm::vec3 posOffset = dir * dist;
-    pos = targ - posOffset;
+    pos = targ - posOffset + glm::vec3(0.0, lift, 0.0);
 }
 
 
-void Camera::SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, double angleSmoothing, double distSmoothing)
+void Camera::SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ,
+                             double angleSmoothing, double distSmoothing,
+                             float lift)
 {
     glm::vec3 hDir = dir;
     hDir.y = 0;
@@ -119,10 +121,11 @@ void Camera::SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ,
 
     float currDist = glm::length(targ - pos);
     float newDist = currDist + (dist - currDist) * distSmoothing;
-    SetFollow(newYaw, pitch, newDist, targ);
+    SetFollow(newYaw, pitch, newDist, targ, lift);
 }
 
-void Camera::SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, double smoothing)
+void Camera::SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ,
+                             double smoothing)
 {
     SetFollowSmooth(yaw, pitch, dist, targ, smoothing, smoothing);
 }
@@ -140,8 +143,8 @@ void Camera::SetOrbit(float dist, float height, glm::vec3 targ)
 
 
 void VehicleCamera::SetFollowSmooth(float yaw, float pitch, float dist,
-                                    double angleSmoothing,
-                                    double distSmoothing)
+                                    double angleSmoothing, double distSmoothing,
+                                    float lift)
 {
     JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
     SDL_assert(targetBody != nullptr);
@@ -151,7 +154,7 @@ void VehicleCamera::SetFollowSmooth(float yaw, float pitch, float dist,
     float targYaw = SDL_PI_F - SDL_atan2f(targDir.GetX(), targDir.GetZ());
 
     glm::vec3 targ = ToGlmVec3(targJolt);
-    cam.SetFollowSmooth(targYaw + yaw, pitch, dist, targ, angleSmoothing, distSmoothing);
+    cam.SetFollowSmooth(targYaw + yaw, pitch, dist, targ, angleSmoothing, distSmoothing, lift);
     
     // Cast ray for camera
     // Doing it this way still makes the camera clip through a little bit. To

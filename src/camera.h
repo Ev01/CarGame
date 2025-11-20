@@ -27,9 +27,12 @@ struct Camera {
     // Sets the aspect ratio of the camera and updates the projection matrix.
     void SetAspectRatio(float aAspect);
     void SetYawPitch(float yaw, float pitch);
-    void SetFollow(float yaw, float pitch, float dist, glm::vec3 targ);
-    void SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, double smoothing);
-    void SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, double angleSmoothing, double distSmoothing);
+    void SetFollow(float yaw, float pitch, float dist, glm::vec3 targ, float lift=0.0);
+    void SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, 
+                         double smoothing);
+    void SetFollowSmooth(float yaw, float pitch, float dist, glm::vec3 targ, 
+                         double angleSmoothing, double distSmoothing,
+                         float lift=0.0);
     void SetOrbit(float dist, float height, glm::vec3 targ);
     glm::mat4 LookAtMatrix(glm::vec3 up) const;
     //void rotate(float angle, glm::vec3 axis);
@@ -42,7 +45,19 @@ struct VehicleCamera {
     Camera cam;
     JPH::Body *targetBody = nullptr;
 
-    void SetFollowSmooth(float yaw, float pitch, float dist, double angleSmoothing, double distSmoothing);
+    void SetFollowSmooth(float yaw, float pitch, float dist, 
+                         double angleSmoothing, double distSmoothing,
+                         float lift=0.0);
     void Init(float aFov, float aAspect, float aNear, float aFar);
 };
 
+
+struct CameraSettings {
+    float baseFov = glm::radians(60.0f);
+    float pitch   = -0.165f;
+    float dist    = 4.4f;
+    float angleSmooth = 3.5f;
+    float distSmooth  = 30.0f;
+    float lift = 0.675f;
+    float fovSpeedStrength = 300.0f;
+};

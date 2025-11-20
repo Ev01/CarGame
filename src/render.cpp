@@ -803,29 +803,12 @@ static void DebugGUI()
 {
     // Update Camera
     ImGui::Begin("Cool window");
-    /*
-    float fovDegrees = glm::degrees(cam2.cam.fov);
-    ImGui::SliderFloat("FOV", &fovDegrees, 20.0f, 140.0f);
-    cam2.cam.SetFovAndRecalcProjection(glm::radians(fovDegrees));
-    cam3.cam.SetFovAndRecalcProjection(glm::radians(fovDegrees));
-    ImGui::SliderFloat("Camera Pitch", &camPitch,
-                       -SDL_PI_F / 2.0f, SDL_PI_F / 2.0);
-    ImGui::SliderFloat("Camera Distance", &camDist, 0.0f, 30.0f);
-    ImGui::SliderFloat("Camera Angle Smoothing", &angleSmooth, 0.0f, 20.0f);
-    ImGui::SliderFloat("Camera Distance Smoothing", &distSmooth, 0.0f, 20.0f);
-
-    const char* items[] = {"Cam1", "Cam2"};
-    ImGui::Combo("Camera", &currentCamNum, items, 2);
-    */
+    
     bool splitBefore = doSplitScreen;
     ImGui::Checkbox("Splitscreen", &doSplitScreen);
     if (doSplitScreen != splitBefore) {
         UpdatePlayerCamAspectRatios();
     }
-    
-
-
-
 
     
     bool isFullscreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN;

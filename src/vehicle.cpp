@@ -536,13 +536,18 @@ float Vehicle::GetEngineRPM()
 }
 
 
+float Vehicle::GetLongVelocity()
+{
+    return (mBody->GetRotation().Conjugated() * mBody->GetLinearVelocity()).GetZ();
+}
+
+
 void Vehicle::PrePhysicsUpdate(float delta)
 {
     JPH::BodyInterface &bodyInterface = Phys::GetPhysicsSystem().GetBodyInterface();
 
     // Longitudinal velocity local to the car
-    float longVelocity = (mBody->GetRotation().Conjugated() * mBody->GetLinearVelocity()).GetZ();
-
+    float longVelocity = GetLongVelocity();
 
     // Limit steering angle based on velocity
     const float limitVelStart = 20.0;

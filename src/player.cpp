@@ -5,6 +5,8 @@
 #include "camera.h"
 #include "render.h"
 
+#include "../vendor/imgui/imgui.h"
+
 Player gPlayers[MAX_PLAYERS];
 int gNumPlayers = 0;
 
@@ -12,7 +14,8 @@ int gNumPlayers = 0;
 static float camPitch = -0.4f;
 static float camDist = 3.7f;
 static float angleSmooth = 3.5f;
-static float distSmooth = 17.0f;
+//static float distSmooth = 17.0f;
+static float distSmooth = 500.0f;
 
 void Player::CreateAndUseVehicle(VehicleSettings &settings)
 {
@@ -44,11 +47,22 @@ void Player::SetVehicle(Vehicle *aVehicle)
 
 void Player::PhysicsUpdate(double delta)
 {
+    // Increase FOV based on speed.
+    // Longitudinal velocity local to the car
+    float longVelocity = vehicle->GetLongVelocity();
+    float fovMult = SDL_clamp(longVelocity / camSettings.fovSpeedStrength + 1.0, 1.0, 2.0);
+    float newFov = SDL_clamp(camSettings.baseFov * fovMult,
+                             glm::radians(10.0), glm::radians(170.0));
+    cam.cam.fov  = newFov;
+    cam.cam.CalcProjection();
+
+    // Update the player's camera
     float yawOffset;
     yawOffset = SDL_PI_F / 2.0 
                   * GetSignedInputForAction(ACTION_LOOK_LEFT, ACTION_LOOK_RIGHT);
-    cam.SetFollowSmooth(yawOffset, camPitch, camDist,
-                        angleSmooth * delta, distSmooth * delta);
+    cam.SetFollowSmooth(yawOffset, camSettings.pitch, camSettings.dist,
+                        camSettings.angleSmooth * delta, camSettings.distSmooth * delta,
+                        camSettings.lift);
     
 
     // Interpolate steering if using keyboard
@@ -64,6 +78,9 @@ void Player::PhysicsUpdate(double delta)
     } else if (vehicle != nullptr) {
         vehicle->mSteer = vehicle->mSteerTarget;
     }
+    
+
+
 }
 
 void Player::Init()
@@ -176,3 +193,23 @@ void Player::InputUpdateAllPlayers()
         gPlayers[i].InputUpdate();
     }
 }
+
+
+void Player::DebugGUI() 
+{
+    ImGui::Begin("Camera Settings");
+    float fovDegrees = glm::degrees(camSettings.baseFov);
+    ImGui::SliderFloat("FOV", &fovDegrees, 20.0f, 140.0f);
+    //cam.cam.SetFovAndRecalcProjection(glm::radians(fovDegrees));
+    camSettings.baseFov = glm::radians(fovDegrees);
+    ImGui::SliderFloat("Camera Pitch", &camSettings.pitch,
+                       -SDL_PI_F / 2.0f, SDL_PI_F / 2.0);
+    ImGui::SliderFloat("Camera Distance", &camSettings.dist, 0.0f, 30.0f);
+    ImGui::SliderFloat("Camera Angle Smoothing", &camSettings.angleSmooth, 0.0f, 20.0f);
+    ImGui::SliderFloat("Camera Distance Smoothing", &camSettings.distSmooth, 0.0f, 20.0f);
+    ImGui::SliderFloat("Camera Lift", &camSettings.lift, 0.0f, 20.0f);
+    ImGui::SliderFloat("FOV Speed Stength", &camSettings.fovSpeedStrength, 25.0f, 500.0f);
+    ImGui::End();
+}
+
+
