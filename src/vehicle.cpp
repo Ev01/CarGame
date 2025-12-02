@@ -387,11 +387,13 @@ void Vehicle::Init(VehicleSettings &settings)
     headLightLeft->mColour = glm::vec3(150.0, 100.0, 50.0);
     headLightLeft->mCutoffInner = cutoffInner;
     headLightLeft->mCutoffOuter = cutoffOuter;
+    headLightLeft->mEnableShadows = false;
 
     headLightRight = Render::CreateSpotLight();
     headLightRight->mColour = glm::vec3(150.0, 100.0, 50.0);
     headLightRight->mCutoffInner = cutoffInner;
     headLightRight->mCutoffOuter = cutoffOuter;
+    headLightRight->mEnableShadows = false;
     
     headLightLeftTransform = settings.headLightLeftTransform;
     headLightRightTransform = settings.headLightRightTransform;

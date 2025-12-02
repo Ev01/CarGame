@@ -36,12 +36,14 @@ namespace Render {
         float mQuadratic = 1.0;
         float mCutoffInner = 0.0;
         float mCutoffOuter = 0.0;
+        bool mEnableShadows = true;
     };
 
     struct SpotLightShadow
     {
         unsigned int mShadowTex = 0;
         unsigned int mShadowFBO = 0;
+        int mForLightIdx = -1;
         glm::mat4 lightSpaceMatrix;
     };
 

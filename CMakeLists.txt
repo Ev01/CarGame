@@ -17,7 +17,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
-
+set(JPH_SHARED_LIBRARY ON)
 
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
@@ -39,17 +39,18 @@ include_directories(include)
 
 add_compile_options(-Wall)
 add_executable(car)
+#set_property(TARGET car PROPERTY POSITION_INDEPENDENT_CODE FALSE)
 
 target_sources(car
 PRIVATE
     src/main.cpp
     src/main_game.cpp
+    src/physics.cpp
     src/model.cpp
     src/shader.cpp
     src/texture.cpp
     src/camera.cpp
     src/convert.cpp
-    src/physics.cpp
     src/vehicle.cpp
     src/input.cpp
     src/audio.cpp
@@ -60,11 +61,9 @@ PRIVATE
 )
 
 #target_include_directories(car PUBLIC ../JoltPhysics)
-target_link_libraries(car PRIVATE SDL3::SDL3 SDL3_image::SDL3_image
+target_link_libraries(car SDL3::SDL3 SDL3_image::SDL3_image
     SDL3_mixer::SDL3_mixer Freetype::Freetype assimp::assimp Jolt::Jolt imgui
     -static-libgcc -static-libstdc++)
-#target_link_libraries(physics_test PRIVATE SDL3::SDL3)
-
 
 # CPack stuff
 

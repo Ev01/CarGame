@@ -355,6 +355,8 @@ static glm::vec3 spotLightDistCompTargetPos = glm::vec3(0.0, 0.0, 0.0);
 // want to compare spot light distances to (e.g. player position)
 static bool SpotLightDistComp(Render::SpotLight *s1, Render::SpotLight *s2) {
     //glm::vec3 playerPos = ToGlmVec3(World::GetCar().GetPos());
+    if (s1 == nullptr) return false;
+    if (s2 == nullptr) return true;
     return LengthSquared(s1->mPosition - spotLightDistCompTargetPos) 
         < LengthSquared(s2->mPosition - spotLightDistCompTargetPos);
 }
@@ -598,6 +600,42 @@ static void LoadShaders()
 }
 
 
+static void InitSkybox()
+{
+    // Create VAO
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    
+    // Texture and Materials
+    skyboxTex = CreateCubemapFromFiles("data/texture/Lycksele/posx.jpg",
+                                       "data/texture/Lycksele/negx.jpg",
+                                       "data/texture/Lycksele/posy.jpg",
+                                       "data/texture/Lycksele/negy.jpg",
+                                       "data/texture/Lycksele/posz.jpg",
+                                       "data/texture/Lycksele/negz.jpg");
+}
+
+
+static void CreateQuadVAO()
+{
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glBindVertexArray(0);
+}
+
+
 bool Render::Init()
 {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -630,33 +668,11 @@ bool Render::Init()
     uiProj = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
     LoadShaders();
     GLERR;
-    // Skybox VAO
-    glGenVertexArrays(1, &skyboxVAO);
-    glGenBuffers(1, &skyboxVBO);
-    glBindVertexArray(skyboxVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
-    //glDisableVertexAttribArray(1);
-    //glDisableVertexAttribArray(2);
-    // Texture and Materials
-    skyboxTex = CreateCubemapFromFiles("data/texture/Lycksele/posx.jpg",
-                                       "data/texture/Lycksele/negx.jpg",
-                                       "data/texture/Lycksele/posy.jpg",
-                                       "data/texture/Lycksele/negy.jpg",
-                                       "data/texture/Lycksele/posz.jpg",
-                                       "data/texture/Lycksele/negz.jpg");
-    /*
-    grassTex = CreateTextureFromFile("texture/grass.png");
-    grassTex.SetWrapClamp();
-    grassMat.texture = grassTex;
-    grassMat.normalMap = gDefaultNormalMap;
-    grassMat.roughnessMap = gDefaultTexture;
-    grassMat.diffuseColour = glm::vec3(1.0f);
-    */
+    InitSkybox();
+    CreateQuadVAO();
 
+    // Window material (used for checkpoints)
     windowMat.texture = CreateTextureFromFile("data/texture/blending_transparent_window.png");
     //windowMat.texture.SetWrapClamp();
     windowMat.normalMap = gDefaultNormalMap;
@@ -667,17 +683,6 @@ bool Render::Init()
     tachoNeedleTex = CreateTextureFromFile("data/texture/tachometer_needle.png");
 
     GLERR;
-    // ----- Quad VAO -----
-    glGenVertexArrays(1, &quadVAO);
-    glGenBuffers(1, &quadVBO);
-    glBindVertexArray(quadVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    glBindVertexArray(0);
 
     // Models
     cubeModel = LoadModel("data/models/cube.gltf");
@@ -687,7 +692,6 @@ bool Render::Init()
     if (!LoadFont()) {
         return false;
     }
-    //glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(uiProj));
 
     GLERR;
     // ----- Framebuffer -----
@@ -763,15 +767,19 @@ void Render::PhysicsUpdate(double delta)
         
         //int numSplitScreens = doSplitScreen && gNumPlayers >= 2 ? 2 : 1;
         int numSplitScreens = doSplitScreen ? gNumPlayers : 1;
-        int endOffset = SDL_min(spotLights.size(), MAX_SPOT_SHADOWS);
+        //int endOffset = SDL_min(spotLights.size(), MAX_SPOT_SHADOWS);
+        int endOffset = spotLights.size();
         for (int i = 0; i < numSplitScreens; i++) {
-            int beginOffset = SDL_min(spotLights.size(), MAX_SPOT_SHADOWS) 
+            //int beginOffset = SDL_min(spotLights.size(), MAX_SPOT_SHADOWS) 
+            int beginOffset = spotLights.size()
                               * i / numSplitScreens;
             spotLightDistCompTargetPos = ToGlmVec3(
                     gPlayers[i].vehicle->GetPos());
+            
             std::sort(spotLights.begin() + beginOffset,
                       spotLights.begin() + endOffset,
                       SpotLightDistComp);
+            
         }
 
         /*
@@ -893,6 +901,31 @@ void Render::Update(double delta)
 }
 
 
+static void PrepareShadowForLight(int shadowIdx, int spotLightIdx)
+{
+    glm::mat4 lightView = glm::lookAt(
+            spotLights[spotLightIdx]->mPosition,
+            spotLights[spotLightIdx]->mPosition + spotLights[spotLightIdx]->mDirection,
+            up);
+    // TODO: clean up and optimize
+    const float nearPlane = 0.2f;
+    const float farPlane = 40.0f;
+    // The projection that will be used to render the scene from the light's
+    // perspective
+    glm::mat4 lightProjection = glm::perspective(SDL_acosf(spotLights[spotLightIdx]->mCutoffOuter) * 2.0f,
+                                       1.0f, nearPlane, farPlane);
+    spotLightShadows[shadowIdx].lightSpaceMatrix = lightProjection * lightView;
+    // Store which light this shadow is for so that when rendering lights later
+    // on, they will use the correct shadows.
+    spotLightShadows[shadowIdx].mForLightIdx = spotLightIdx;
+    // Render the scene onto the shadow framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, spotLightShadows[shadowIdx].mShadowFBO);
+    glViewport(0, 0, SPOT_SHADOW_SIZE, SPOT_SHADOW_SIZE);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    RenderSceneShadow(spotLightShadows[shadowIdx].lightSpaceMatrix);
+}
+
+
 static void ShadowPass()
 {
     // For sunlight shadows
@@ -917,34 +950,20 @@ static void ShadowPass()
     glClear(GL_DEPTH_BUFFER_BIT);
     glCullFace(GL_FRONT);
     GLERR;
+    // For sun shadow
     RenderSceneShadow(lightSpaceMatrix);
+
     // Render shadows for some spotlights
-    int spotLightNum = 0;
-    for (size_t i = 0; i < MAX_SPOT_SHADOWS && i < spotLights.size(); i++) {
-        if (spotLights[i] == nullptr) continue;
-        lightView = glm::lookAt(
-                spotLights[i]->mPosition,
-                spotLights[i]->mPosition + spotLights[i]->mDirection,
-                up);
-        // TODO: clean up and optimize
-        nearPlane = 0.2f;
-        farPlane = 40.0f;
-        lightProjection = glm::perspective(SDL_acosf(spotLights[i]->mCutoffOuter) * 2.0f,
-                                           1.0f, nearPlane, farPlane);
-        //lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 
-        //                            nearPlane, farPlane);
-        spotLightShadows[i].lightSpaceMatrix = lightProjection * lightView;
-        GLERR;
-        glBindTexture(GL_TEXTURE_2D, spotLightShadows[i].mShadowTex);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, spotLightShadows[i].mShadowFBO);
-        GLERR;
-        glViewport(0, 0, SPOT_SHADOW_SIZE, SPOT_SHADOW_SIZE);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        GLERR;
-        RenderSceneShadow(spotLightShadows[i].lightSpaceMatrix);
-        spotLightNum++;
+    int shadowNum = 0;
+    size_t i = 0;
+    for (; shadowNum < MAX_SPOT_SHADOWS && i < spotLights.size(); i++) {
+        if (spotLights[i] == nullptr || !spotLights[i]->mEnableShadows) continue;
+        PrepareShadowForLight(shadowNum, i);
+        shadowNum++;
+    }
+    // If there are left over shadows not in use, set their light idx to -1.
+    for (; shadowNum < MAX_SPOT_SHADOWS; shadowNum++) {
+        spotLightShadows[shadowNum].mForLightIdx = -1;
     }
     glCullFace(GL_BACK);
 
@@ -1214,6 +1233,8 @@ void Render::ResetSpotLightsGPU()
         PbrShader.SetFloat(uniformName, 0.0);
         SDL_snprintf(uniformName, 64, "spotLights[%d].cutoffOuter", i);
         PbrShader.SetFloat(uniformName, 0.0);
+        SDL_snprintf(uniformName, 64, "spotLights[%d].shadowMapIdx", i);
+        PbrShader.SetInt(uniformName, -1);
         GLERR;
     }
 }
@@ -1239,15 +1260,12 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
     shader.SetMat4fv((char*)"view", glm::value_ptr(view));
 
     GLERR;
+
     // Shadow setup
     shader.SetMat4fv((char*)"lightSpaceMatrix", glm::value_ptr(lightSpaceMatrix));
-    GLERR;
     glActiveTexture(GL_TEXTURE8);
-    GLERR;
     glBindTexture(GL_TEXTURE_2D, depthMap);
-    GLERR;
     shader.SetInt((char*)"shadowMap", 8);
-    GLERR;
     glActiveTexture(GL_TEXTURE0);
     GLERR;
 
@@ -1288,21 +1306,26 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
     }
 
     GLERR;
-    int spotLightNum = 0;
     
-    for (size_t i = 0; i < spotLights.size() && i < MAX_SPOT_LIGHTS; i++) {
+    // Set spot light shadow uniforms
+    for (int shadowNum = 0; shadowNum < MAX_SPOT_SHADOWS; shadowNum++) {
+        //if (spotLightShadows[i].mForLightIdx == -1) continue;
+        SDL_snprintf(uniformName, 64, "spotLightShadowMaps[%d]", shadowNum);
+        shader.SetInt(uniformName, 9 + shadowNum);
+        SDL_snprintf(uniformName, 64, "spotLightSpaceMatrix[%d]", shadowNum);
+        shader.SetMat4fv(uniformName, glm::value_ptr(spotLightShadows[shadowNum].lightSpaceMatrix));
+        glActiveTexture(GL_TEXTURE9 + shadowNum);
+        glBindTexture(GL_TEXTURE_2D, spotLightShadows[shadowNum].mShadowTex);
+    }
+    
+    // Set Spot light uniforms
+    int spotLightNum = 0;
+    for (size_t i = 0; i < spotLights.size() && spotLightNum < MAX_SPOT_LIGHTS; i++) {
         if (spotLights[i] == nullptr) continue;
-        // Spotlight shadow texture
-        if (i < MAX_SPOT_SHADOWS) {
-            glActiveTexture(GL_TEXTURE9 + spotLightNum);
-            glBindTexture(GL_TEXTURE_2D, spotLightShadows[i].mShadowTex);
-            SDL_snprintf(uniformName, 64, "spotLightShadowMaps[%d]", spotLightNum);
-            shader.SetInt(uniformName, 9 + spotLightNum);
-            SDL_snprintf(uniformName, 64, "spotLightSpaceMatrix[%d]", spotLightNum);
-            shader.SetMat4fv(uniformName, glm::value_ptr(spotLightShadows[i].lightSpaceMatrix));
-        }
+        
         glActiveTexture(GL_TEXTURE0);
 
+        //if (!spotLights[i]->mEnableShadows) continue;
         glm::vec3 lightCol = spotLights[i]->mColour / glm::vec3(1.0);
         //glm::vec3 lightCol = glm::vec3(6000.0);
         SDL_snprintf(uniformName, 64, "spotLights[%d].diffuse", spotLightNum);
@@ -1324,8 +1347,21 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
         shader.SetFloat(uniformName, spotLights[i]->mCutoffInner);
         SDL_snprintf(uniformName, 64, "spotLights[%d].cutoffOuter", spotLightNum);
         shader.SetFloat(uniformName, spotLights[i]->mCutoffOuter);
-        spotLightNum++;
         GLERR;
+
+        // Search for the shadow corresponding to this light
+        int spotShadowNum = -1;
+        for (int j=0; j < MAX_SPOT_SHADOWS; j++) {
+           if (spotLightShadows[j].mForLightIdx == (int)i) {
+               spotShadowNum = j;
+               break;
+           }
+        }
+        // Set the shadow uniform for this light: -1 for no shadow.
+        SDL_snprintf(uniformName, 64, "spotLights[%d].shadowMapIdx", spotLightNum);
+        shader.SetInt(uniformName, spotShadowNum);
+
+        spotLightNum++;
     }
     //SDL_Log("Num spot lights: %d", spotLightNum);
 

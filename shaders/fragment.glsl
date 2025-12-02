@@ -47,6 +47,7 @@ struct SpotLight {
     float cutoffInner;
     float cutoffOuter;
     float quadratic;
+    int shadowMapIdx;
     //sampler2D shadowMap;
 };
 
@@ -113,7 +114,8 @@ float ShadowCalculation(sampler2D shadMap, vec4 fragPosLightSpace, float bias)
     return shadow;
 }
 
-void main() {
+void main() 
+{
     //vec3 norm = normalize(Normal);
 
     vec4 textureSample = texture(material.albedo, fs_in.TexCoords);
@@ -142,9 +144,10 @@ void main() {
     
     
     for (int i = 0; i < NUM_SPOT_LIGHTS; i++) {
-        int shadowMapNum = i < MAX_SPOT_SHADOWS ? i : -1;
+        //if (spotLights[i].shadowMapIdx == -1) continue;
+        int shadowMapNum = spotLights[i].shadowMapIdx;
         Lo += CalcSpotLight(spotLights[i], norm, fs_in.FragPos, viewDir,
-                fs_in.FragPosSpotLightSpace[i], shadowMapNum);
+                fs_in.FragPosSpotLightSpace[shadowMapNum], shadowMapNum);
     }
 
     
