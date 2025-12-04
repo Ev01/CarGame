@@ -1,5 +1,6 @@
 #include "world.h"
 #include "render.h"
+#include "render_lights.h"
 #include "convert.h"
 #include "vehicle.h"
 #include "model.h"

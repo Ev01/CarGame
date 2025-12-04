@@ -3,6 +3,7 @@
 #include "shader.h"
 #include "convert.h"
 #include "../glad/glad.h"
+#include "glerr.h"
 
 #include <SDL3/SDL.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -164,7 +165,9 @@ void Mesh::Draw(ShaderProg shader,
     shader.SetFloat((char*)"material.metallic", material->metallic);
 
     glBindVertexArray(vao);
+    GLERR;
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+    GLERR;
     glBindVertexArray(0);
 }
 
@@ -175,12 +178,15 @@ void ModelNode::Draw(ShaderProg shader,
                      glm::mat4 transform,
                      const Material *materialOverride) const
 {
+    GLERR;
     glm::mat4 newTrans = transform * mTransform;
     newTrans = ToGlmMat4(ToJoltMat4(newTrans));
+    GLERR;
     shader.SetMat4fv((char*)"model", glm::value_ptr(newTrans));
 
     for (size_t i = 0; i < mMeshes.size(); i++) {
         meshes[mMeshes[i]]->Draw(shader, materials, materialOverride);
+        GLERR;
     }
 }
 
@@ -197,16 +203,20 @@ void ModelNode::Draw(ShaderProg shader,
 void Model::Draw(ShaderProg shader, glm::mat4 transform,
                  const Material *materialOverride) const
 {
+    GLERR;
     for (unsigned int i = 0; i < nodes.size(); i++) {
         nodes[i]->Draw(shader, meshes, materials, transform, materialOverride);
+        GLERR;
     }
 }
 
 
 void Model::Draw(ShaderProg shader, const Material *materialOverride) const
 {
+    GLERR;
     for (unsigned int i = 0; i < nodes.size(); i++) {
         nodes[i]->Draw(shader, meshes, materials, materialOverride);
+        GLERR;
     }
 }
 

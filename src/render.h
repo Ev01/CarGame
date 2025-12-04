@@ -1,6 +1,7 @@
 #pragma once
 
 #include "camera.h"
+#include "render_lights.h"
 
 #include <glm/glm.hpp>
 #include <assimp/scene.h>
@@ -12,48 +13,12 @@ struct ShaderProg;
 
 namespace Render {
 
-    struct Light
-    {
-        glm::vec3 mPosition;
-        glm::vec3 mColour;
-        float mQuadratic;
-    };
-
-    struct SunLight
-    {
-        glm::vec3 mDirection;
-        glm::vec3 mColour;
-    };
-
-    struct SpotLight
-    {
-        void Init();
-        ~SpotLight();
-        glm::vec3 mPosition;
-        glm::vec3 mDirection;
-        glm::vec3 mColour;
-
-        float mQuadratic = 1.0;
-        float mCutoffInner = 0.0;
-        float mCutoffOuter = 0.0;
-        bool mEnableShadows = true;
-    };
-
-    struct SpotLightShadow
-    {
-        unsigned int mShadowTex = 0;
-        unsigned int mShadowFBO = 0;
-        int mForLightIdx = -1;
-        glm::mat4 lightSpaceMatrix;
-    };
 
         
 
     bool Init();
     Camera& GetCamera();
     void AssimpAddLight(const aiLight *light, const aiNode *node, aiMatrix4x4 transform);
-    Render::SpotLight* CreateSpotLight();
-    void DestroySpotLight(SpotLight *spotLight);
     //SpotLight& GetSpotLightById(unsigned int id);
     void PhysicsUpdate(double delta);
     void Update(double delta);
@@ -61,11 +26,11 @@ namespace Render {
     void RenderScene(const Camera &cam);
     void RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
                      bool enableSkybox = true);
+    void RenderSceneRaw(ShaderProg &shader);
     void RenderText(ShaderProg &s, std::string text, float x, float y,
                     float scale, glm::vec3 colour);
 
     // Reset the spotlight shader values.
-    void ResetSpotLightsGPU();
     void HandleEvent(SDL_Event *event);
     void DeleteAllLights();
     /* Returns current aspect ratio of the window */
@@ -74,6 +39,7 @@ namespace Render {
     SDL_GLContext& GetGLContext();
     void CleanUp();
 
+    SunLight& GetSunLight();
 
 }
 

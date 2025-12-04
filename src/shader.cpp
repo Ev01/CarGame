@@ -64,6 +64,7 @@ void ShaderProg::SetFloat(char uniformName[], float value)
 
 void ShaderProg::SetMat4fv(char uniformName[], const float *matrix)
 {
+    GLERR;
     GLint loc = glGetUniformLocation(id, uniformName); 
     GLERR;
     glUniformMatrix4fv(loc, 1, GL_FALSE, matrix);

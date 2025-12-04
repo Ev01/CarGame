@@ -73,6 +73,9 @@ uniform PointLight pointLights[NUM_POINT_LIGHTS];
 uniform SpotLight spotLights[NUM_SPOT_LIGHTS];
 uniform sampler2D shadowMap;
 uniform sampler2D spotLightShadowMaps[MAX_SPOT_SHADOWS];
+//uniform sampler2DArray spotLightShadowMapArr;
+uniform sampler2D spotLightShadowMapAtlas;
+uniform int shadowSize;
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
@@ -80,6 +83,8 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
         vec4 fragPosLightSpace, int shadowMapNum);
 
 #define PI 3.14159265359
+
+
 
 float ShadowCalculation(sampler2D shadMap, vec4 fragPosLightSpace, float bias)
 {
@@ -113,6 +118,53 @@ float ShadowCalculation(sampler2D shadMap, vec4 fragPosLightSpace, float bias)
 
     return shadow;
 }
+
+
+float ShadowCalculation(vec4 fragPosLightSpace,
+        float bias, int shadowNum)
+{
+    // perform perspective divide
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    // Map [-1, 1] range to [0, 1] range
+    projCoords = projCoords * 0.5 + 0.5;
+    if (projCoords.z > 1.0) {
+        return 0.0;
+    }
+
+    // Get depth of current fragment from lights perspective
+    float currentDepth = projCoords.z;
+    
+    // Get cloest depth from lights perspective
+    //float closestDepth = texture(shadMap, projCoords.xy).r;
+    //float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+    
+    
+    float shadow = 0.0;
+    
+    vec2 texelSize = 1.0 / textureSize(spotLightShadowMapAtlas, 0).xy;
+    
+    
+    for (float x = -1.5; x <= 1.5; x++) {
+        for (float y = -1.5; y <= 1.5; y++) {
+            vec2 texCoords = vec2(projCoords.xy + vec2(x, y) * texelSize);
+            texCoords.x = (texCoords.x + shadowNum) / MAX_SPOT_SHADOWS;
+            float pcfDepth = texture(spotLightShadowMapAtlas, texCoords).r;
+            //float pcfDepth = 0.0;
+            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= 16.0;
+    
+    /*
+    float x = (projCoords.x + shadowNum) / MAX_SPOT_SHADOWS;
+    float depth = texture(spotLightShadowMapAtlas,
+                            vec2(x, projCoords.y)).r;
+    shadow = currentDepth > depth ? 1.0 : 0.0;
+    */
+
+    return shadow;
+}
+
 
 void main() 
 {
@@ -260,6 +312,7 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     //float shadowBias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
     float shadowBias = -0.0005;
     float shadow = ShadowCalculation(shadowMap, fs_in.FragPosLightSpace, shadowBias);
+    //float shadow = 0.0;
     vec3 radiance = light.diffuse * (1.0 - shadow);
     return CalcLightIntensity(normal, lightDir, viewDir, radiance);
 }
@@ -304,6 +357,9 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
     // error "sampler arrays indexed with non-constant expressions are
     // forbidden in GLSL 1.30 and later".
     // TODO: Could use an Array Texture to solve this properly.
+    shadow = shadowMapNum == -1 ? 0.0
+           : ShadowCalculation(fragPosLightSpace, shadowBias, shadowMapNum);
+    /*
     switch (shadowMapNum) {
         case 0: 
             shadow = ShadowCalculation(spotLightShadowMaps[0],
@@ -338,6 +394,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
                               fragPosLightSpace, shadowBias);
             break;
     }
+    */
 
     vec3 radiance = light.diffuse * attenuation * cutoffMult * (1.0 - shadow);
 
