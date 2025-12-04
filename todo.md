@@ -1,6 +1,6 @@
 - [x] Re-add lighting
 - [x] Display floor
-- [ ] Shadows??
+- [x] Shadows??
 - [x] Orbit Camera
 - [x] Multiple physics objects
 - [x] Even more physics objects
@@ -122,9 +122,16 @@ fixed later.
 28/07
 - [x] Players can choose input device
 
+Undated
+- [x] Render shadows from closest light sources only
+- [x] Rendering text without ImGui
+
+04/12
+- [x] Use Array Texture for shadow maps. See shaders/fragment.glsl
+NOTE: I couldn't get array textures to work, so I am using a single texture
+atlas that stores all shadows side by side.
 
 
-- [ ] Use Array Texture for shadow maps. See shaders/fragment.glsl
 - [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())
 - [ ] Get model from filename anywhere without loading it twice. When loading a
       model, it will save it to an array if loading it for the first time. Later
@@ -139,7 +146,6 @@ fixed later.
 - [ ] Metallic texture for car paint
 - [ ] Sun Shadow LOD?
 - [ ] Sun shadow for player 2
-- [ ] Rendering text without ImGui
 - [ ] Driving car AI
 - [ ] SSAO
 - [ ] Deferred shading
@@ -148,5 +154,4 @@ fixed later.
 - [ ] Make tree with branch texture
 - [ ] Make bushes
 - [ ] Start on UI / menu screen
-- [ ] Render shadows from closest light sources only
 
