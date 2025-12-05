@@ -33,11 +33,11 @@
 #include <algorithm>
 
 
+ShaderProg pbrShader;
+ShaderProg simpleDepthShader;
 
 static std::vector<Render::Light> lights;
 static Render::SunLight sunLight;
-ShaderProg pbrShader;
-ShaderProg simpleDepthShader;
 static ShaderProg skyboxShader;
 static ShaderProg screenShader;
 static ShaderProg rawScreenShader;
@@ -135,10 +135,6 @@ static unsigned int msTexColourBuffer;
 static unsigned int quadVAO;
 static unsigned int quadVBO;
 
-static const int fbWidth = 1600;
-static const int fbHeight = 900;
-//static const int fbWidth = 800;
-//static const int fbHeight = 600;
 static unsigned int physFrameCounter = 0;
 
 //std::map<char, Character> characters;
@@ -151,7 +147,8 @@ unsigned int textVAO, textVBO;
 static const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
 
-static void CreateFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned int *aRBO)
+static void CreateFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned int *aRBO, 
+                              unsigned int aWidth, unsigned int aHeight)
 {
     glGenFramebuffers(1, aFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, *aFBO);
@@ -159,7 +156,7 @@ static void CreateFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned
     // Create texture for frame buffer
     glGenTextures(1, aCbTex);
     glBindTexture(GL_TEXTURE_2D, *aCbTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, fbWidth, fbHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, aWidth, aHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -170,7 +167,7 @@ static void CreateFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned
     // Create renderbuffer for depth and stencil components
     glGenRenderbuffers(1, aRBO);
     glBindRenderbuffer(GL_RENDERBUFFER, *aRBO);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, fbWidth, fbHeight);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, aWidth, aHeight);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
     // Attach render buffer to framebuffer
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, *aRBO);
@@ -182,7 +179,8 @@ static void CreateFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned
 }
 
 
-static void CreateMSFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned int *aRBO)
+static void CreateMSFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned int *aRBO,
+                                unsigned int aWidth, unsigned int aHeight)
 {
     glGenFramebuffers(1, aFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, *aFBO);
@@ -191,7 +189,7 @@ static void CreateMSFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsign
     // Create texture for frame buffer
     glGenTextures(1, aCbTex);
     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, *aCbTex);
-    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB32F, fbWidth, fbHeight, GL_TRUE);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB32F, aWidth, aHeight, GL_TRUE);
     GLERR;
     //glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     //glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -205,7 +203,7 @@ static void CreateMSFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsign
     // Create renderbuffer for depth and stencil components
     glGenRenderbuffers(1, aRBO);
     glBindRenderbuffer(GL_RENDERBUFFER, *aRBO);
-    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, fbWidth, fbHeight);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, aWidth, aHeight);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
     GLERR;
     // Attach render buffer to framebuffer
@@ -216,6 +214,23 @@ static void CreateMSFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsign
         SDL_Log("Error: Framebuffer is not complete!");
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+
+static void CreateFBOs()
+{
+    // if any objects are already existant, delete them before creating them
+    // again.
+    if (fbo != 0) glDeleteFramebuffers(1, &fbo);
+    if (textureColourBuffer != 0) glDeleteTextures(1, &textureColourBuffer);
+    if (rbo != 0) glDeleteRenderbuffers(1, &rbo);
+    CreateFramebuffer(&fbo, &textureColourBuffer, &rbo, screenWidth, screenHeight);
+    GLERR;
+    if (msFBO != 0) glDeleteFramebuffers(1, &msFBO);
+    if (msTexColourBuffer != 0) glDeleteTextures(1, &msTexColourBuffer);
+    if (msRBO != 0) glDeleteRenderbuffers(1, &msRBO);
+    CreateMSFramebuffer(&msFBO, &msTexColourBuffer, &msRBO, screenWidth, screenHeight);
+    GLERR;
 }
 
 
@@ -599,10 +614,7 @@ bool Render::Init()
 
     GLERR;
     // ----- Framebuffer -----
-    CreateFramebuffer(&fbo, &textureColourBuffer, &rbo);
-    GLERR;
-    CreateMSFramebuffer(&msFBO, &msTexColourBuffer, &msRBO);
-
+    CreateFBOs();
 
     GLERR;
     InitShadows();
@@ -896,6 +908,8 @@ static void RenderPlayerTachometer(int playerNum)
 
     // Draw the needle
     Player &p = gPlayers[playerNum];
+    const glm::vec2 margin = glm::vec2(-32.0f, 32.0f);
+    const glm::vec2 scale = glm::vec2(256.0f, 256.0f);
     if (p.vehicle != NULL) {
         float rpm = p.vehicle->GetEngineRPM();
         // Change these constants based on the tachometer graphic.
@@ -903,11 +917,19 @@ static void RenderPlayerTachometer(int playerNum)
         const float angleRange = 4.28;
         const float rpmRange = 8000.0;
         float needleAngle = zeroAngle - rpm / rpmRange * angleRange;
-        RenderUIAnchored(
-                tachoNeedleTex, glm::vec2(256.0f, 256.0f),
-                glm::vec2(-32.0f, 32.0f), needleAngle, UI_ANCHOR_BOTTOM_RIGHT,
-                boundX, boundY, boundW, boundH);
+        RenderUIAnchored(tachoNeedleTex, scale, margin, needleAngle, 
+                UI_ANCHOR_BOTTOM_RIGHT, boundX, boundY, boundW, boundH);
+
+        //int vehKph = (int) (p.vehicle->GetLongVelocity() * 3.6);
+        int vehKph = SDL_abs (p.vehicle->GetSpeedoSpeed() * 3.6);
+        //char vehKphStr[16];
+        //SDL_itoa(vehKph, vehKphStr, 10);
+        // TODO: Make this easier to position
+        Render::RenderText(textShader, std::to_string(vehKph), 
+                screenWidth + margin.x - scale.x / 2.0 - 10.0f,
+                margin.y + scale.y / 2.0 - 60.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
     }
+
 }
 
 
@@ -962,7 +984,15 @@ static void UpdateWindowSize()
     bool screenSuccess = SDL_GetWindowSize(window, &screenWidth, &screenHeight);
     if (screenSuccess) {
         glViewport(0, 0, screenWidth, screenHeight);
+        // Update projection uniforms in shaders.
         uiProj = glm::ortho(0.0f, (float)screenWidth, 0.0f, (float)screenHeight);
+        glUseProgram(uiShader.id);
+        uiShader.SetMat4fv((char*)"proj", glm::value_ptr(uiProj));
+        glUseProgram(textShader.id);
+        textShader.SetMat4fv((char*)"projection", glm::value_ptr(uiProj));
+        // Delete and recreate screen frame buffer objects with new screen
+        // size.
+        CreateFBOs();
     }
     else {
         SDL_Log("Could not get screen size.");
@@ -972,7 +1002,6 @@ static void UpdateWindowSize()
 
 static void RenderShadowDepthToScreen()
 {
-    //glViewport(0, 0, fbWidth, fbHeight);
     glViewport(0, 0, screenWidth, screenHeight);
     glClearColor(0.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1044,7 +1073,7 @@ void Render::RenderFrame()
     glDisable(GL_CULL_FACE);
     
     
-    glViewport(0, 0, fbWidth, fbHeight);
+    glViewport(0, 0, screenWidth, screenHeight);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDisable(GL_DEPTH_TEST);

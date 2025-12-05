@@ -6,6 +6,7 @@
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Vehicle/VehicleConstraint.h>
+#include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
 #include <Jolt/RegisterTypes.h>
 
 #include <string>
@@ -75,6 +76,8 @@ struct Vehicle
     JPH::WheelSettings* GetWheelRL();
     float GetEngineRPM();
     float GetLongVelocity();
+    float GetSpeedoSpeed();
+    JPH::WheeledVehicleController* GetController();
     void DebugGUI(unsigned int id);
 
     float mForward = 0;

@@ -696,6 +696,34 @@ JPH::Quat Vehicle::GetRotation()
 }
 
 
+
+JPH::WheeledVehicleController* Vehicle::GetController()
+{
+    return static_cast<JPH::WheeledVehicleController *>(mVehicleConstraint->GetController());
+}
+
+
+float Vehicle::GetSpeedoSpeed()
+{
+    JPH::WheeledVehicleController *controller = GetController();
+    //JPH::VehicleTransmission *transmission = controller->GetTransmission();
+    //float gearRatio = transmission->GetCurrentRatio();
+    //float wheelSpeed = controller->GetWheelSpeedAtClutch();
+    float speed; 
+    // This might not be the best way to get an accurate measurement of what
+    // the speedometer would say, but it's a start.
+    // Assuming there is 4 wheels
+    for (int i = 0; i < 4; i++) {
+        speed += mVehicleConstraint->GetWheel(i)->GetAngularVelocity()
+            / mVehicleConstraint->GetWheel(i)->GetSettings()->mRadius / 10.0;
+    }
+    speed /= 4.0;
+    //speed = SDL_fabsf(speed);
+    return speed;
+
+}
+
+
 void Vehicle::Destroy()
 {
     JPH::BodyInterface &bodyInterface = Phys::GetPhysicsSystem().GetBodyInterface();
