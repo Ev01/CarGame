@@ -12,14 +12,8 @@
 struct ShaderProg;
 
 namespace Render {
-
-
-        
-
     bool Init();
-    Camera& GetCamera();
     void AssimpAddLight(const aiLight *light, const aiNode *node, aiMatrix4x4 transform);
-    //SpotLight& GetSpotLightById(unsigned int id);
     void PhysicsUpdate(double delta);
     void Update(double delta);
     void RenderFrame();
@@ -30,7 +24,6 @@ namespace Render {
     void RenderText(ShaderProg &s, std::string text, float x, float y,
                     float scale, glm::vec3 colour);
 
-    // Reset the spotlight shader values.
     void HandleEvent(SDL_Event *event);
     void DeleteAllLights();
     /* Returns current aspect ratio of the window */

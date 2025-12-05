@@ -1,6 +1,7 @@
+#include "render_internal.h"
 #include "render_lights.h"
 #include "render_defines.h"
-#include "render_shaders.h"
+//#include "render_shaders.h"
 #include "render_shadow.h"
 #include "shader.h"
 #include "player.h"

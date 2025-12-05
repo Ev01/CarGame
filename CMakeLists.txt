@@ -55,6 +55,7 @@ PRIVATE
     src/input.cpp
     src/audio.cpp
     src/render.cpp
+    src/render_internal.cpp
     src/render_lights.cpp
     src/render_shadow.cpp
     src/world.cpp

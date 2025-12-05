@@ -41,10 +41,22 @@ namespace Render {
 
     Render::SpotLight* CreateSpotLight();
     void DestroySpotLight(SpotLight *spotLight);
-    void ResetSpotLightsGPU();
-    void SetSpotLightUniforms(ShaderProg pbrShader, glm::mat4 view);
-    void SortSpotLights(int numSplitScreens);
 
+    /* Resets the spotlight shader uniforms. */
+    void ResetSpotLightsGPU();
+    /* Sets all uniforms for the spotlights in the PBR shader to keep them
+     * synced with the array of spotlights on the CPU. View is the camera's
+     * view matrix. This function should be called if the camera's view
+     * changes, a light changes, or a light's shadow is changed. Should
+     * probably call it every frame. */
+    void SetSpotLightUniforms(ShaderProg pbrShader, glm::mat4 view);
+    /* Sorts the spotlights from closest to the player to farthest from the
+     * player. This is used for giving shadows to the spotlights closest to the
+     * player. */
+    void SortSpotLights(int numSplitScreens);
+    /* Get the size of the spotlights array. This is not the same as the number
+     * of spotlights because some elements in the array are nullptr. */
     int GetSpotLightsSize();
+    /* Get a spotlight by index in the array. May return nullptr. */
     Render::SpotLight* GetSpotLightByIdx(int idx);
 }

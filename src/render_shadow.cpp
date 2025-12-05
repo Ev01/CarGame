@@ -1,7 +1,8 @@
 #include "render_shadow.h"
+#include "render_internal.h"
 #include "render_lights.h"
 #include "render_defines.h"
-#include "render_shaders.h"
+//#include "render_shaders.h"
 #include "render.h" // TODO: Remove this include
 #include "glerr.h"
 #include "player.h"
