@@ -251,14 +251,6 @@ void Render::RenderFrame()
 {
     GLERR;
 
-    int windowWidth;
-    int windowHeight;
-    if (!SDL_GetWindowSize(window, &windowWidth, &windowHeight)) {
-        SDL_Log("Could not get window size, using defaults");
-        windowWidth = 800;
-        windowHeight = 600;
-    } 
-
     if (MainGame::gGameState == GAME_IN_WORLD) {
         ShadowPass();
     }
