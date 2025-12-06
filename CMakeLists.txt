@@ -22,13 +22,16 @@ set(JPH_SHARED_LIBRARY ON)
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
 find_package(assimp REQUIRED)
-find_package(Jolt CONFIG REQUIRED)
+#find_package(Jolt CONFIG REQUIRED)
 find_package(SDL3_mixer REQUIRED)
 # find_package(SDL3_ttf REQUIRED)
 find_package(Freetype REQUIRED)
 
 add_library(imgui)
 add_subdirectory(vendor/imgui)
+
+#add_library(Jolt)
+add_subdirectory(vendor/JoltPhysics/Build)
 
 #include_directories(include ~/cmake/freetype-2.13.3-win64/include/freetype2/)
 include_directories(include)
