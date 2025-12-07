@@ -8,6 +8,7 @@
 #include "shader.h"
 #include "texture.h"
 #include "model.h"
+#include "ui.h"
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
 
@@ -26,7 +27,6 @@ extern Model *quadModel;
 extern Material windowMat;
 extern Texture tachoMeterTex;
 extern Texture tachoNeedleTex;
-extern Character characters[96];
 extern glm::mat4 uiProj;
 
 extern ShaderProg simpleDepthShader;
@@ -37,12 +37,6 @@ extern bool doSplitScreen;
 extern SDL_Window *window;
 
 
-enum UIAnchor {
-    UI_ANCHOR_BOTTOM_LEFT  = 0b00,
-    UI_ANCHOR_TOP_LEFT     = 0b01,
-    UI_ANCHOR_BOTTOM_RIGHT = 0b10,
-    UI_ANCHOR_TOP_RIGHT    = 0b11,
-};
 
 namespace Render {
     void CreateFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned int *aRBO, 
@@ -58,6 +52,7 @@ namespace Render {
     bool LoadFont();
     void LoadShaders();
     void InitSkybox();
+    void InitText();
     void CreateQuadVAO();
     void UpdatePlayerCamAspectRatios();
     void RenderUIAnchored(Texture tex, glm::vec2 scale, glm::vec2 margin,

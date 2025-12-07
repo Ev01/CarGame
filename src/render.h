@@ -2,6 +2,7 @@
 
 #include "camera.h"
 #include "render_lights.h"
+#include "font.h"
 
 #include <glm/glm.hpp>
 #include <assimp/scene.h>
@@ -21,7 +22,7 @@ namespace Render {
     void RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
                      bool enableSkybox = true);
     void RenderSceneRaw(ShaderProg &shader);
-    void RenderText(ShaderProg &s, std::string text, float x, float y,
+    void RenderText(Font::Face *face, ShaderProg &s, std::string text, float x, float y,
                     float scale, glm::vec3 colour);
 
     void HandleEvent(SDL_Event *event);

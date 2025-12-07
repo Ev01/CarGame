@@ -21,6 +21,7 @@
 #include "render.h"
 #include "player.h"
 #include "font.h"
+#include "ui.h"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -43,6 +44,8 @@ static float physicsTime = 0;
 
 static bool dontSkipPhysicsStep = false;
 static double fpsLimit = 300.0;
+
+static bool requestToQuit = false;
 
 GameState MainGame::gGameState = GAME_PRESS_START_SCREEN;
 
@@ -162,14 +165,23 @@ static void DebugGUI()
 }
 
 
-static void StartWorld()
+void MainGame::StartWorld()
 {
+    if (gGameState == GAME_IN_WORLD) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Tried to start world, but already started");
+        return;
+    }
     Phys::SetupSimulation();
     World::Init();
     MainGame::gGameState = GAME_IN_WORLD;
 }
 
 
+void MainGame::Quit()
+{
+    SDL_Log("Quitting game...");
+    requestToQuit = true;
+}
 
 
 SDL_AppResult MainGame::Init()
@@ -179,6 +191,9 @@ SDL_AppResult MainGame::Init()
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO);
 
     if (!Render::Init()) {
+        return SDL_APP_FAILURE;
+    }
+    if (!Font::Init()) {
         return SDL_APP_FAILURE;
     }
 
@@ -252,10 +267,16 @@ SDL_AppResult MainGame::HandleEvent(SDL_Event *event)
         return SDL_APP_CONTINUE;
     }
 
+    /*
     if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_RETURN
     //if (Input::GetNumRealKeyboards() > 0
             && gGameState == GAME_PRESS_START_SCREEN) {
         StartWorld();
+    }
+    */
+
+    if (gGameState == GAME_PRESS_START_SCREEN) {
+        UI::mainMenu.HandleEvent(event);
     }
 
     Input::HandleEvent(event);
@@ -267,6 +288,10 @@ SDL_AppResult MainGame::HandleEvent(SDL_Event *event)
 
 SDL_AppResult MainGame::Update()
 {
+    if (requestToQuit) {
+        return SDL_APP_SUCCESS;
+    }
+
     delta = GetSeconds() - lastFrame;
     lastFrame = GetSeconds();
 

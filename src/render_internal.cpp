@@ -11,6 +11,7 @@
 #include "main_game.h"
 #include "vehicle.h"
 #include "player.h"
+#include "ui.h"
 
 #include "../vendor/imgui/imgui.h"
 #include "../vendor/imgui/backends/imgui_impl_opengl3.h"
@@ -38,7 +39,6 @@ Model *quadModel;
 Material windowMat;
 Texture tachoMeterTex;
 Texture tachoNeedleTex;
-Character characters[96];
 glm::mat4 uiProj;
 
 ShaderProg simpleDepthShader;
@@ -58,6 +58,7 @@ static Texture skyboxTex;
 static Texture grassTex;
 static unsigned int skyboxVAO;
 static unsigned int skyboxVBO;
+
 
 static float skyboxVertices[] = {
     // positions          
@@ -271,85 +272,6 @@ void Render::DrawCheckpoints(ShaderProg &shader)
     }
 }
 
-bool Render::LoadFont()
-{
-    FT_Library ft;
-    if (FT_Init_FreeType(&ft)) {
-        SDL_Log("Could not init FreeType Library");
-        return false;
-    }
-
-    FT_Face face;
-    if (FT_New_Face(ft, "data/fonts/liberation_sans/LiberationSans-Regular.ttf", 0, &face)) {
-        SDL_Log("Failed to load font");
-    }
-
-    FT_Set_Pixel_Sizes(face, 0, 48);
-    if (FT_Load_Char(face, 'X', FT_LOAD_RENDER)) {
-        SDL_Log("Failed to load glyph");
-    }
-
-    GLERR;
-    // disable byte-alignment restriction
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    // Loop through first 128 ascii characters (0-31 are control characters)
-    for (unsigned char c = 32; c < 128; c++) {
-        // load character glyph
-        if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
-            SDL_Log("Failed to load glyph");
-        }
-        Texture tex;
-        glGenTextures(1, &tex.id);
-        glBindTexture(GL_TEXTURE_2D, tex.id);
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RED,
-            face->glyph->bitmap.width,
-            face->glyph->bitmap.rows,
-            0,
-            GL_RED,
-            GL_UNSIGNED_BYTE,
-            face->glyph->bitmap.buffer
-        );
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        GLERR;
-        // Store character for later
-        Character character = {
-            tex,
-            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-            glm::ivec2(face->glyph->bitmap_left,  face->glyph->bitmap_top),
-            static_cast<unsigned int>(face->glyph->advance.x)
-        };
-        characters[c - 32] = character;
-    }
-
-    FT_Done_Face(face);
-    FT_Done_FreeType(ft);
-
-    GLERR;
-    glUseProgram(textShader.id);
-    textShader.SetMat4fv((char*)"projection", glm::value_ptr(uiProj));
-    GLERR;
-    GLERR;
-
-    glGenVertexArrays(1, &textVAO);
-    glGenBuffers(1, &textVBO);
-    glBindVertexArray(textVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
-    // Need 6 vertices of 4 floats each for a quad.
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    GLERR;
-    return true;
-}
 
 
 void Render::LoadShaders()
@@ -418,6 +340,29 @@ void Render::InitSkybox()
 }
 
 
+void Render::InitText()
+{
+    GLERR;
+    glUseProgram(textShader.id);
+    textShader.SetMat4fv((char*)"projection", glm::value_ptr(uiProj));
+    GLERR;
+    GLERR;
+
+    glGenVertexArrays(1, &textVAO);
+    glGenBuffers(1, &textVBO);
+    glBindVertexArray(textVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+    // Need 6 vertices of 4 floats each for a quad.
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    GLERR;
+}
+
+
 void Render::CreateQuadVAO()
 {
     glGenVertexArrays(1, &quadVAO);
@@ -483,6 +428,7 @@ void Render::DebugGUI()
     static int selectedWindowMode = currentWindowMode;
     int numDisplayModes;
     // Display modes (resolutions) supported by monitor
+    // TODO: Just get displayModes once at the start of the game
     SDL_DisplayMode **displayModes = SDL_GetFullscreenDisplayModes(
             SDL_GetDisplayForWindow(window), &numDisplayModes);
 
@@ -526,6 +472,7 @@ void Render::DebugGUI()
             SDL_SetWindowFullscreenMode(window, displayModes[selectedDisplayMode]);
         }
     }
+    SDL_free(displayModes);
     ImGui::End();
 }
 
@@ -541,28 +488,11 @@ void Render::RenderUIAnchored(Texture tex, glm::vec2 scale, glm::vec2 margin,
     //float boundH = (float)screenHeight;
     if (boundW == 0.0) boundW = (float)screenWidth;
     if (boundH == 0.0) boundH = (float)screenHeight;
-    float boundR = boundX + boundW; /* right boundary */
-    float boundT = boundY + boundH; /* top boundary   */
+    
     // Divide scale because the quad is originally 2 wide and 2 high.
     scale = scale / 2.0f;
-    switch (anchor) {
-        case UI_ANCHOR_BOTTOM_LEFT:
-            pos = glm::vec2(boundX + margin.x + scale.x,
-                            boundY + margin.y + scale.y);
-            break;
-        case UI_ANCHOR_TOP_LEFT:
-            pos = glm::vec2(boundX + margin.x + scale.x,
-                            boundT + margin.y - scale.y);
-            break;
-        case UI_ANCHOR_BOTTOM_RIGHT:
-            pos = glm::vec2(boundR + margin.x - scale.x,
-                            boundY + margin.y + scale.y);
-            break;
-        case UI_ANCHOR_TOP_RIGHT:
-            pos = glm::vec2(boundR  + margin.x - scale.x,
-                            boundT + margin.y - scale.y);
-            break;
-    }
+
+    pos = UI::GetPositionAnchored(scale, margin, anchor, boundX, boundY, boundW, boundH);
     trans = glm::translate(trans, glm::vec3(pos.x, pos.y, 0.0f));
     trans = glm::rotate(trans, rotation, glm::vec3(0, 0, 1));
     trans = glm::scale(trans, glm::vec3(scale.x, scale.y, 1.0f));
@@ -647,7 +577,7 @@ void Render::RenderPlayerTachometer(int playerNum)
         //char vehKphStr[16];
         //SDL_itoa(vehKph, vehKphStr, 10);
         // TODO: Make this easier to position
-        Render::RenderText(textShader, std::to_string(vehKph), 
+        Render::RenderText(Font::defaultFace, textShader, std::to_string(vehKph), 
                 screenWidth + margin.x - scale.x / 2.0 - 10.0f,
                 margin.y + scale.y / 2.0 - 60.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
     }
@@ -660,17 +590,36 @@ void Render::RenderPlayerTachometer(int playerNum)
 void Render::GuiPass()
 {
     if (MainGame::gGameState == GAME_PRESS_START_SCREEN) {
-        Render::RenderText(textShader, "Hello!!! This is a sentence.",
+        /*
+        Render::RenderText(Font::defaultFace, textShader, "Hello!!! This is a sentence.",
                            25.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f));
-        Render::RenderText(textShader, "Press Enter and up arrow to start...", 
+        Render::RenderText(Font::defaultFace, textShader, "Press Enter and up arrow to start...", 
                            100.0f, 100.0f, 0.5f, glm::vec3(0.0, 0.0f, 0.0f));
+        */
+
+        // Render the main menu
+        const float scale = 0.5f;
+        for (int i = 0; i < UI::mainMenu.numItems; i++) {
+            bool isSelected = UI::mainMenu.selectedIdx == i;
+            glm::vec3 col = isSelected ? glm::vec3(0.0, 0.0, 0.0) : glm::vec3(0.3, 0.3, 0.3);
+            float yOffset = -Font::defaultFace->GetLineHeight() * scale * i;
+            const char* text = UI::mainMenu.items[i].text;
+            float width = Font::defaultFace->GetWidthOfText(text, SDL_strlen(text)) * scale;
+            glm::vec2 pos = UI::GetPositionAnchored(
+                    glm::vec2(width, 0.0), glm::vec2(0.0, yOffset),
+                    UI_ANCHOR_CENTRE, 0, 0, screenWidth, screenHeight);
+            Render::RenderText(Font::defaultFace, textShader, text, pos.x, pos.y,
+                               scale, col);
+        }
     }
 
     // Render the tachometer for all players
-    for (int i = 0; i < gNumPlayers; i++) {
-        RenderPlayerTachometer(i);
-        // Only render player 1 if doSplitScreen is off.
-        if (!doSplitScreen) break;
+    if (MainGame::gGameState == GAME_IN_WORLD) {
+        for (int i = 0; i < gNumPlayers; i++) {
+            RenderPlayerTachometer(i);
+            // Only render player 1 if doSplitScreen is off.
+            if (!doSplitScreen) break;
+        }
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);

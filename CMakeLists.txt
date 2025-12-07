@@ -17,7 +17,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
-set(JPH_SHARED_LIBRARY ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+#set(JPH_SHARED_LIBRARY ON)
 
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
@@ -34,7 +35,7 @@ add_subdirectory(vendor/imgui)
 add_subdirectory(vendor/JoltPhysics/Build)
 
 #include_directories(include ~/cmake/freetype-2.13.3-win64/include/freetype2/)
-include_directories(include)
+include_directories(include /usr/include/freetype2)
 
 #add_subdirectory(../assimp-src assimp)
 #add_subdirectory(C:/Users/Ev/SDL_image SDL_image EXCLUDE_FROM_ALL)
@@ -63,6 +64,8 @@ PRIVATE
     src/render_shadow.cpp
     src/world.cpp
     src/player.cpp
+    src/ui.cpp
+    src/font.cpp
     glad/glad.c
 )
 

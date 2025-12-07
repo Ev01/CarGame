@@ -1,8 +1,7 @@
 #include "vehicle.h"
 #include "audio.h"
-#include "input.h"
 #include "physics.h"
-#include "render.h"
+#include "render_lights.h"
 #include "convert.h"
 #include "model.h"
 

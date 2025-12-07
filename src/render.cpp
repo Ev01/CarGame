@@ -173,9 +173,12 @@ bool Render::Init()
     quadModel = LoadModel("data/models/quad.gltf");
 
     GLERR;
+    /*
     if (!LoadFont()) {
         return false;
     }
+    */
+    InitText();
 
     GLERR;
     // ----- Framebuffer -----
@@ -400,7 +403,7 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
 }
 
 
-void Render::RenderText(ShaderProg &s, std::string text, float x, float y,
+void Render::RenderText(Font::Face *face, ShaderProg &s, std::string text, float x, float y,
                         float scale, glm::vec3 colour)
 {
     glUseProgram(s.id);
@@ -410,7 +413,7 @@ void Render::RenderText(ShaderProg &s, std::string text, float x, float y,
 
     std::string::const_iterator c;
     for (c = text.begin(); c != text.end(); c++) {
-        Character ch = characters[*c - 32];
+        Character ch = face->characters[*c - 32];
 
         float xPos = x + ch.bearing.x * scale;
         float yPos = y - (ch.size.y - ch.bearing.y) * scale;
