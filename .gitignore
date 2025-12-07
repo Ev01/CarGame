@@ -10,3 +10,4 @@ vendor/imgui/.github/*
 backup/*
 .cache/*
 .clangd
+compile_commands.json
