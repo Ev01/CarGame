@@ -46,6 +46,7 @@ struct RaceProgress {
 };
 extern RaceProgress gPlayerRaceProgress;
 
+struct ChoiceOption;
 
 namespace World {
     void AssimpAddLight(const aiLight *aLight, const aiNode *aNode,
@@ -66,4 +67,6 @@ namespace World {
     std::vector<Checkpoint>& GetCheckpoints();
     Model& GetCurrentMapModel();
     RaceState GetRaceState();
+
+    extern ChoiceOption gMapOption;
 };

@@ -710,7 +710,7 @@ void Input::DebugGUI()
         if (!ImGui::BeginCombo(comboTitle, comboValueString)) {
             continue;
         }
-        // Option for keyboard (by settings gamepad to nullptr)
+
         const bool isNoneSelected =
             gPlayers[i].inputDeviceType == INPUT_DEVICE_NONE;
 

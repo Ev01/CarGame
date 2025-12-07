@@ -6,7 +6,6 @@
 FT_Library ft;
 FT_Face face;
 Font::Face *Font::defaultFace;
-//Character characters[96];
 
 bool Font::Init()
 {

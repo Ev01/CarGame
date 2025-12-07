@@ -226,7 +226,9 @@ SDL_AppResult MainGame::Init()
 
     // Players
     Player::AddPlayer();
-    Player::AddPlayer();
+    //Player::AddPlayer();
+
+    UI::OpenMenu(&UI::mainMenu);
 
 
     glViewport(0, 0, 800, 600);
@@ -276,7 +278,7 @@ SDL_AppResult MainGame::HandleEvent(SDL_Event *event)
     */
 
     if (gGameState == GAME_PRESS_START_SCREEN) {
-        UI::mainMenu.HandleEvent(event);
+        UI::GetCurrentMenu()->HandleEvent(event);
     }
 
     Input::HandleEvent(event);

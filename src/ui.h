@@ -19,14 +19,35 @@ enum UIAnchor {
 enum MenuAction {
     MA_NONE,
     MA_START_GAME,
+    MA_OPEN_MENU,
+    MA_BACK,
+    MA_CYCLE_CHOICE,
     MA_QUIT,
 };
 
+/*
+enum MenuItemType {
+    MI_BUTTON,
+    MI_CHOICE
+};
+*/
+
+struct ChoiceOption;
 
 namespace UI {
+    struct Menu;
+
+
     struct MenuItem {
         char text[64];
-        MenuAction action;
+        MenuAction action = MA_NONE;
+        Menu *menuToOpen  = nullptr; // If action == MA_OPEN_MENU
+        ChoiceOption *choiceOption = nullptr; // If action == MA_CYCLE_CHOICE
+
+        void DoAction();
+        /* Put the full display text in outText, including the choice value if
+         * this is a CYCLE_CHOICE item. */
+        void GetText(char *outText, int maxlen);
     };
 
 
@@ -38,13 +59,17 @@ namespace UI {
         void SelectNext();
         void SelectPrev();
         MenuAction GetSelectedMenuAction();
+        MenuItem* GetSelectedMenuItem();
         void HandleEvent(SDL_Event *event);
     };
 
-    void DoMenuAction(MenuAction action);
+    //void DoMenuAction(MenuAction action);
 
     glm::vec2 GetPositionAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
             float boundX, float boundY, float boundW, float boundH);
+    void OpenMenu(Menu *toOpen);
+    void MenuBack();
+    Menu* GetCurrentMenu();
 
     extern Menu mainMenu;
 }

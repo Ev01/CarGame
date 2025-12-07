@@ -7,6 +7,7 @@
 #include "physics.h"
 #include "audio.h"
 #include "player.h"
+#include "options.h"
 
 #include "../vendor/imgui/imgui.h"
 
@@ -39,6 +40,16 @@ JPH::Quat raceStartRot;
 RaceState raceState;
 static float raceCountdownTimer = 0.0;
 
+const char* mapDisplayNames[] = {"Map01", "Map02", "simple_map", "racetrack1"};
+const char* mapFilepaths[] = {
+    "data/models/no_tex_map.gltf",
+    "data/models/map1.gltf",
+    "data/models/simple_map.gltf",
+    "data/models/racetrack1.gltf",
+};
+
+ChoiceOption World::gMapOption = {0, mapDisplayNames, 4};
+    
 
 static void CreateCheckpoint(JPH::Vec3 position, unsigned int num)
 {
@@ -294,25 +305,11 @@ void World::Update(float delta)
     Vehicle::UpdateAllVehicles();
 
     ImGui::Begin("Maps");
-    const char* items[] = {"Map01", "Map02", "simple_map", "racetrack1"};
-    static int currentItem = 0;
-    ImGui::Combo("Map", &currentItem, items, 4);
+
+    //static int currentItem = 0;
+    ImGui::Combo("Map", &gMapOption.selectedChoice, gMapOption.optionStrings, gMapOption.numOptions);
     if (ImGui::Button("Change map")) {
-        switch(currentItem) {
-            case 0:
-                SDL_Log("sizeof: %lld", sizeof(*mapModel));
-                ChangeMap("data/models/no_tex_map.gltf");
-                break;
-            case 1:
-                ChangeMap("data/models/map1.gltf");
-                break;
-            case 2:
-                ChangeMap("data/models/simple_map.gltf");
-                break;
-            case 3:
-                ChangeMap("data/models/racetrack1.gltf");
-                break;
-        }
+        ChangeMap(mapFilepaths[gMapOption.selectedChoice]);
     }
     if (ImGui::Button("Begin Race")) {
         BeginRace();
@@ -358,7 +355,7 @@ void World::Init()
     //gPlayers[1].SetVehicle(car2);
     //CreateCheckpoint(JPH::Vec3(1, 2, 1));
 
-    mapModel = std::unique_ptr<Model>(LoadModel("data/models/no_tex_map.gltf", MapNodeCallback, LightCallback));
+    mapModel = std::unique_ptr<Model>(LoadModel(mapFilepaths[gMapOption.selectedChoice], MapNodeCallback, LightCallback));
     Phys::LoadMap(*mapModel);
     
     RespawnVehicles();
