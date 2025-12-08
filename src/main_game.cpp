@@ -352,6 +352,15 @@ SDL_AppResult MainGame::Update()
     //FrameUpdate(); 
     Render::RenderFrame();
 
+    // A bit of a hack to make sure no ImGui window takes focus when the
+    // program starts up.
+    static bool isFirstFrame = true;
+    if (isFirstFrame) {
+        ImGui::SetWindowFocus(nullptr);
+        isFirstFrame = false;
+    }
+
+
     LimitFPS();
     Input::NewFrame();
 

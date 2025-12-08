@@ -587,6 +587,28 @@ void Render::RenderPlayerTachometer(int playerNum)
 
 
 
+static void DrawMenu()
+{
+    const float scale = 0.5f;
+    UI::Menu* menu = UI::GetCurrentMenu();
+    if (menu == nullptr) return;
+
+    for (int i = 0; i < menu->numItems; i++) {
+        bool isSelected = menu->selectedIdx == i;
+        glm::vec3 col = isSelected ? glm::vec3(0.0, 0.0, 0.0) : glm::vec3(0.3, 0.3, 0.3);
+        float yOffset = -Font::defaultFace->GetLineHeight() * scale * i;
+        char text[64];
+        menu->items[i].GetText(text, 64);
+        float width = Font::defaultFace->GetWidthOfText(text, SDL_strlen(text)) * scale;
+        glm::vec2 pos = UI::GetPositionAnchored(
+                glm::vec2(width, 0.0), glm::vec2(0.0, yOffset),
+                UI_ANCHOR_CENTRE, 0, 0, screenWidth, screenHeight);
+        Render::RenderText(Font::defaultFace, textShader, text, pos.x, pos.y,
+                           scale, col);
+    }
+}
+
+
 
 void Render::GuiPass()
 {
@@ -600,6 +622,8 @@ void Render::GuiPass()
 
     }
     // Render the current menu
+    DrawMenu();
+    /*
     const float scale = 0.5f;
     UI::Menu* menu = UI::GetCurrentMenu();
     if (menu != nullptr) {
@@ -617,6 +641,7 @@ void Render::GuiPass()
                                scale, col);
         }
     }
+    */
 
     // Render the tachometer for all players
     if (MainGame::gGameState == GAME_IN_WORLD) {
