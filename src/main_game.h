@@ -4,7 +4,8 @@
 
 enum GameState {
     GAME_PRESS_START_SCREEN,
-    GAME_IN_WORLD
+    GAME_IN_WORLD,
+    GAME_IN_WORLD_PAUSED
 };
 
 namespace MainGame {

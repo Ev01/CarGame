@@ -28,6 +28,15 @@ UI::Menu UI::mainMenu = {
     4, 0
 };
 
+UI::Menu pauseMenu = {
+    {
+        {"Resume", MA_BACK},
+        {"Options", MA_OPEN_MENU, &optionsMenu},
+        {"Quit Game", MA_QUIT},
+    },
+    3, 0
+};
+
 
 static constexpr int cMaxStackSize = 8;
 
@@ -161,6 +170,12 @@ UI::Menu* UI::GetCurrentMenu()
 }
 
 
+void UI::CloseAllMenus()
+{
+    while (GetCurrentMenu() != nullptr) MenuBack();
+}
+
+
 void UI::MenuItem::GetText(char *outText, int maxlen)
 {
     if (action == MA_CYCLE_CHOICE) {
@@ -171,3 +186,6 @@ void UI::MenuItem::GetText(char *outText, int maxlen)
         SDL_snprintf(outText, maxlen, "%s", text);
     }
 }
+
+
+UI::Menu* UI::GetPauseMenu() { return &pauseMenu; }

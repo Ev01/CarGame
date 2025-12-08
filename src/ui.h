@@ -70,6 +70,9 @@ namespace UI {
     void OpenMenu(Menu *toOpen);
     void MenuBack();
     Menu* GetCurrentMenu();
+    void CloseAllMenus();
+
+    Menu* GetPauseMenu();
 
     extern Menu mainMenu;
 }

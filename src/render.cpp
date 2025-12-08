@@ -272,7 +272,7 @@ void Render::RenderFrame()
 
     GLERR;
     
-    if (MainGame::gGameState == GAME_IN_WORLD) {
+    if (MainGame::gGameState == GAME_IN_WORLD || MainGame::gGameState == GAME_IN_WORLD_PAUSED) {
         RenderSceneSplitScreen();
         //RenderShadowDepthToScreen();
     }

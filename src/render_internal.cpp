@@ -598,23 +598,23 @@ void Render::GuiPass()
                            100.0f, 100.0f, 0.5f, glm::vec3(0.0, 0.0f, 0.0f));
         */
 
-        // Render the current menu
-        const float scale = 0.5f;
-        UI::Menu* menu = UI::GetCurrentMenu();
-        if (menu != nullptr) {
-            for (int i = 0; i < menu->numItems; i++) {
-                bool isSelected = menu->selectedIdx == i;
-                glm::vec3 col = isSelected ? glm::vec3(0.0, 0.0, 0.0) : glm::vec3(0.3, 0.3, 0.3);
-                float yOffset = -Font::defaultFace->GetLineHeight() * scale * i;
-                char text[64];
-                menu->items[i].GetText(text, 64);
-                float width = Font::defaultFace->GetWidthOfText(text, SDL_strlen(text)) * scale;
-                glm::vec2 pos = UI::GetPositionAnchored(
-                        glm::vec2(width, 0.0), glm::vec2(0.0, yOffset),
-                        UI_ANCHOR_CENTRE, 0, 0, screenWidth, screenHeight);
-                Render::RenderText(Font::defaultFace, textShader, text, pos.x, pos.y,
-                                   scale, col);
-            }
+    }
+    // Render the current menu
+    const float scale = 0.5f;
+    UI::Menu* menu = UI::GetCurrentMenu();
+    if (menu != nullptr) {
+        for (int i = 0; i < menu->numItems; i++) {
+            bool isSelected = menu->selectedIdx == i;
+            glm::vec3 col = isSelected ? glm::vec3(0.0, 0.0, 0.0) : glm::vec3(0.3, 0.3, 0.3);
+            float yOffset = -Font::defaultFace->GetLineHeight() * scale * i;
+            char text[64];
+            menu->items[i].GetText(text, 64);
+            float width = Font::defaultFace->GetWidthOfText(text, SDL_strlen(text)) * scale;
+            glm::vec2 pos = UI::GetPositionAnchored(
+                    glm::vec2(width, 0.0), glm::vec2(0.0, yOffset),
+                    UI_ANCHOR_CENTRE, 0, 0, screenWidth, screenHeight);
+            Render::RenderText(Font::defaultFace, textShader, text, pos.x, pos.y,
+                               scale, col);
         }
     }
 

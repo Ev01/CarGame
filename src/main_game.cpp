@@ -165,12 +165,30 @@ static void DebugGUI()
 }
 
 
+static void Pause()
+{
+    if (MainGame::gGameState == GAME_IN_WORLD) {
+        MainGame::gGameState = GAME_IN_WORLD_PAUSED;
+    }
+}
+
+
+static void Unpause()
+{
+    if (MainGame::gGameState == GAME_IN_WORLD_PAUSED) {
+        MainGame::gGameState = GAME_IN_WORLD;
+    }
+}
+
+
 void MainGame::StartWorld()
 {
     if (gGameState == GAME_IN_WORLD) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Tried to start world, but already started");
         return;
     }
+
+    UI::CloseAllMenus();
     Phys::SetupSimulation();
     World::Init();
     MainGame::gGameState = GAME_IN_WORLD;
@@ -277,8 +295,18 @@ SDL_AppResult MainGame::HandleEvent(SDL_Event *event)
     }
     */
 
-    if (gGameState == GAME_PRESS_START_SCREEN) {
-        UI::GetCurrentMenu()->HandleEvent(event);
+    if (gGameState == GAME_IN_WORLD) {
+        if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_ESCAPE) {
+            UI::OpenMenu(UI::GetPauseMenu());
+            Pause();
+        }
+    }
+
+
+    //if (gGameState == GAME_PRESS_START_SCREEN) {
+    UI::Menu *currentMenu = UI::GetCurrentMenu();
+    if (currentMenu != nullptr) {
+        currentMenu->HandleEvent(event);
     }
 
     Input::HandleEvent(event);
@@ -308,13 +336,19 @@ SDL_AppResult MainGame::Update()
 
     switch (gGameState) {
         case GAME_PRESS_START_SCREEN:
+            FrameUpdate(); 
+            break;
+        case GAME_IN_WORLD_PAUSED:
+            // Unpause if the user goes out of the pause menu
+            if (UI::GetCurrentMenu() == nullptr) Unpause();
             break;
         case GAME_IN_WORLD:
             PhysicsUpdate();
+            FrameUpdate(); 
             break;
     }
 
-    FrameUpdate(); 
+    //FrameUpdate(); 
     Render::RenderFrame();
 
     LimitFPS();
