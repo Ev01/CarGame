@@ -391,7 +391,7 @@ void Render::UpdatePlayerCamAspectRatios()
 void Render::DebugGUI()
 {
     // Update Camera
-    ImGui::Begin("Cool window");
+    ImGui::Begin("Cool window", nullptr, ImGuiWindowFlags_NoFocusOnAppearing);
     
     bool splitBefore = doSplitScreen;
     ImGui::Checkbox("Splitscreen", &doSplitScreen);

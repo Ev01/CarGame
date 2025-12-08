@@ -197,7 +197,7 @@ void Player::InputUpdateAllPlayers()
 
 void Player::DebugGUI() 
 {
-    ImGui::Begin("Camera Settings");
+    ImGui::Begin("Camera Settings", nullptr, ImGuiWindowFlags_NoFocusOnAppearing);
     float fovDegrees = glm::degrees(camSettings.baseFov);
     ImGui::SliderFloat("FOV", &fovDegrees, 20.0f, 140.0f);
     //cam.cam.SetFovAndRecalcProjection(glm::radians(fovDegrees));

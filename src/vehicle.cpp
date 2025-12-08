@@ -414,7 +414,7 @@ void Vehicle::DebugGUI(unsigned int id)
 
     char title[20];
     SDL_snprintf(title, 20, "Vehicle Debug %d", id);
-    ImGui::Begin(title);
+    ImGui::Begin(title, nullptr, ImGuiWindowFlags_NoFocusOnAppearing);
 
 
     // Front Camber

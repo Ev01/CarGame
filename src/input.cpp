@@ -669,7 +669,7 @@ bool Input::GetGamepadButton(SDL_Gamepad *gamepad, SDL_GamepadButton button)
 
 void Input::DebugGUI()
 {
-    ImGui::Begin("Input");
+    ImGui::Begin("Input", nullptr, ImGuiWindowFlags_NoFocusOnAppearing);
     for (int i = 0; i < numOpenedGamepads; i++) {
         ImGui::Text("%s %d, player idx %d", SDL_GetGamepadName(gamepads[i]),
                     i, SDL_GetGamepadPlayerIndex(gamepads[i]));

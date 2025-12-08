@@ -304,7 +304,7 @@ void World::Update(float delta)
 
     Vehicle::UpdateAllVehicles();
 
-    ImGui::Begin("Maps");
+    ImGui::Begin("Maps", nullptr, ImGuiWindowFlags_NoFocusOnAppearing);
 
     //static int currentItem = 0;
     ImGui::Combo("Map", &gMapOption.selectedChoice, gMapOption.optionStrings, gMapOption.numOptions);

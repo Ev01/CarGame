@@ -141,7 +141,7 @@ static void LimitFPS()
 static void DebugGUI()
 {
     // Debug FPS window
-    ImGui::Begin("FPS");
+    ImGui::Begin("FPS", nullptr, ImGuiWindowFlags_NoFocusOnAppearing);
     int interval;
     if (SDL_GL_GetSwapInterval(&interval)) {
         bool vSync = interval != 0;
@@ -272,6 +272,7 @@ SDL_AppResult MainGame::HandleEvent(SDL_Event *event)
     if (event->type == SDL_EVENT_QUIT) {
         return SDL_APP_SUCCESS;
     }
+
 
     ImGuiIO &io = ImGui::GetIO(); (void)io;
     ImGui_ImplSDL3_ProcessEvent(event);
