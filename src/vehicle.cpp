@@ -176,6 +176,46 @@ void VehicleSettings::Init()
     PrepareLoadCar(this);
     vehicleModel = LoadModel(modelFile.c_str(), CarNodeCallback);
     wheelModel = LoadModel(wheelModelFile.c_str());
+
+
+    JPH::WheelSettings *fr = GetWheelFR();
+    JPH::WheelSettings *fl = GetWheelFL();
+    JPH::WheelSettings *rr = GetWheelRR();
+    JPH::WheelSettings *rl = GetWheelRL();
+    SDL_assert(fr != nullptr && fl != nullptr && rr != nullptr && rl != nullptr);
+
+
+    // Set up wheels and suspension
+    JPH::Vec3 frontWheelUp = JPH::Vec3(SDL_sin(frontCamber), SDL_cos(frontCamber), 0.0);
+    JPH::Vec3 rearWheelUp = JPH::Vec3(SDL_sin(rearCamber), SDL_cos(rearCamber), 0.0);
+    JPH::Vec3 frontSteeringAxis = JPH::Vec3(-SDL_tan(frontKingPin), 1, -SDL_tan(frontCaster)).Normalized();
+    JPH::Vec3 frontWheelForward = JPH::Vec3(-SDL_sin(frontToe), 0, SDL_cos(frontToe));
+    JPH::Vec3 rearWheelForward = JPH::Vec3(-SDL_sin(rearToe), 0, SDL_cos(rearToe));
+            
+    JPH::Vec3 flipX = JPH::Vec3(-1, 1, 1);
+
+    JPH::Vec3 frontSuspensionDir = frontSteeringAxis * JPH::Vec3(-1, -1, -1);
+    fr->mWheelUp = frontWheelUp * flipX;
+    fl->mWheelUp = frontWheelUp;
+    rr->mWheelUp = rearWheelUp * flipX;
+    rl->mWheelUp = rearWheelUp;
+
+    fr->mWheelForward = frontWheelForward * flipX;
+    fl->mWheelForward = frontWheelForward;
+    fr->mSuspensionDirection = frontSuspensionDir * flipX;
+    fl->mSuspensionDirection = frontSuspensionDir;
+    fr->mSteeringAxis = frontSteeringAxis * flipX;
+    fl->mSteeringAxis = frontSteeringAxis;
+
+    rr->mWheelForward = rearWheelForward * flipX;
+    rl->mWheelForward = rearWheelForward;
+
+    // Move wheels up a bit so that they rest where placed in the model.
+    
+    fr->mPosition -= fr->mSuspensionDirection * suspensionMinLength;
+    fl->mPosition -= fl->mSuspensionDirection * suspensionMinLength;
+    rr->mPosition -= rr->mSuspensionDirection * suspensionMinLength;
+    rl->mPosition -= rl->mSuspensionDirection * suspensionMinLength;
 }
 
 
@@ -187,7 +227,7 @@ void VehicleSettings::AddWheel(JPH::Vec3 position, bool isSteering, float wheelR
 	//const float wheel_width = 0.27f;
     JPH::WheelSettingsWV *wheel = new JPH::WheelSettingsWV;
     //JPH::Vec3 up = JPH::Vec3(0, 1, 0);
-	wheel->mPosition = position;
+    wheel->mPosition = position;
     wheel->mMaxSteerAngle = isSteering ? SDL_PI_F / 8.0 : 0;
     wheel->mRadius = wheelRadius;
     wheel->mWidth = wheelWidth;
@@ -214,6 +254,39 @@ void VehicleSettings::AddCollisionBox(JPH::Vec3 position, JPH::Vec3 scale)
 }
 
 
+void VehicleSettings::DebugGUI()
+{
+    if (!ImGui::Begin("Vehicle Settings", nullptr, ImGuiWindowFlags_NoFocusOnAppearing)) {
+        ImGui::End();
+        return;
+    }
+
+    /*
+    ImGui::Text("Suspension Min Length: %f", suspensionMinLength);
+    ImGui::Text("Suspension Max Length: %f", suspensionMaxLength);
+    ImGui::Text("Suspension Frequency: %f", suspensionFrequency);
+    ImGui::Text("Mass: %f", mass);
+    */
+
+    //ImGui::SliderFloat("Max Torque", &(maxTorque), 0.0, 1200.0);
+    //static_cast<JPH::WheeledVehicleController *>(mVehicleConstraint->GetController())->GetEngine().mMaxTorque = maxTorque;
+
+    // Suspension
+    //const float minLengthBefore = suspensionMinLength;
+    ImGui::SliderFloat("Suspension Min Length", &(suspensionMinLength), 0.0, 1.0);
+    ImGui::SliderFloat("Suspension Max Length", &(suspensionMaxLength), 0.0, 1.0);
+    ImGui::SliderFloat("Suspension Frequency", &(suspensionFrequency), 0.0, 8.0);
+    ImGui::SliderFloat("Suspension Damping", &(suspensionDamping), 0.0, 8.0);
+    for (JPH::Ref<JPH::WheelSettings> wheel : mWheels) {
+        wheel->mSuspensionMinLength = suspensionMinLength;
+        wheel->mSuspensionMaxLength = suspensionMaxLength;
+        wheel->mSuspensionSpring.mFrequency = suspensionFrequency;
+        wheel->mSuspensionSpring.mDamping = suspensionDamping;
+    }
+    ImGui::End();
+}
+
+
 bool Vehicle::IsWheelFlipped(int wheelIndex)
 {
     const JPH::WheelSettings *settings = mVehicleConstraint->GetWheels()[wheelIndex]
@@ -222,7 +295,7 @@ bool Vehicle::IsWheelFlipped(int wheelIndex)
 }
 
 
-JPH::WheelSettings* Vehicle::GetWheelFR()
+JPH::WheelSettings* VehicleSettings::GetWheelFR() const
 {
     for (JPH::WheelSettings* wheel : mWheels) {
         if (wheel->mPosition.GetX() < 0.0f && wheel->mPosition.GetZ() > 0.0) {
@@ -231,7 +304,7 @@ JPH::WheelSettings* Vehicle::GetWheelFR()
     }
     return nullptr;
 }
-JPH::WheelSettings* Vehicle::GetWheelFL()
+JPH::WheelSettings* VehicleSettings::GetWheelFL() const
 {
     for (JPH::WheelSettings* wheel : mWheels) {
         if (wheel->mPosition.GetX() > 0.0f && wheel->mPosition.GetZ() > 0.0) {
@@ -240,7 +313,7 @@ JPH::WheelSettings* Vehicle::GetWheelFL()
     }
     return nullptr;
 }
-JPH::WheelSettings* Vehicle::GetWheelRR()
+JPH::WheelSettings* VehicleSettings::GetWheelRR() const
 {
     for (JPH::WheelSettings* wheel : mWheels) {
         if (wheel->mPosition.GetX() < 0.0f && wheel->mPosition.GetZ() < 0.0) {
@@ -249,7 +322,7 @@ JPH::WheelSettings* Vehicle::GetWheelRR()
     }
     return nullptr;
 }
-JPH::WheelSettings* Vehicle::GetWheelRL()
+JPH::WheelSettings* VehicleSettings::GetWheelRL() const
 {
     for (JPH::WheelSettings* wheel : mWheels) {
         if (wheel->mPosition.GetX() > 0.0f && wheel->mPosition.GetZ() < 0.0) {
@@ -260,7 +333,27 @@ JPH::WheelSettings* Vehicle::GetWheelRL()
 }
 
 
-void Vehicle::Init(VehicleSettings &settings)
+
+JPH::WheelSettings* Vehicle::GetWheelRL()
+{
+    return mSettings->GetWheelRL();
+}
+
+JPH::WheelSettings* Vehicle::GetWheelRR()
+{
+    return mSettings->GetWheelRR();
+}
+
+JPH::WheelSettings* Vehicle::GetWheelFR()
+{
+    return mSettings->GetWheelFR();
+}
+JPH::WheelSettings* Vehicle::GetWheelFL()
+{
+    return mSettings->GetWheelFL();
+}
+
+void Vehicle::Init(const VehicleSettings &settings)
 {
     mSettings = &settings;
     JPH::PhysicsSystem &physicsSystem = Phys::GetPhysicsSystem();
@@ -273,6 +366,8 @@ void Vehicle::Init(VehicleSettings &settings)
     mWheelModel = settings.wheelModel;
 
     // Set up wheels
+    
+    /*
     JPH::Vec3 frontWheelUp = JPH::Vec3(SDL_sin(settings.frontCamber), SDL_cos(settings.frontCamber), 0.0);
     JPH::Vec3 rearWheelUp = JPH::Vec3(SDL_sin(settings.rearCamber), SDL_cos(settings.rearCamber), 0.0);
     JPH::Vec3 frontSteeringAxis = JPH::Vec3(-SDL_tan(settings.frontKingPin), 1, -SDL_tan(settings.frontCaster)).Normalized();
@@ -309,13 +404,14 @@ void Vehicle::Init(VehicleSettings &settings)
     fl->mPosition -= fl->mSuspensionDirection * settings.suspensionMinLength;
     rr->mPosition -= rr->mSuspensionDirection * settings.suspensionMinLength;
     rl->mPosition -= rl->mSuspensionDirection * settings.suspensionMinLength;
+    */
     
 
 
     // Create collision tester
-	//colTester = new VehicleCollisionTesterCastSphere(Layers::MOVING, 0.5f * wheel_width);
-	//colTester = new VehicleCollisionTesterCastCylinder(Layers::MOVING);
-	mColTester = new JPH::VehicleCollisionTesterRay(Phys::Layers::MOVING);
+    //colTester = new VehicleCollisionTesterCastSphere(Layers::MOVING, 0.5f * wheel_width);
+    //colTester = new VehicleCollisionTesterCastCylinder(Layers::MOVING);
+    mColTester = new JPH::VehicleCollisionTesterRay(Phys::Layers::MOVING);
     
 	// Create vehicle body
     JPH::RVec3 position(6, 3, 12);
@@ -324,10 +420,10 @@ void Vehicle::Init(VehicleSettings &settings)
                                               JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), 0.0f),
                                               JPH::EMotionType::Dynamic, Phys::Layers::MOVING);
 
-	carBodySettings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
-	carBodySettings.mMassPropertiesOverride.mMass = settings.mass;
-	mBody = bodyInterface.CreateBody(carBodySettings);
-	bodyInterface.AddBody(mBody->GetID(), JPH::EActivation::Activate);
+    carBodySettings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
+    carBodySettings.mMassPropertiesOverride.mMass = settings.mass;
+    mBody = bodyInterface.CreateBody(carBodySettings);
+    bodyInterface.AddBody(mBody->GetID(), JPH::EActivation::Activate);
 
 	// Create vehicle constraint
     JPH::VehicleConstraintSettings constraintSettings;
@@ -339,12 +435,12 @@ void Vehicle::Init(VehicleSettings &settings)
     controller->mEngine.mMaxTorque = settings.maxTorque;
 
     // Set which wheels are driven
-	controller->mDifferentials.resize(1);
+    controller->mDifferentials.resize(1);
     for (unsigned int i = 0; i < mWheels.size(); i++) {
-        if (mWheels[i].GetPtr() == fl) {
+        if (mWheels[i].GetPtr() == GetWheelFL()) {
             controller->mDifferentials[0].mLeftWheel = i;
         }
-        else if (mWheels[i].GetPtr() == fr) {
+        else if (mWheels[i].GetPtr() == GetWheelFR()) {
             controller->mDifferentials[0].mRightWheel = i;
         }
     }
@@ -353,26 +449,27 @@ void Vehicle::Init(VehicleSettings &settings)
     controller->mTransmission.mMode = JPH::ETransmissionMode::Auto;
     SDL_Log("%f", controller->mTransmission.mShiftUpRPM);
 
-	mVehicleConstraint = new JPH::VehicleConstraint(*mBody, constraintSettings);
-	physicsSystem.AddConstraint(mVehicleConstraint);
-	physicsSystem.AddStepListener(mVehicleConstraint);
+    mVehicleConstraint = new JPH::VehicleConstraint(*mBody, constraintSettings);
+    physicsSystem.AddConstraint(mVehicleConstraint);
+    physicsSystem.AddStepListener(mVehicleConstraint);
 
-	mVehicleConstraint->SetVehicleCollisionTester(mColTester);
+    mVehicleConstraint->SetVehicleCollisionTester(mColTester);
     mVehicleConstraint->SetPostCollideCallback(VehiclePostCollideCallback);
 
-    float &longGripRef = mSettings->longGrip;
-    float &latGripRef = mSettings->latGrip;
-	static_cast<JPH::WheeledVehicleController *>(mVehicleConstraint->GetController())->SetTireMaxImpulseCallback(
-		[&longGripRef, &latGripRef](JPH::uint, float &outLongitudinalImpulse, float &outLateralImpulse, float inSuspensionImpulse, float inLongitudinalFriction, float inLateralFriction, float, float, float)
-		{
-            JPH::uint velSteps = Phys::GetPhysicsSystem().GetPhysicsSettings()
-                                                         .mNumVelocitySteps;
-			outLongitudinalImpulse = velSteps * inLongitudinalFriction 
-                                     * inSuspensionImpulse
-                                     * longGripRef;
-			outLateralImpulse = inLateralFriction * inSuspensionImpulse
-                                * latGripRef;
-		});
+    const float &longGripRef = mSettings->longGrip;
+    const float &latGripRef = mSettings->latGrip;
+    static_cast<JPH::WheeledVehicleController *>(mVehicleConstraint->GetController())->SetTireMaxImpulseCallback(
+            [&longGripRef, &latGripRef](JPH::uint, float &outLongitudinalImpulse, float &outLateralImpulse, float inSuspensionImpulse, float inLongitudinalFriction, float inLateralFriction, float, float, float)
+            {
+        JPH::uint velSteps = Phys::GetPhysicsSystem().GetPhysicsSettings()
+                                                     .mNumVelocitySteps;
+                    outLongitudinalImpulse = velSteps * inLongitudinalFriction 
+                                 * inSuspensionImpulse
+                                 * longGripRef;
+                    outLateralImpulse = inLateralFriction * inSuspensionImpulse
+                            * latGripRef;
+            });
+    
 
     //RVec3 com = Phys::GetCarPos();
     //SDL_Log("car com (%f, %f, %f)", com.GetX(), com.GetY(), com.GetZ());
@@ -406,17 +503,41 @@ void Vehicle::Init(VehicleSettings &settings)
 
 void Vehicle::DebugGUI(unsigned int id)
 {
+    /*
     JPH::Vec3 flipX = JPH::Vec3(-1, 1, 1);
     JPH::WheelSettings *fr = GetWheelFR();
     JPH::WheelSettings *fl = GetWheelFL();
     JPH::WheelSettings *rr = GetWheelRR();
     JPH::WheelSettings *rl = GetWheelRL();
+    */
 
     char title[20];
     SDL_snprintf(title, 20, "Vehicle Debug %d", id);
     ImGui::Begin(title, nullptr, ImGuiWindowFlags_NoFocusOnAppearing);
 
 
+    //JPH::MassProperties massProperties = mBody->GetShape()->GetMassProperties();
+    JPH::MotionProperties* motionProperties = mBody->GetMotionProperties();
+    //massProperties.ScaleToMass(100.0);
+    //motionProperties->SetMassProperties(JPH::EAllowedDOFs::All, massProperties);
+
+    ImGui::Text("Mass: %f", 1.0 / motionProperties->GetInverseMass());
+
+    int i = 0;
+    for (JPH::Ref<JPH::WheelSettings> wheel : mWheels) {
+        ImGui::Text("Wheel %d", i++);
+        ImGui::Text("mSuspensionMinLength: %f", wheel->mSuspensionMinLength);
+        ImGui::Text("mSuspensionMaxLength: %f", wheel->mSuspensionMaxLength);
+        ImGui::Text("mFrequency: %f", wheel->mSuspensionSpring.mFrequency);
+        ImGui::Text("mDamping: %f", wheel->mSuspensionSpring.mDamping);
+        ImGui::Text("mWheelUp: %f, %f, %f", wheel->mWheelUp.GetX(), wheel->mWheelUp.GetY(), wheel->mWheelUp.GetZ());
+        ImGui::Text("mSteeringAxis: %f, %f, %f", wheel->mSteeringAxis.GetX(), wheel->mSteeringAxis.GetY(), wheel->mSteeringAxis.GetZ());
+        ImGui::Text("mSuspensionDirection: %f, %f, %f", wheel->mSuspensionDirection.GetX(), wheel->mSuspensionDirection.GetY(), wheel->mSuspensionDirection.GetZ());
+        ImGui::Text("mPosition: %f, %f, %f", wheel->mPosition.GetX(), wheel->mPosition.GetY(), wheel->mPosition.GetZ());
+    }
+
+    //JPH::MotionProperties* motionProperties = mBody->GetMotionProperties();
+    /*
     // Front Camber
     float frontCamberDeg = glm::degrees(mSettings->frontCamber);
     const float frontCamberBefore = frontCamberDeg;
@@ -513,6 +634,7 @@ void Vehicle::DebugGUI(unsigned int id)
     ImGui::Text("Position: %f, %f, %f", position.GetX(), position.GetY(), position.GetZ());
     ImGui::Text("Speed: %.1f kph", speedKPH);
 
+    */
     ImGui::End();
 }
 
@@ -704,11 +826,11 @@ JPH::WheeledVehicleController* Vehicle::GetController()
 
 float Vehicle::GetSpeedoSpeed()
 {
-    JPH::WheeledVehicleController *controller = GetController();
+    //JPH::WheeledVehicleController *controller = GetController();
     //JPH::VehicleTransmission *transmission = controller->GetTransmission();
     //float gearRatio = transmission->GetCurrentRatio();
     //float wheelSpeed = controller->GetWheelSpeedAtClutch();
-    float speed; 
+    float speed = 0.0; 
     // This might not be the best way to get an accurate measurement of what
     // the speedometer would say, but it's a start.
     // Assuming there is 4 wheels
@@ -771,6 +893,11 @@ void Vehicle::PrePhysicsUpdateAllVehicles(float delta)
     for (Vehicle *v : existingVehicles) {
         v->PrePhysicsUpdate(delta);
     }
+    /*
+    if (existingVehicles[0] != nullptr) {
+        existingVehicles[0]->PrePhysicsUpdate(delta);
+    }
+    */
 }
 
 void Vehicle::UpdateAllVehicles()

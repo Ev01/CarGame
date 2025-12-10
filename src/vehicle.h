@@ -29,6 +29,12 @@ struct VehicleSettings
     void AddCollisionBox(JPH::Vec3 position, JPH::Vec3 scale);
     // Loads the models
     void Init();
+    void DebugGUI();
+
+    JPH::WheelSettings* GetWheelFR() const;
+    JPH::WheelSettings* GetWheelFL() const;
+    JPH::WheelSettings* GetWheelRR() const;
+    JPH::WheelSettings* GetWheelRL() const;
 
     std::string modelFile;
     std::string wheelModelFile;
@@ -60,7 +66,7 @@ struct Vehicle
     bool IsWheelFlipped(int wheelIndex);
     void PrePhysicsUpdate(float delta);
     void Update();
-    void Init(VehicleSettings &settings);
+    void Init(const VehicleSettings &settings);
     void Destroy();
 
     // Puts on the handbrake and disables driving
@@ -99,12 +105,12 @@ struct Vehicle
 
     // The below 4 could probably be removed and just have a pointer to
     // VehicleSettings object instead.
-    Model *mVehicleModel;
-    Model *mWheelModel;
+    const Model *mVehicleModel;
+    const Model *mWheelModel;
     JPH::Ref<JPH::StaticCompoundShapeSettings> mCompoundShape;
     JPH::Array<JPH::Ref<JPH::WheelSettings>> mWheels;
 
-    VehicleSettings *mSettings = nullptr;
+    const VehicleSettings *mSettings = nullptr;
 
     JPH::Ref<JPH::VehicleConstraint> mVehicleConstraint;
     JPH::Ref<JPH::VehicleCollisionTester> mColTester;

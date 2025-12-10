@@ -304,7 +304,10 @@ void World::Update(float delta)
 
     Vehicle::UpdateAllVehicles();
 
-    ImGui::Begin("Maps", nullptr, ImGuiWindowFlags_NoFocusOnAppearing);
+    carSettings.DebugGUI();
+
+    ImGui::Begin("World", nullptr, ImGuiWindowFlags_NoFocusOnAppearing);
+
 
     //static int currentItem = 0;
     ImGui::Combo("Map", &gMapOption.selectedChoice, gMapOption.optionStrings, gMapOption.numOptions);
@@ -315,10 +318,14 @@ void World::Update(float delta)
         BeginRace();
     }
     ImGui::Text("Race Time: %f", raceTime);
+    if (ImGui::Button("Add player")) {
+        Player::AddPlayerAndVehicle(carSettings);
+    }
     ImGui::End();
     for (int i = 0; i < Vehicle::NumExistingVehicles(); i++) {
         Vehicle::GetExistingVehicles()[i]->DebugGUI(i);
     }
+
 }
 
 

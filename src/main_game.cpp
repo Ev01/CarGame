@@ -153,6 +153,7 @@ static void DebugGUI()
     else {
         ImGui::Text("Couldn't get GL swap interval (VSync)");
     }
+    
     ImGui::Checkbox("Dont skip physics step", &dontSkipPhysicsStep);
     const double fpsSliderMin = 0.0;
     const double fpsSliderMax = 300.0;
@@ -244,7 +245,6 @@ SDL_AppResult MainGame::Init()
 
     // Players
     Player::AddPlayer();
-    //Player::AddPlayer();
 
     UI::OpenMenu(&UI::mainMenu);
 

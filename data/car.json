@@ -11,8 +11,8 @@
     "long_grip": 1.5,
     "lat_grip": 1.5,
     "max_torque": 275.0,
-    "suspension_min_length": 0.1,
-    "suspension_max_length": 0.24,
-    "suspension_frequency":  2.24,
-    "suspension_damping":    0.427
+    "suspension_min_length": 0.082,
+    "suspension_max_length": 0.226,
+    "suspension_frequency":  1.745,
+    "suspension_damping":    0.481
 }

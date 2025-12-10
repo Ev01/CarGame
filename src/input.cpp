@@ -485,11 +485,11 @@ static void EventListenNewKeyboard(SDL_Event *event)
         // last keyboard pressed to 0
         if (event->key.scancode == SDL_SCANCODE_RETURN) {
             lastKeyboardPressedReturn = event->key.which;
-            SDL_Log("%d pressed return", event->key.which);
+            //SDL_Log("%d pressed return", event->key.which);
         }
         else if (event->key.scancode == SDL_SCANCODE_UP) {
             lastKeyboardPressedUp = event->key.which;
-            SDL_Log("%d pressed up", event->key.which);
+            //SDL_Log("%d pressed up", event->key.which);
         }
     }
     else if (event->type == SDL_EVENT_KEY_UP) {
@@ -569,7 +569,7 @@ void Input::HandleEvent(SDL_Event *event)
                 break;
             }
         }
-        SDL_Log("keyboard id %d", event->key.which);
+        //SDL_Log("keyboard id %d", event->key.which);
     }
     else if (event->type == SDL_EVENT_GAMEPAD_ADDED) {
         SDL_JoystickID joyId = event->gdevice.which;
