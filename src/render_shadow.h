@@ -1,8 +1,9 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include "render_lights.h"
-#include "shader.h"
+
+// Forward declarations
+struct ShaderProg;
 
 namespace Render {
     //void PrepareShadowForLight(int shadowIdx, int spotLightIdx);

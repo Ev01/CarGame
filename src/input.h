@@ -105,6 +105,7 @@ struct RealKeyboard {
     bool IsValid() { return id != 0; }
 
     Uint8 keyState[SDL_SCANCODE_COUNT];
+    // TODO: This should probably just be an array.
     std::unordered_set<SDL_KeyboardID> rawKeyboardIDs;
 
 

@@ -1,15 +1,18 @@
 #pragma once
 
+#include "texture.h"
+
 #include <glm/glm.hpp>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
 #include <vector>
-#include "shader.h"
-#include "texture.h"
-
 #include <memory>
+
+
+// Forward declarations
+struct ShaderProg;
 
 using node_callback_t = bool (*)(const aiNode *node, aiMatrix4x4 transform);
 using light_callback_t = void (*)(const aiLight *light, const aiNode *node, aiMatrix4x4 transform);

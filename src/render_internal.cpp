@@ -12,7 +12,8 @@
 #include "vehicle.h"
 #include "player.h"
 #include "ui.h"
-#include "options.h"
+#include "shader.h"
+//#include "options.h"
 
 #include "../vendor/imgui/imgui.h"
 #include "../vendor/imgui/backends/imgui_impl_opengl3.h"

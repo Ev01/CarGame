@@ -4,13 +4,15 @@
  */
 #pragma once
 
-#include "font.h"
-#include "shader.h"
-#include "texture.h"
-#include "model.h"
-#include "ui.h"
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
+
+// Forward declarations
+struct ShaderProg;
+struct Texture;
+struct Model;
+struct Material;
+enum UIAnchor : unsigned int;
 
 extern unsigned int fbo;
 extern unsigned int rbo;
@@ -35,8 +37,6 @@ extern ShaderProg screenShader;
 
 extern bool doSplitScreen;
 extern SDL_Window *window;
-
-
 
 namespace Render {
     void CreateFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned int *aRBO, 

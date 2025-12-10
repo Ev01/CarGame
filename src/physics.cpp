@@ -77,7 +77,7 @@ static void traceImpl(const char *inFMT, ...)
 	va_end(list);
 
 	// Print to the TTY
-	SDL_Log(buffer);
+	SDL_Log("%s", buffer);
 }
 
 

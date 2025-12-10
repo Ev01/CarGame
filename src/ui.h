@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
 
-enum UIAnchor {
+enum UIAnchor : unsigned int {
     UI_ANCHOR_CENTRE       = 0,
     UI_ANCHOR_RIGHT        = 0b0001,
     UI_ANCHOR_LEFT         = 0b0010,

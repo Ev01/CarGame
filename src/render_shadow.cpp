@@ -6,6 +6,7 @@
 #include "render.h" // TODO: Remove this include
 #include "glerr.h"
 #include "player.h"
+#include "shader.h"
 
 #include "../glad/glad.h"
 
@@ -130,8 +131,8 @@ void Render::CreateShadowTextureArray(unsigned int *outTex,
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     */
     GLERR;
-    float borderColour[] = {defaultLighting, defaultLighting, 
-                            defaultLighting, defaultLighting};
+    //float borderColour[] = {defaultLighting, defaultLighting, 
+    //                        defaultLighting, defaultLighting};
     //glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColour);
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
     GLERR;
@@ -213,7 +214,7 @@ void Render::ShadowPass()
 
     // Render shadows for some spotlights
     int shadowNum = 0;
-    size_t i = 0;
+    int i = 0;
     glBindFramebuffer(GL_FRAMEBUFFER, spotShadowFBO);
     glClear(GL_DEPTH_BUFFER_BIT);
     for (; shadowNum < MAX_SPOT_SHADOWS && i < GetSpotLightsSize(); i++) {

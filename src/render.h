@@ -1,8 +1,5 @@
 #pragma once
 
-#include "camera.h"
-#include "render_lights.h"
-#include "font.h"
 
 #include <glm/glm.hpp>
 #include <assimp/scene.h>
@@ -11,6 +8,13 @@
 
 // forward declarations
 struct ShaderProg;
+struct Camera;
+namespace Render {
+    struct SunLight;
+}
+namespace Font {
+    struct Face;
+}
 
 namespace Render {
     bool Init();

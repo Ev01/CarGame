@@ -232,7 +232,7 @@ bool RealKeyboard::ContainsRawKeyboard(SDL_KeyboardID rawID)
 }
 void RealKeyboard::HandleEvent(SDL_Event *event)
 {
-    if (event->type != SDL_EVENT_KEY_DOWN && event->type != SDL_EVENT_KEY_UP
+    if ((event->type != SDL_EVENT_KEY_DOWN && event->type != SDL_EVENT_KEY_UP)
             || !ContainsRawKeyboard(event->key.which)) {
         return;
     }
@@ -438,6 +438,7 @@ void Input::NewFrame()
 }
 
 
+/*
 static bool IsKeyboardRegistered(SDL_KeyboardID keyboardID)
 {
     for (int i = 0; i < numKeyboards; i++) {
@@ -447,6 +448,7 @@ static bool IsKeyboardRegistered(SDL_KeyboardID keyboardID)
     }
     return false;
 }
+*/
 
 
 // Returns true if the keyboard id is registered as part of a real keyboard.
