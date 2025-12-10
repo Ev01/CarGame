@@ -29,7 +29,12 @@ static Render::SpotLightShadow spotLightShadows[MAX_SPOT_SHADOWS];
 //static unsigned int spotShadowTexArray;
 static unsigned int spotShadowTexAtlas;
 static unsigned int spotShadowFBO;
-constexpr unsigned int SPOT_SHADOW_SIZE = 2048;
+
+// TODO: rename to cSpotShadowSize
+static constexpr unsigned int SPOT_SHADOW_SIZE = 2048;
+
+static constexpr float cSpotShadowNear = 0.2f;
+static constexpr float cSpotShadowFar = 40.0f;
 
 //unsigned int testShadowFBO;
 //unsigned int testShadowTex;
@@ -41,13 +46,10 @@ void Render::PrepareShadowForLight(int spotShadowNum, int spotLightIdx)
 
     glm::mat4 lightView = glm::lookAt(
             sl->mPosition, sl->mPosition + sl->mDirection, up);
-    // TODO: clean up and optimize
-    const float nearPlane = 0.2f;
-    const float farPlane = 40.0f;
     // The projection that will be used to render the scene from the light's
     // perspective
     glm::mat4 lightProjection = glm::perspective(SDL_acosf(sl->mCutoffOuter) * 2.0f,
-                                       1.0f, nearPlane, farPlane);
+                                       1.0f, cSpotShadowNear, cSpotShadowFar);
     spotShadow.lightSpaceMatrix = lightProjection * lightView;
     // Store which light this shadow is for so that when rendering lights later
     // on, they will use the correct shadows.
