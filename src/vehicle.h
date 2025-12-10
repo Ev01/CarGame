@@ -27,8 +27,9 @@ struct VehicleSettings
 {
     void AddWheel(JPH::Vec3 position, bool isSteering, float wheelRadius, float wheelWidth);
     void AddCollisionBox(JPH::Vec3 position, JPH::Vec3 scale);
-    // Loads the models
+    // Loads the models and apply suspension settings to the wheels.
     void Init();
+    void Destroy();
     void DebugGUI();
 
     JPH::WheelSettings* GetWheelFR() const;

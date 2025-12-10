@@ -372,6 +372,7 @@ void World::Init()
 void World::CleanUp()
 {
     Vehicle::DestroyAllVehicles();
+    carSettings.Destroy();
 }
 
 

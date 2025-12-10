@@ -172,11 +172,9 @@ VehicleSettings GetVehicleSettingsFromFile(const char* filename)
 
 void VehicleSettings::Init()
 {
-    // TODO: Destroy these models
     PrepareLoadCar(this);
     vehicleModel = LoadModel(modelFile.c_str(), CarNodeCallback);
     wheelModel = LoadModel(wheelModelFile.c_str());
-
 
     JPH::WheelSettings *fr = GetWheelFR();
     JPH::WheelSettings *fl = GetWheelFL();
@@ -216,6 +214,12 @@ void VehicleSettings::Init()
     fl->mPosition -= fl->mSuspensionDirection * suspensionMinLength;
     rr->mPosition -= rr->mSuspensionDirection * suspensionMinLength;
     rl->mPosition -= rl->mSuspensionDirection * suspensionMinLength;
+}
+
+void VehicleSettings::Destroy()
+{
+    delete vehicleModel;
+    delete wheelModel;
 }
 
 
