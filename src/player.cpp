@@ -10,12 +10,6 @@
 Player gPlayers[MAX_PLAYERS];
 int gNumPlayers = 0;
 
-// Camera Settings
-static float camPitch = -0.4f;
-static float camDist = 3.7f;
-static float angleSmooth = 3.5f;
-//static float distSmooth = 17.0f;
-static float distSmooth = 500.0f;
 
 void Player::CreateAndUseVehicle(VehicleSettings &settings)
 {
