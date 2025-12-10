@@ -131,12 +131,27 @@ Undated
 NOTE: I couldn't get array textures to work, so I am using a single texture
 atlas that stores all shadows side by side.
 
+05/12 - 11/12
+- [x] Speedometer
+- [x] Start on UI / menu screen
+
+
+- [ ] Add titles to menus 
+- [ ] Add player button in menu screen
+- [ ] Prompt player to press a button when adding player. Detects which input
+      device they are using.
+- [ ] Checkpoints that look like archways.
+- [ ] Simple end race screen.
+- [ ] Players can progress through the race independently.
+
+- [ ] Add VSync option to menu.
+- [ ] Add display settings to menu (windowed/fullscreen + video resolution)
+- [ ] Enable and disable shadows at runtime.
 
 - [ ] Look into this error. Happened on map1: JPH ASSERT FAILED: C:/Users/Ev/Documents/c/JoltPhysics/Jolt/Geometry/EPAPenetrationDepth.h:115: (!ioV.IsNearZero())
 - [ ] Get model from filename anywhere without loading it twice. When loading a
       model, it will save it to an array if loading it for the first time. Later
       load calls will return a pointer to the already loaded model.
-- [ ] Speedometer
 - [ ] Luminosity
 - [ ] Crash sound effect
 - [ ] Adjust drift volume
@@ -153,5 +168,4 @@ atlas that stores all shadows side by side.
 - [ ] Reflections from cubemap / IBL
 - [ ] Make tree with branch texture
 - [ ] Make bushes
-- [ ] Start on UI / menu screen
 
