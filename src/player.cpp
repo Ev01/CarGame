@@ -160,10 +160,10 @@ float Player::GetSignedInputForAction(GameAction negAction, GameAction posAction
 }
 
 
-void Player::AddPlayer()
+int Player::AddPlayer()
 {
     gPlayers[gNumPlayers].Init();
-    gNumPlayers++;
+    return gNumPlayers++;
 }
 
 void Player::AddPlayerAndVehicle(VehicleSettings &settings)

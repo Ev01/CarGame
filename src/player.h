@@ -50,7 +50,7 @@ struct Player {
     float GetSignedInputForAction(GameAction negAction, GameAction posAction);
     void DebugGUI();
 
-    static void AddPlayer();
+    static int AddPlayer();
     static void AddPlayerAndVehicle(VehicleSettings &settings);
     static void PhysicsUpdateAllPlayers(double delta);
     static void InputUpdateAllPlayers();

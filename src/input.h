@@ -103,17 +103,19 @@ struct RealKeyboard {
     const char *GetName();
     int GetID()    { return id; }
     bool IsValid() { return id != 0; }
+    void AddSDLKeyboard(SDL_KeyboardID keyboard);
 
     Uint8 keyState[SDL_SCANCODE_COUNT];
     // TODO: This should probably just be an array.
     std::unordered_set<SDL_KeyboardID> rawKeyboardIDs;
-
+    bool justRegistered = false;
 
     // Increments every time an id is assigned. Use this to assign a unique id.
     static int idCounter;
     // Get a pointer to the real keyboard given its id. Returns nullptr if the
     // id is invalid.
     static RealKeyboard* GetByID(int id);
+
 
 private:
     int id = 0;
@@ -143,7 +145,12 @@ namespace Input
     int GetNumRealKeyboards();
     void HandleEvent(SDL_Event *event);
     SDL_Gamepad* GetGamepad();
+    // Return the first gamepad that is pressing A. Or nullptr if no gamepad is
+    // pressing A.
+    SDL_Gamepad* ListenGamepadPressA();
+    int ListenKeyboardPressJoin();
     void DebugGUI();
     void Update();
     void NewFrame();
+    int EventListenNewKeyboard(SDL_Event *event);
 }

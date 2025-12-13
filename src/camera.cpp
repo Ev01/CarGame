@@ -36,6 +36,7 @@ void Camera::CalcProjection()
 {
     // If fails, has Init been called?
     SDL_assert(fov != 0.0 && aspect != 0.0 && near != 0.0 && far != 0.0);
+    //SDL_Log("Aspect: %f", aspect);
     projection = glm::perspective(fov, aspect, near, far);
 }
 

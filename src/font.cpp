@@ -38,7 +38,7 @@ Font::Face* Font::CreateFaceFromFile(const char* filename)
         SDL_Log("Failed to load font");
     }
 
-    FT_Set_Pixel_Sizes(ftFace, 0, 48);
+    FT_Set_Pixel_Sizes(ftFace, 0, 24);
     if (FT_Load_Char(ftFace, 'X', FT_LOAD_RENDER)) {
         SDL_Log("Failed to load glyph");
     }

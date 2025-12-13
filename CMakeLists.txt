@@ -62,6 +62,7 @@ PRIVATE
     src/render_internal.cpp
     src/render_lights.cpp
     src/render_shadow.cpp
+    src/render_ui.cpp
     src/world.cpp
     src/player.cpp
     src/ui.cpp

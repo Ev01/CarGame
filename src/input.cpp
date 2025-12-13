@@ -260,6 +260,7 @@ void RealKeyboard::NewFrame()
         // Erase all flags except for pressed flag
         keyState[j] &= KEY_STATE_FLAG_PRESSED;
     }
+    justRegistered = false;
 }
 RealKeyboard* RealKeyboard::GetByID(int id)
 {
@@ -284,13 +285,34 @@ bool RealKeyboard::IsScanDown(SDL_Scancode scancode)
 }
 
 
+bool RealKeyboard::IsScanJustPressed(SDL_Scancode scancode)
+{
+    if (!IsValid()) return false;
+    return keyState[scancode] & KEY_STATE_FLAG_JUST_PRESSED;
+}
+
+
+bool RealKeyboard::IsScanJustReleased(SDL_Scancode scancode)
+{
+    if (!IsValid()) return false;
+    return keyState[scancode] & KEY_STATE_FLAG_JUST_RELEASED;
+}
+
+
+void RealKeyboard::AddSDLKeyboard(SDL_KeyboardID keyboard)
+{
+    rawKeyboardIDs.insert(keyboard);
+}
+
+
 // rawIDs: An array of SDL_KeyboardIDs that belong to this real keyboard.
 // count: The size of rawIDs array.
-static void RegisterRealKeyboard(const SDL_KeyboardID *rawIDs,
+// Returns id of registered keyboard
+static int RegisterRealKeyboard(const SDL_KeyboardID *rawIDs,
                                  unsigned int count)
 {
     SDL_assert(count > 0);
-    if (numRealKeyboards >= MAX_KEYBOARDS) return;
+    if (numRealKeyboards >= MAX_KEYBOARDS) return -1;
 
     int idx = 0;
     // Get the idx of the next unused keyboard slot
@@ -300,10 +322,12 @@ static void RegisterRealKeyboard(const SDL_KeyboardID *rawIDs,
     SDL_Log("Registering real keyboard...");
     for (unsigned int i = 0; i < count; i++) {
         SDL_Log("Raw keyboard id %d", rawIDs[i]);
-        realKeyboards[idx].rawKeyboardIDs.insert(rawIDs[i]);
+        //realKeyboards[idx].rawKeyboardIDs.insert(rawIDs[i]);
+        realKeyboards[idx].AddSDLKeyboard(rawIDs[i]);
     }
+    realKeyboards[idx].justRegistered = true;
     SDL_Log("End register");
-    numRealKeyboards++;
+    return numRealKeyboards++;
 }
 
 
@@ -438,6 +462,17 @@ void Input::NewFrame()
 }
 
 
+SDL_Gamepad* Input::ListenGamepadPressA()
+{
+    for (int i = 0; i < numOpenedGamepads; i++) {
+        if (GetGamepadButton(gamepads[i], SDL_GAMEPAD_BUTTON_SOUTH)) {
+            return gamepads[i];
+        }
+    }
+    return nullptr;
+}
+
+
 /*
 static bool IsKeyboardRegistered(SDL_KeyboardID keyboardID)
 {
@@ -449,6 +484,21 @@ static bool IsKeyboardRegistered(SDL_KeyboardID keyboardID)
     return false;
 }
 */
+
+int Input::ListenKeyboardPressJoin()
+{
+    for (int i = 0; i < MAX_KEYBOARDS; i++) {
+        if (!realKeyboards[i].IsValid()) return 0;
+        // If the keyboard was just registered this frame, it means it is
+        // already pressing up and return.
+        if (realKeyboards[i].justRegistered || 
+                (realKeyboards[i].IsScanDown(SDL_SCANCODE_UP) 
+                && realKeyboards[i].IsScanDown(SDL_SCANCODE_RETURN))) {
+            return realKeyboards[i].GetID();
+        }
+    }
+    return 0;
+}
 
 
 // Returns true if the keyboard id is registered as part of a real keyboard.
@@ -468,18 +518,18 @@ static bool IsRawKeyboardRegistered(SDL_KeyboardID keyboardID)
 }
 
 
-static void EventListenNewKeyboard(SDL_Event *event)
+int Input::EventListenNewKeyboard(SDL_Event *event)
 {
     if (event->type != SDL_EVENT_KEY_DOWN && event->type != SDL_EVENT_KEY_UP) {
-        return;
+        return -1;
     }
     
     if (IsRawKeyboardRegistered(event->key.which)) {
-        return;
+        return -1;
     }
     
-    static SDL_KeyboardID lastKeyboardPressedReturn = 0;
-    static SDL_KeyboardID lastKeyboardPressedUp = 0;
+    static int lastKeyboardPressedReturn = -1;
+    static int lastKeyboardPressedUp = -1;
 
 
     if (event->type == SDL_EVENT_KEY_DOWN) {
@@ -496,23 +546,33 @@ static void EventListenNewKeyboard(SDL_Event *event)
     }
     else if (event->type == SDL_EVENT_KEY_UP) {
         if (event->key.scancode == SDL_SCANCODE_RETURN) {
-            lastKeyboardPressedReturn = 0;
+            lastKeyboardPressedReturn = -1;
         }
         else if (event->key.scancode == SDL_SCANCODE_UP) {
-            lastKeyboardPressedUp = 0;
+            lastKeyboardPressedUp = -1;
         }
     }
 
-    if (lastKeyboardPressedUp && lastKeyboardPressedReturn) {
+    if (lastKeyboardPressedUp > 0 && lastKeyboardPressedReturn > 0) {
         // Register the keyboard with these ids
         SDL_Log("Register");
-        const SDL_KeyboardID rawIDs[] = {lastKeyboardPressedReturn,
-                                         lastKeyboardPressedUp};
-        RegisterRealKeyboard(rawIDs, 2);
-        lastKeyboardPressedUp = 0;
-        lastKeyboardPressedReturn = 0;
+        const SDL_KeyboardID rawIDs[] = {(SDL_KeyboardID)lastKeyboardPressedReturn,
+                                         (SDL_KeyboardID)lastKeyboardPressedUp};
+        lastKeyboardPressedUp = -1;
+        lastKeyboardPressedReturn = -1;
+        return RegisterRealKeyboard(rawIDs, 2);
     }
-
+    else if (lastKeyboardPressedUp == 0 && lastKeyboardPressedReturn == 0) {
+        // The user is using an unidentifiable keyboard. Could be on system
+        // that doesn't differentiate keyboards.
+        SDL_Log("Register keyboard 0");
+        lastKeyboardPressedUp = -1;
+        lastKeyboardPressedReturn = -1;
+        const SDL_KeyboardID rawID = 0;
+        return RegisterRealKeyboard(&rawID, 1);
+    }
+    // If no keyboard was registered
+    return -1;
 }
 
 
@@ -533,12 +593,6 @@ static void DeregisterKeyboard(SDL_KeyboardID kID)
 
 void Input::HandleEvent(SDL_Event *event)
 {
-    for (int i = 0; i < MAX_KEYBOARDS; i++) {
-        if (!realKeyboards[i].IsValid()) {
-            continue;
-        }
-        realKeyboards[i].HandleEvent(event);
-    }
     if (event->type == SDL_EVENT_KEYBOARD_ADDED) {
         SDL_Log("keyboard added. id %d at time %lu",
                 event->kdevice.which, event->kdevice.timestamp);
@@ -555,6 +609,7 @@ void Input::HandleEvent(SDL_Event *event)
         scancodesDown[event->key.scancode] = event->key.down;
         for (int i = 0; i < numKeyboards; i++) {
             if (keyboards[i] == event->key.which) {
+                // Clear the pressed flag
                 keyboardStates[i][event->key.scancode] &= ~KEY_STATE_FLAG_PRESSED;
                 if (event->key.down) {
                     keyboardStates[i][event->key.scancode] |= 
@@ -597,6 +652,13 @@ void Input::HandleEvent(SDL_Event *event)
                 break;
             }
         }
+    }
+
+    for (int i = 0; i < MAX_KEYBOARDS; i++) {
+        if (!realKeyboards[i].IsValid()) {
+            continue;
+        }
+        realKeyboards[i].HandleEvent(event);
     }
 }
 

@@ -5,18 +5,13 @@
 #include "../glad/glad.h"
 #include "glerr.h"
 #include "convert.h"
-#include "font.h"
 #include "model.h"
 #include "world.h"
-#include "main_game.h"
 #include "vehicle.h"
 #include "player.h"
-#include "ui.h"
 #include "shader.h"
-//#include "options.h"
 
 #include "../vendor/imgui/imgui.h"
-#include "../vendor/imgui/backends/imgui_impl_opengl3.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -28,6 +23,8 @@
 unsigned int textVAO, textVBO;
 unsigned int quadVAO;
 unsigned int quadVBO;
+unsigned int uiQuadVAO;
+unsigned int uiQuadVBO;
 unsigned int fbo;
 unsigned int rbo;
 unsigned int textureColourBuffer;
@@ -46,14 +43,14 @@ glm::mat4 uiProj;
 ShaderProg simpleDepthShader;
 ShaderProg pbrShader;
 ShaderProg screenShader;
+ShaderProg uiShader;
+ShaderProg textShader;
 
-bool doSplitScreen = false;
+bool doSplitScreen = true;
 SDL_Window *window;
 
 static ShaderProg skyboxShader;
 static ShaderProg rawScreenShader;
-static ShaderProg textShader;
-static ShaderProg uiShader;
 static ShaderProg samplerArrayTestShader;
 
 static Texture skyboxTex;
@@ -109,12 +106,22 @@ static float skyboxVertices[] = {
 
 static float quadVertices[] = {
     // Positions  // Tex Coords
-    -1.0f, 1.0f,  0.0f, 1.0f,     // Top left
-    1.0f, 1.0f,    1.0f, 1.0f,     // Top right
-    1.0f, -1.0f,   1.0f, 0.0f,    // Bottom right
-    1.0f, -1.0f,   1.0f, 0.0f,    // Bottom right
-    -1.0f, -1.0f, 0.0f, 0.0f,    // Bottom left
-    -1.0f, 1.0f,  0.0f, 1.0f      // Top left
+    -1.0f,  1.0f,  0.0f, 1.0f,    // Top left
+     1.0f,  1.0f,  1.0f, 1.0f,    // Top right
+     1.0f, -1.0f,  1.0f, 0.0f,    // Bottom right
+     1.0f, -1.0f,  1.0f, 0.0f,    // Bottom right
+    -1.0f, -1.0f,  0.0f, 0.0f,    // Bottom left
+    -1.0f,  1.0f,  0.0f, 1.0f     // Top left
+};
+
+static float uiQuadVertices[] = {
+    // Positions  // Tex Coords
+    0.0f, 1.0f,   0.0f, 1.0f,    // Top left
+    1.0f, 1.0f,   1.0f, 1.0f,    // Top right
+    1.0f, 0.0f,   1.0f, 0.0f,    // Bottom right
+    1.0f, 0.0f,   1.0f, 0.0f,    // Bottom right
+    0.0f, 0.0f,   0.0f, 0.0f,    // Bottom left
+    0.0f, 1.0f,   0.0f, 1.0f     // Top left
 };
 
 void Render::CreateFramebuffer(unsigned int *aFBO, unsigned int *aCbTex, unsigned int *aRBO, 
@@ -314,6 +321,9 @@ void Render::LoadShaders()
     unsigned int vUI = CreateShaderFromFile("shaders/v_ui.glsl", GL_VERTEX_SHADER);
     unsigned int fUI = CreateShaderFromFile("shaders/f_ui.glsl", GL_FRAGMENT_SHADER);
     uiShader = CreateAndLinkShaderProgram(vUI, fUI);
+    glUseProgram(uiShader.id);
+    // Initialise uniform for ui shader
+    uiShader.SetVec4((char*)"colourMod", 1.0, 1.0, 1.0, 1.0);
 
     unsigned int fSamplerArrayTest = CreateShaderFromFile("shaders/f_samplerarray_test.glsl",
                                                           GL_FRAGMENT_SHADER);
@@ -377,16 +387,21 @@ void Render::CreateQuadVAO()
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glBindVertexArray(0);
+
+    // Create the UI Quad, which has bottom left at 0, 0 and not -1, -1.
+    glGenVertexArrays(1, &uiQuadVAO);
+    glGenBuffers(1, &uiQuadVBO);
+    glBindVertexArray(uiQuadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, uiQuadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(uiQuadVertices), &uiQuadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glBindVertexArray(0);
 }
 
 
-void Render::UpdatePlayerCamAspectRatios()
-{
-        float aspect = Render::ScreenAspect();
-        for (int i = 0; i < gNumPlayers; i++) {
-            gPlayers[i].cam.cam.SetAspectRatio(aspect);
-        }
-}
 
 
 void Render::DebugGUI()
@@ -479,38 +494,6 @@ void Render::DebugGUI()
 }
 
 
-void Render::RenderUIAnchored(Texture tex, glm::vec2 scale, glm::vec2 margin,
-                             float rotation, UIAnchor anchor,
-                             float boundX, float boundY,
-                             float boundW, float boundH)
-{
-    glm::mat4 trans = glm::mat4(1.0);
-    glm::vec2 pos;
-    //float boundW  = (float)screenWidth;
-    //float boundH = (float)screenHeight;
-    if (boundW == 0.0) boundW = (float)screenWidth;
-    if (boundH == 0.0) boundH = (float)screenHeight;
-    
-    // Divide scale because the quad is originally 2 wide and 2 high.
-    scale = scale / 2.0f;
-
-    pos = UI::GetPositionAnchored(scale, margin, anchor, boundX, boundY, boundW, boundH);
-    trans = glm::translate(trans, glm::vec3(pos.x, pos.y, 0.0f));
-    trans = glm::rotate(trans, rotation, glm::vec3(0, 0, 1));
-    trans = glm::scale(trans, glm::vec3(scale.x, scale.y, 1.0f));
-
-    glViewport(0, 0, screenWidth, screenHeight);
-
-    // Draw the texture
-    glUseProgram(uiShader.id);
-    GLERR;
-    uiShader.SetMat4fv((char*)"trans", glm::value_ptr(trans));
-    uiShader.SetMat4fv((char*)"proj", glm::value_ptr(uiProj));
-    glBindVertexArray(quadVAO);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, tex.id);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-}
 
 
 void Render::GetPlayerSplitScreenBounds(int playerNum, int *outX, int *outY,
@@ -552,112 +535,12 @@ void Render::GetPlayerSplitScreenBounds(int playerNum, int *outX, int *outY,
 }
 
 
-void Render::RenderPlayerTachometer(int playerNum)
-{
-    int boundX, boundY, boundW, boundH;
-    GetPlayerSplitScreenBounds(playerNum, &boundX, &boundY, &boundW, &boundH);
-    RenderUIAnchored(tachoMeterTex, glm::vec2(256.0f, 256.0f),
-                     glm::vec2(-32.0f, 32.0f), 0.0, UI_ANCHOR_BOTTOM_RIGHT,
-                     boundX, boundY, boundW, boundH);
-
-    // Draw the needle
-    Player &p = gPlayers[playerNum];
-    const glm::vec2 margin = glm::vec2(-32.0f, 32.0f);
-    const glm::vec2 scale = glm::vec2(256.0f, 256.0f);
-    if (p.vehicle != NULL) {
-        float rpm = p.vehicle->GetEngineRPM();
-        // Change these constants based on the tachometer graphic.
-        const float zeroAngle = 0.74;
-        const float angleRange = 4.28;
-        const float rpmRange = 8000.0;
-        float needleAngle = zeroAngle - rpm / rpmRange * angleRange;
-        RenderUIAnchored(tachoNeedleTex, scale, margin, needleAngle, 
-                UI_ANCHOR_BOTTOM_RIGHT, boundX, boundY, boundW, boundH);
-
-        //int vehKph = (int) (p.vehicle->GetLongVelocity() * 3.6);
-        int vehKph = SDL_abs (p.vehicle->GetSpeedoSpeed() * 3.6);
-        //char vehKphStr[16];
-        //SDL_itoa(vehKph, vehKphStr, 10);
-        // TODO: Make this easier to position
-        Render::RenderText(Font::defaultFace, textShader, std::to_string(vehKph), 
-                screenWidth + margin.x - scale.x / 2.0 - 10.0f,
-                margin.y + scale.y / 2.0 - 60.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
-    }
-
-}
 
 
 
-static void DrawMenu()
-{
-    const float scale = 0.5f;
-    UI::Menu* menu = UI::GetCurrentMenu();
-    if (menu == nullptr) return;
-
-    for (int i = 0; i < menu->numItems; i++) {
-        bool isSelected = menu->selectedIdx == i;
-        glm::vec3 col = isSelected ? glm::vec3(0.0, 0.0, 0.0) : glm::vec3(0.3, 0.3, 0.3);
-        float yOffset = -Font::defaultFace->GetLineHeight() * scale * i;
-        char text[64];
-        menu->items[i].GetText(text, 64);
-        float width = Font::defaultFace->GetWidthOfText(text, SDL_strlen(text)) * scale;
-        glm::vec2 pos = UI::GetPositionAnchored(
-                glm::vec2(width, 0.0), glm::vec2(0.0, yOffset),
-                UI_ANCHOR_CENTRE, 0, 0, screenWidth, screenHeight);
-        Render::RenderText(Font::defaultFace, textShader, text, pos.x, pos.y,
-                           scale, col);
-    }
-}
 
 
 
-void Render::GuiPass()
-{
-    if (MainGame::gGameState == GAME_PRESS_START_SCREEN) {
-        /*
-        Render::RenderText(Font::defaultFace, textShader, "Hello!!! This is a sentence.",
-                           25.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f));
-        Render::RenderText(Font::defaultFace, textShader, "Press Enter and up arrow to start...", 
-                           100.0f, 100.0f, 0.5f, glm::vec3(0.0, 0.0f, 0.0f));
-        */
-
-    }
-    // Render the current menu
-    DrawMenu();
-    /*
-    const float scale = 0.5f;
-    UI::Menu* menu = UI::GetCurrentMenu();
-    if (menu != nullptr) {
-        for (int i = 0; i < menu->numItems; i++) {
-            bool isSelected = menu->selectedIdx == i;
-            glm::vec3 col = isSelected ? glm::vec3(0.0, 0.0, 0.0) : glm::vec3(0.3, 0.3, 0.3);
-            float yOffset = -Font::defaultFace->GetLineHeight() * scale * i;
-            char text[64];
-            menu->items[i].GetText(text, 64);
-            float width = Font::defaultFace->GetWidthOfText(text, SDL_strlen(text)) * scale;
-            glm::vec2 pos = UI::GetPositionAnchored(
-                    glm::vec2(width, 0.0), glm::vec2(0.0, yOffset),
-                    UI_ANCHOR_CENTRE, 0, 0, screenWidth, screenHeight);
-            Render::RenderText(Font::defaultFace, textShader, text, pos.x, pos.y,
-                               scale, col);
-        }
-    }
-    */
-
-    // Render the tachometer for all players
-    if (MainGame::gGameState == GAME_IN_WORLD) {
-        for (int i = 0; i < gNumPlayers; i++) {
-            RenderPlayerTachometer(i);
-            // Only render player 1 if doSplitScreen is off.
-            if (!doSplitScreen) break;
-        }
-    }
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-    
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}
 
 
 void Render::RenderSceneSplitScreen()
@@ -670,6 +553,7 @@ void Render::RenderSceneSplitScreen()
         GetPlayerSplitScreenBounds(i, &xOffset, &yOffset, 
                                    &playerScreenWidth, &playerScreenHeight);
         GLERR;
+        //SDL_Log("%d, %d", playerScreenWidth, playerScreenHeight);
         glViewport(xOffset, yOffset, playerScreenWidth, playerScreenHeight);
         GLERR;
         Render::RenderScene(gPlayers[i].cam.cam);

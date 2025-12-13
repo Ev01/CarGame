@@ -192,6 +192,7 @@ void MainGame::StartWorld()
     UI::CloseAllMenus();
     Phys::SetupSimulation();
     World::Init();
+    Render::UpdatePlayerCamAspectRatios();
     MainGame::gGameState = GAME_IN_WORLD;
 }
 
@@ -244,7 +245,7 @@ SDL_AppResult MainGame::Init()
     Phys::SetupJolt();
 
     // Players
-    Player::AddPlayer();
+    //Player::AddPlayer();
 
     UI::OpenMenu(&UI::mainMenu);
 
@@ -305,12 +306,8 @@ SDL_AppResult MainGame::HandleEvent(SDL_Event *event)
 
 
     //if (gGameState == GAME_PRESS_START_SCREEN) {
-    UI::Menu *currentMenu = UI::GetCurrentMenu();
-    if (currentMenu != nullptr) {
-        currentMenu->HandleEvent(event);
-    }
-
     Input::HandleEvent(event);
+    UI::HandleEvent(event);
     Render::HandleEvent(event);
 
     return SDL_APP_CONTINUE;

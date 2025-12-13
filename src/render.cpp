@@ -2,6 +2,7 @@
 #include "render_shadow.h"
 #include "render_lights.h"
 #include "render_internal.h"
+#include "render_ui.h"
 
 #include "convert.h"
 #include "camera.h"
@@ -216,16 +217,19 @@ bool Render::Init()
 float Render::ScreenAspect()
 {
     // Screen width and height
-    int sw, sh;
-    bool screenSuccess = SDL_GetWindowSize(window, &sw, &sh);
-    if (screenSuccess) {
-        float aspect = (float) sw / (float) sh;
+    //int sw, sh;
+    //bool screenSuccess = SDL_GetWindowSize(window, &sw, &sh);
+    //if (screenSuccess) {
+        float aspect = (float) screenWidth / (float) screenHeight;
         // Divide aspect by 2.0 for split screen
+        SDL_Log("Split: %d, num players: %d", doSplitScreen, gNumPlayers);
         if (doSplitScreen && gNumPlayers == 2) {
+            SDL_Log("Dividing");
             aspect /= 2.0;
         }
+        SDL_Log("Aspect 2: %f", aspect);
         return aspect;
-    }
+    //}
     return 0.0;
 }
 
@@ -277,6 +281,7 @@ void Render::RenderFrame()
         //RenderShadowDepthToScreen();
     }
 
+
     GLERR;
     
     // Blit multisampled framebuffer onto the regular framebuffer
@@ -311,7 +316,7 @@ void Render::RenderFrame()
 
 
     // Do UI pass afterwards to avoid postprocessing on UI
-    glUseProgram(screenShader.id);
+    glUseProgram(uiShader.id);
     GuiPass();
     
     GLERR;
@@ -444,6 +449,13 @@ void Render::RenderText(Font::Face *face, ShaderProg &s, std::string text, float
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void Render::UpdatePlayerCamAspectRatios()
+{
+        float aspect = Render::ScreenAspect();
+        for (int i = 0; i < gNumPlayers; i++) {
+            gPlayers[i].cam.cam.SetAspectRatio(aspect);
+        }
+}
 
 void Render::HandleEvent(SDL_Event *event)
 {

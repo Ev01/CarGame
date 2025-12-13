@@ -2,13 +2,17 @@
 
 
 #include <glm/glm.hpp>
-#include <assimp/scene.h>
-#include <assimp/light.h>
+#include <assimp/matrix4x4.h>
 #include <SDL3/SDL.h>
+
+#include <string>
 
 // forward declarations
 struct ShaderProg;
 struct Camera;
+struct aiLight;
+struct aiNode;
+//struct aiMatrix4x4;
 namespace Render {
     struct SunLight;
 }
@@ -33,6 +37,7 @@ namespace Render {
     void DeleteAllLights();
     /* Returns current aspect ratio of the window */
     float ScreenAspect();
+    void UpdatePlayerCamAspectRatios();
     SDL_Window* GetWindow();
     SDL_GLContext& GetGLContext();
     void CleanUp();

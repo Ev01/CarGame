@@ -3,13 +3,17 @@
 #include "main_game.h"
 #include "world.h"
 #include "options.h"
+#include "player.h"
+#include "input.h"
 
 #include <glm/glm.hpp>
+#include <SDL3/SDL.h>
 
 
 
 UI::Menu optionsMenu = {
     {
+        //{"Add Player", MA_ADD_PLAYER_AND_VEHICLE},
         {"Option 1", MA_NONE},
         {"Option 2", MA_NONE},
         {"Option 3", MA_NONE},
@@ -20,12 +24,14 @@ UI::Menu optionsMenu = {
 
 UI::Menu UI::mainMenu = {
     {
-        {"Play",    MA_START_GAME}, 
+        // Title         Action           Menu     ChoiceOption
+        {"Play",         MA_START_GAME}, 
         {"Starting Map", MA_CYCLE_CHOICE, nullptr, &World::gMapOption},
-        {"Options", MA_OPEN_MENU, &optionsMenu}, 
-        {"Quit",    MA_QUIT}, 
+        {"Add Player",   MA_ADD_PLAYER},
+        {"Options",      MA_OPEN_MENU, &optionsMenu}, 
+        {"Quit",         MA_QUIT}, 
     },
-    4, 0
+    5, 0
 };
 
 UI::Menu pauseMenu = {
@@ -42,6 +48,7 @@ static constexpr int cMaxStackSize = 8;
 
 UI::Menu* menuStack[cMaxStackSize];
 int menuStackSize = 0;
+bool showAddPlayerDialog = false;
 
 
 glm::vec2 UI::GetPositionAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
@@ -54,7 +61,7 @@ glm::vec2 UI::GetPositionAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anc
     float boundT = boundY + boundH; /* top boundary   */
 
     if (anchor & UI_ANCHOR_LEFT) {
-        pos.x = boundX + margin.x + size.x;
+        pos.x = boundX + margin.x;
     } 
     else if (anchor & UI_ANCHOR_RIGHT) {
         pos.x = boundR + margin.x - size.x;
@@ -64,7 +71,7 @@ glm::vec2 UI::GetPositionAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anc
     }
 
     if (anchor & UI_ANCHOR_BOTTOM) {
-        pos.y = boundY + margin.y + size.y;
+        pos.y = boundY + margin.y;
     }
     else if (anchor & UI_ANCHOR_TOP) {
         pos.y = boundT + margin.y - size.y;
@@ -74,6 +81,41 @@ glm::vec2 UI::GetPositionAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anc
     }
 
     return pos;
+}
+
+glm::vec4 UI::GetRectAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
+        float boundX, float boundY, float boundW, float boundH)
+{
+    glm::vec2 bl;
+    glm::vec2 tr;
+    glm::vec2 blMargin = margin;
+    glm::vec2 trMargin = margin;
+    if (anchor & UI_ANCHOR_LEFT) {
+        trMargin.x += size.x;
+    }
+    else if (anchor & UI_ANCHOR_RIGHT) {
+        blMargin.x -= size.x;
+    }
+    else {
+        blMargin.x -= size.x / 2.0;
+        trMargin.x += size.x / 2.0;
+    }
+    if (anchor & UI_ANCHOR_BOTTOM) {
+        trMargin.y += size.y;
+    }
+    else if (anchor & UI_ANCHOR_TOP) {
+        blMargin.y -= size.y;
+    }
+    else {
+        blMargin.y -= size.y / 2.0;
+        trMargin.y += size.y / 2.0;
+    }
+    bl = GetPositionAnchored(glm::vec2(0, 0), blMargin, anchor,
+            boundX, boundY, boundW, boundH);
+    tr = GetPositionAnchored(glm::vec2(0, 0), trMargin, anchor,
+            boundX, boundY, boundW, boundH);
+
+    return glm::vec4(bl.x, bl.y, tr.x - bl.x, tr.y - bl.y);
 }
 
 void UI::Menu::SelectNext()
@@ -115,7 +157,9 @@ void UI::MenuItem::DoAction()
         case MA_NONE:
             break;
         case MA_START_GAME:
-            MainGame::StartWorld();
+            if (gNumPlayers > 0) {
+                MainGame::StartWorld();
+            }
             break;
         case MA_QUIT:
             MainGame::Quit();
@@ -128,6 +172,10 @@ void UI::MenuItem::DoAction()
             break;
         case MA_CYCLE_CHOICE:
             choiceOption->SelectNext();
+            break;
+        case MA_ADD_PLAYER:
+            //Player::AddPlayer();
+            showAddPlayerDialog = true;
             break;
     }
 }
@@ -176,6 +224,35 @@ void UI::CloseAllMenus()
 }
 
 
+void UI::HandleEvent(SDL_Event *event)
+{
+    if (showAddPlayerDialog) {
+        int newRealKeyboard = Input::ListenKeyboardPressJoin();
+        SDL_Gamepad *gamepad = Input::ListenGamepadPressA();
+        if (newRealKeyboard != 0) {
+            int newPlayerId = Player::AddPlayer();
+            gPlayers[newPlayerId].UseKeyboard(newRealKeyboard);
+            showAddPlayerDialog = false;
+            SDL_Log("Keyboard pressed join");
+        }
+        else if (gamepad != nullptr) {
+            int newPlayerId = Player::AddPlayer();
+            gPlayers[newPlayerId].UseGamepad(gamepad);
+            showAddPlayerDialog = false;
+        }
+        else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_ESCAPE) {
+            showAddPlayerDialog = false;
+        }
+    }
+    else {
+        UI::Menu *currentMenu = UI::GetCurrentMenu();
+        if (currentMenu != nullptr) {
+            currentMenu->HandleEvent(event);
+        }
+    }
+}
+
+
 void UI::MenuItem::GetText(char *outText, int maxlen)
 {
     if (action == MA_CYCLE_CHOICE) {
@@ -189,3 +266,4 @@ void UI::MenuItem::GetText(char *outText, int maxlen)
 
 
 UI::Menu* UI::GetPauseMenu() { return &pauseMenu; }
+bool UI::GetShowPlayerAddDialog() { return showAddPlayerDialog; }

@@ -82,6 +82,11 @@ void ShaderProg::SetVec3(char uniformName[], float x, float y, float z)
     glUniform3f(glGetUniformLocation(id, uniformName), x, y, z);
 }
 
+void ShaderProg::SetVec4(char uniformName[], const float *vec4)
+{
+    glUniform4fv(glGetUniformLocation(id, uniformName), 1, vec4);
+}
+
 void ShaderProg::SetVec4(char uniformName[], float x, float y, float z, float w)
 {
     glUniform4f(glGetUniformLocation(id, uniformName), x, y, z, w);

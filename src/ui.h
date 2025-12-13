@@ -22,6 +22,7 @@ enum MenuAction {
     MA_OPEN_MENU,
     MA_BACK,
     MA_CYCLE_CHOICE,
+    MA_ADD_PLAYER,
     MA_QUIT,
 };
 
@@ -67,10 +68,14 @@ namespace UI {
 
     glm::vec2 GetPositionAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
             float boundX, float boundY, float boundW, float boundH);
+    glm::vec4 GetRectAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
+            float boundX, float boundY, float boundW, float boundH);
     void OpenMenu(Menu *toOpen);
     void MenuBack();
     Menu* GetCurrentMenu();
     void CloseAllMenus();
+    void HandleEvent(SDL_Event *event);
+    bool GetShowPlayerAddDialog();
 
     Menu* GetPauseMenu();
 

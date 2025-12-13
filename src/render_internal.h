@@ -22,6 +22,7 @@ extern unsigned int msRBO;
 extern unsigned int msTexColourBuffer;
 extern unsigned int textVAO, textVBO;
 extern unsigned int quadVAO, quadVBO;
+extern unsigned int uiQuadVAO, uiQuadVBO;
 extern int screenWidth;
 extern int screenHeight;
 extern Model *cubeModel;
@@ -34,6 +35,8 @@ extern glm::mat4 uiProj;
 extern ShaderProg simpleDepthShader;
 extern ShaderProg pbrShader;
 extern ShaderProg screenShader;
+extern ShaderProg uiShader;
+extern ShaderProg textShader;
 
 extern bool doSplitScreen;
 extern SDL_Window *window;
@@ -54,15 +57,8 @@ namespace Render {
     void InitSkybox();
     void InitText();
     void CreateQuadVAO();
-    void UpdatePlayerCamAspectRatios();
-    void RenderUIAnchored(Texture tex, glm::vec2 scale, glm::vec2 margin,
-                                 float rotation, UIAnchor anchor,
-                                 float boundX=0.0, float boundY=0.0,
-                                 float boundW=0.0, float boundH=0.0);
     void GetPlayerSplitScreenBounds(int playerNum, int *outX, int *outY,
                                            int *outW, int *outH);
-    void RenderPlayerTachometer(int playerNum);
-    void GuiPass();
     void RenderSceneSplitScreen();
     void UpdateWindowSize();
     void RenderShadowDepthToScreen();
