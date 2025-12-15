@@ -18,6 +18,14 @@ enum InputDeviceType {
     INPUT_DEVICE_KEYBOARD,
 };
 
+
+struct PlayerRaceProgress {
+    void CollectCheckpoint();
+    void Reset();
+    float finishTime = 0.0;
+    unsigned int checkpointsCollected = 0;
+};
+
 struct Player {
     // Whether the player is using a gamepad or keyboard
     InputDeviceType inputDeviceType = INPUT_DEVICE_NONE;
@@ -28,6 +36,7 @@ struct Player {
 
     // The vehicle that this player controls
     Vehicle *vehicle = nullptr;
+    PlayerRaceProgress raceProgress;
     VehicleCamera cam;
     CameraSettings camSettings;
 

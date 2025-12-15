@@ -33,12 +33,11 @@ static glm::vec3 mapSpawnPoint = glm::vec3(0.0f);
 static std::vector<Checkpoint> existingCheckpoints;
 static Audio::Sound *checkpointSound;
 
-RaceProgress gPlayerRaceProgress;
+static RaceProgress raceProgress;
+
 JPH::Vec3 raceStartPos;
 JPH::Quat raceStartRot;
 
-RaceState raceState;
-static float raceCountdownTimer = 0.0;
 
 const char* mapDisplayNames[] = {"Map01", "Map02", "simple_map", "racetrack1"};
 const char* mapFilepaths[] = {
@@ -143,7 +142,7 @@ static void ChangeMap(const char *modelFileName)
 }
 
 
-static void BeginRace()
+static void BeginRaceCountdown()
 {
     JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
 
@@ -159,6 +158,10 @@ static void BeginRace()
                 Vehicle::GetExistingVehicles()[i]->mBody->GetID());
     }
 
+    for (int i = 0; i < gNumPlayers; i++) {
+        gPlayers[i].raceProgress.Reset();
+    }
+
     /*
     bodyInterface.SetPositionRotationAndVelocity(World::GetCar().mBody->GetID(),
                                                  raceStartPos,
@@ -172,14 +175,10 @@ static void BeginRace()
     bodyInterface.ActivateBody(World::GetCar().mBody->GetID());
     bodyInterface.ActivateBody(World::GetCar2().mBody->GetID());
     */
-    raceState = RACE_COUNTING_DOWN;
-    raceCountdownTimer = 3.0;
+    raceProgress.mState = RACE_COUNTING_DOWN;
+    raceProgress.mCountdownTimer = 3.0;
 }
 
-static void SEndRace()
-{
-    raceState = RACE_NONE;
-}
 
 
 /*
@@ -191,29 +190,33 @@ static void ResetCheckpoints()
 }
 */
 
+
 void RaceProgress::EndRace()
 {
-    mFinishTime = (SDL_GetTicks() - mRaceStartMS) / 1000.0;
-    SDL_Log("Finished race in %f seconds", mFinishTime);
-}
-
-
-
-void RaceProgress::CollectCheckpoint()
-{
-    mCheckpointsCollected++;
-    //mCheckpointsCollected %= existingCheckpoints.size();
-    if (mCheckpointsCollected == existingCheckpoints.size()) {
-        SEndRace();
-        EndRace();
-    }
+    //mFinishTime = (SDL_GetTicks() - mRaceStartMS) / 1000.0;
+    mState = RACE_NONE;
+    SDL_Log("Finished race in %f seconds", mTimePassed);
 }
 
 
 void RaceProgress::BeginRace()
 {
+    mState = RACE_STARTED;
+    mTimePassed = 0.0;
     mRaceStartMS = SDL_GetTicks();
-    mCheckpointsCollected = 0;
+}
+
+
+void World::BeginRace()
+{
+    //raceState = RACE_STARTED;
+    raceProgress.BeginRace();
+}
+
+
+void World::EndRace()
+{
+    raceProgress.EndRace();
 }
 
 
@@ -257,22 +260,23 @@ std::vector<Checkpoint>& World::GetCheckpoints()
 void World::OnContactAdded(const JPH::Body &inBody1, const JPH::Body &inBody2)
 {
     if (existingCheckpoints.size() == 0) return;
-    if (raceState != RACE_STARTED) return;
+    if (raceProgress.mState != RACE_STARTED) return;
     //JPH::BodyInterface &bodyInterface = Phys::GetPhysicsSystem().GetBodyInterfaceNoLock();
     //for (Checkpoint &checkpoint : existingCheckpoints) {
 
-    Checkpoint &checkpoint = existingCheckpoints[gPlayerRaceProgress.mCheckpointsCollected % existingCheckpoints.size()];     
-    if (inBody1.GetID() == checkpoint.mBodyID 
-            || inBody2.GetID() == checkpoint.mBodyID) {
-        //checkpoint.Collect();
-        gPlayerRaceProgress.CollectCheckpoint();
-        checkpointSound->Play();
-        //if (existingCheckpoints.back().mIsCollected) {
-        //    ResetCheckpoints();
-        //}
-        //break;
+    // Checkpoint collection
+    for (int i = 0; i < gNumPlayers; i++) {
+        JPH::BodyID vehID = gPlayers[i].vehicle->mBody->GetID();
+        if (inBody1.GetID() != vehID && inBody2.GetID() != vehID) continue;
+
+        size_t checkpointNum = gPlayers[i].raceProgress.checkpointsCollected % existingCheckpoints.size();
+        Checkpoint &nextCheckpoint = existingCheckpoints[checkpointNum];     
+        if (inBody1.GetID() == nextCheckpoint.mBodyID 
+                || inBody2.GetID() == nextCheckpoint.mBodyID) {
+            gPlayers[i].raceProgress.CollectCheckpoint();
+            checkpointSound->Play();
+        }
     }
-    //}
 }
 
 
@@ -281,24 +285,36 @@ void World::PrePhysicsUpdate(float delta)
     Vehicle::PrePhysicsUpdateAllVehicles(delta);
 }
 
+void RaceProgress::Update(float delta)
+{
+    switch (mState) {
+        case RACE_COUNTING_DOWN:
+            mCountdownTimer -= delta;
+            if (mCountdownTimer < 0) {
+                BeginRace();
+            }
+            break;
+        case RACE_STARTED:
+            mTimePassed += delta;
+            break;
+        case RACE_NONE:
+            break;
+    }
+}
 
 void World::Update(float delta)
 {
+    raceProgress.Update(delta);
+
     float raceTime;
-    switch(raceState) {
+    switch(raceProgress.mState) {
         case RACE_COUNTING_DOWN:
-            raceCountdownTimer -= delta;
-            if (raceCountdownTimer < 0) {
-                raceState = RACE_STARTED;
-                gPlayerRaceProgress.BeginRace();
-            }
-            raceTime = -raceCountdownTimer;
+            raceTime = -raceProgress.mCountdownTimer;
             break;
         case RACE_STARTED:
-            raceTime = (SDL_GetTicks() - gPlayerRaceProgress.mRaceStartMS) / 1000.0;
-            break;
+            //raceTime = (SDL_GetTicks() - raceProgress.mRaceStartMS) / 1000.0;
         case RACE_NONE:
-            raceTime = gPlayerRaceProgress.mFinishTime;
+            raceTime = raceProgress.mTimePassed;
             break;
     }
 
@@ -315,7 +331,7 @@ void World::Update(float delta)
         ChangeMap(mapFilepaths[gMapOption.selectedChoice]);
     }
     if (ImGui::Button("Begin Race")) {
-        BeginRace();
+        BeginRaceCountdown();
     }
     ImGui::Text("Race Time: %f", raceTime);
     if (ImGui::Button("Add player")) {
@@ -331,7 +347,7 @@ void World::Update(float delta)
 
 void World::InputUpdate()
 {
-    if (raceState != RACE_COUNTING_DOWN) {
+    if (raceProgress.mState != RACE_COUNTING_DOWN) {
         for (Vehicle *v : Vehicle::GetExistingVehicles()) {
             v->ReleaseFromHold();
         }
@@ -481,4 +497,4 @@ void World::DestroyAllLights()
 
 
 Model& World::GetCurrentMapModel() { return *mapModel; }
-RaceState World::GetRaceState()           { return raceState; }
+RaceState World::GetRaceState()           { return raceProgress.mState; }

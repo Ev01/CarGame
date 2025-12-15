@@ -5,11 +5,27 @@
 #include "input_mapping.h"
 #include "camera.h"
 #include "render.h"
+#include "world.h"
 
 #include "../vendor/imgui/imgui.h"
 
 Player gPlayers[MAX_PLAYERS];
 int gNumPlayers = 0;
+
+void PlayerRaceProgress::CollectCheckpoint()
+{
+    checkpointsCollected++;
+    //mCheckpointsCollected %= existingCheckpoints.size();
+    if (checkpointsCollected == World::GetCheckpoints().size()) {
+        World::EndRace();
+    }
+}
+
+
+void PlayerRaceProgress::Reset()
+{
+    checkpointsCollected = 0;
+}
 
 
 void Player::CreateAndUseVehicle(VehicleSettings &settings)

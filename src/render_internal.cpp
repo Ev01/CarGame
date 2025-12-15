@@ -269,10 +269,10 @@ void Render::DrawCars(ShaderProg &shader)
 }
 
 
-void Render::DrawCheckpoints(ShaderProg &shader)
+void Render::DrawCheckpoints(ShaderProg &shader, Player *p)
 {
     if (World::GetCheckpoints().size() > 0 && World::GetRaceState() != RACE_NONE) {
-        Checkpoint &checkpoint = World::GetCheckpoints()[gPlayerRaceProgress.mCheckpointsCollected % World::GetCheckpoints().size()];
+        Checkpoint &checkpoint = World::GetCheckpoints()[p->raceProgress.checkpointsCollected % World::GetCheckpoints().size()];
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, ToGlmVec3(checkpoint.GetPosition()));
         // TODO: Add variable for checkpoint size
@@ -556,7 +556,7 @@ void Render::RenderSceneSplitScreen()
         //SDL_Log("%d, %d", playerScreenWidth, playerScreenHeight);
         glViewport(xOffset, yOffset, playerScreenWidth, playerScreenHeight);
         GLERR;
-        Render::RenderScene(gPlayers[i].cam.cam);
+        Render::RenderScene(gPlayers[i].cam.cam, &gPlayers[i]);
         GLERR;
         // Only render player 1 if doSplitScreen is off.
         if (!doSplitScreen) break;

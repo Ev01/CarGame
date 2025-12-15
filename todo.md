@@ -135,14 +135,18 @@ atlas that stores all shadows side by side.
 - [x] Speedometer
 - [x] Start on UI / menu screen
 
+13/12 - 14/12
+- [x] Add player button in menu screen
+- [x] Prompt player to press a button when adding player. Detects which input
+      device they are using.
+- Add controller support to menus
+
+15/12
+- [x] Players can progress through the race independently.
 
 - [ ] Add titles to menus 
-- [ ] Add player button in menu screen
-- [ ] Prompt player to press a button when adding player. Detects which input
-      device they are using.
 - [ ] Checkpoints that look like archways.
 - [ ] Simple end race screen.
-- [ ] Players can progress through the race independently.
 
 - [ ] Add VSync option to menu.
 - [ ] Add display settings to menu (windowed/fullscreen + video resolution)

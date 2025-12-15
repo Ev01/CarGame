@@ -12,6 +12,7 @@ struct ShaderProg;
 struct Camera;
 struct aiLight;
 struct aiNode;
+struct Player;
 //struct aiMatrix4x4;
 namespace Render {
     struct SunLight;
@@ -26,10 +27,10 @@ namespace Render {
     void PhysicsUpdate(double delta);
     void Update(double delta);
     void RenderFrame();
-    void RenderScene(const Camera &cam);
+    void RenderScene(const Camera &cam, Player *p = nullptr);
     void RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
-                     bool enableSkybox = true);
-    void RenderSceneRaw(ShaderProg &shader);
+                     bool enableSkybox = true, Player *p = nullptr);
+    void RenderSceneRaw(ShaderProg &shader, Player *p = nullptr);
     void RenderText(Font::Face *face, ShaderProg &s, std::string text, float x, float y,
                     float scale, glm::vec3 colour);
 

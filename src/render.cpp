@@ -39,7 +39,7 @@ static const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 /*
  * Render the scene without any shader setup
  */
-void Render::RenderSceneRaw(ShaderProg &shader)
+void Render::RenderSceneRaw(ShaderProg &shader, Player *p)
 {
     // Draw map
     DrawMap(shader);
@@ -48,7 +48,9 @@ void Render::RenderSceneRaw(ShaderProg &shader)
     DrawCars(shader);
 
     // Draw next checkpoint in race
-    DrawCheckpoints(shader);
+    if (p != nullptr) {
+        DrawCheckpoints(shader, p);
+    }
 
 }
 
@@ -326,14 +328,14 @@ void Render::RenderFrame()
 }
 
 
-void Render::RenderScene(const Camera &cam)
+void Render::RenderScene(const Camera &cam, Player *p)
 {
-    RenderScene(cam.LookAtMatrix(up), cam.projection);
+    RenderScene(cam.LookAtMatrix(up), cam.projection, true, p);
 }
 
 
 void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection, 
-                         bool enableSkybox)
+                         bool enableSkybox, Player *p)
 {
     GLERR;
     glEnable(GL_CULL_FACE);
@@ -397,7 +399,7 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
     GLERR;
     //SDL_Log("Num spot lights: %d", spotLightNum);
 
-    RenderSceneRaw(pbrShader);
+    RenderSceneRaw(pbrShader, p);
     GLERR;
     // Draw skybox
     if (enableSkybox) {

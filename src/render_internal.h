@@ -12,6 +12,7 @@ struct ShaderProg;
 struct Texture;
 struct Model;
 struct Material;
+struct Player;
 enum UIAnchor : unsigned int;
 
 extern unsigned int fbo;
@@ -50,7 +51,7 @@ namespace Render {
     void RenderSkybox(glm::mat4 view, glm::mat4 projection);
     void DrawMap(ShaderProg &shader);
     void DrawCars(ShaderProg &shader);
-    void DrawCheckpoints(ShaderProg &shader);
+    void DrawCheckpoints(ShaderProg &shader, Player *p);
     void DebugGUI();
     bool LoadFont();
     void LoadShaders();

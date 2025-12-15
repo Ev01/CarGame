@@ -37,14 +37,14 @@ struct Checkpoint {
 
 
 struct RaceProgress {
-    void CollectCheckpoint();
     void BeginRace();
     void EndRace();
+    void Update(float delta);
+    RaceState mState = RACE_NONE;
+    float mCountdownTimer = 0.0;
     Uint64 mRaceStartMS = 0;
-    unsigned int mCheckpointsCollected = 0;
-    float mFinishTime = 0.0;
+    float mTimePassed = 0.0;
 };
-extern RaceProgress gPlayerRaceProgress;
 
 struct ChoiceOption;
 
@@ -60,6 +60,8 @@ namespace World {
     void Init();
     void CleanUp();
     void CreateCars();
+    void EndRace();
+    void BeginRace();
     /*
     Vehicle& GetCar();
     Vehicle& GetCar2();
