@@ -2,6 +2,7 @@
 
 #include "vehicle.h"
 #include "input.h"
+#include "input_mapping.h"
 #include "camera.h"
 #include "render.h"
 

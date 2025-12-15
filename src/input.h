@@ -5,84 +5,6 @@
 #include <unordered_set>
 
 
-enum MappingType {
-    MAPPING_TYPE_NONE,
-    MAPPING_TYPE_SCANCODE,
-    MAPPING_TYPE_GAMEPAD_BUTTON,
-    MAPPING_TYPE_GAMEPAD_AXIS_POS,
-    MAPPING_TYPE_GAMEPAD_AXIS_NEG
-};
-
-
-// Each game action can have its own bindings. E.g. players will
-// see these actions when changing their controls
-enum GameAction : unsigned int {
-    ACTION_STEER_RIGHT,
-    ACTION_STEER_LEFT,
-    ACTION_FORWARD,
-    ACTION_BRAKE,
-    ACTION_HANDBRAKE,
-    ACTION_LOOK_LEFT,
-    ACTION_LOOK_RIGHT,
-    ACTION_UI_START,
-
-    NUM_ACTIONS
-};
-
-
-// Defines a single input control. This can be a keyboard key, 
-// controller button or controller axis.
-struct InputMapping {
-    MappingType mappingType = MAPPING_TYPE_NONE;
-    union {
-        SDL_Scancode scancode;
-        SDL_GamepadButton button;
-        SDL_GamepadAxis axis;
-    };
-
-    void AssignMapping(SDL_Scancode aScancode);
-    void AssignMapping(SDL_GamepadButton aButton);
-    void AssignMapping(SDL_GamepadAxis aAxis, bool isPosAxis = true);
-    float GetValue(SDL_Gamepad *gamepad = nullptr);
-    float GetValue(int realKeyboardID = 0);
-};
-
-
-// Combines one or more input controls so that they can be used
-// for a single action
-struct InputAction {
-    InputMapping mappings[3];
-    // Index of last pressed input mapping
-    //int lastPressed = 0;
-    int numMappingsSet = 0;
-
-    // Get value of last pressed mapping
-    float GetValue(SDL_Gamepad *gamepad = nullptr);
-    float GetValue(int realKeyboardID = 0);
-    void AddMapping(SDL_Scancode scancode);
-    void AddMapping(SDL_GamepadButton button);
-    void AddMapping(SDL_GamepadAxis axis, bool isPosAxis = true);
-    void ClearMappings();
-    void HandleEvent(SDL_Event *event);
-};
-
-// Defines input bindings to every action in the game.
-struct ControlScheme {
-    InputAction actions[NUM_ACTIONS];
-
-    // Gets the input value for an action between 0.0 and 1.0.
-    float GetInputForAction(GameAction action, SDL_Gamepad *gamepad = nullptr);
-    float GetInputForAction(GameAction action, int realKeyboardID = 0);
-    // Like GetInputForAction, but can be used for two opposing actions to get a
-    // value between -1.0 and 1.0. E.g. steer left and steer right.
-    float GetSignedInputForAction(GameAction negAction, GameAction posAction, 
-                                  SDL_Gamepad *gamepad = nullptr);
-    float GetSignedInputForAction(GameAction negAction, GameAction posAction, 
-                                  int realKeyboardID = 0);
-};
-
-extern ControlScheme gDefaultControlScheme;
-
 
 // Represents one physical keyboard. Some gaming keyboards are detected as
 // multiple HID devices, each having one SDL_KeyboardID. This class groups them
@@ -121,6 +43,20 @@ private:
     int id = 0;
 };
 
+
+struct GamepadState {
+    void HandleEvent(SDL_Event *event, SDL_Gamepad *gamepad);
+    bool IsButtonJustPressed(SDL_GamepadButton button);
+    bool IsButtonJustReleased(SDL_GamepadButton button);
+    bool IsButtonDown(SDL_GamepadButton button);
+    //float GetAxis(SDL_GamepadAxis axis);
+    void NewFrame();
+
+    Uint8 buttons[SDL_GAMEPAD_BUTTON_COUNT];
+    //Uint8 axis[SDL_GAMEPAD_AXIS_COUNT];
+};
+
+
 namespace Input
 {
     void Init();
@@ -142,12 +78,15 @@ namespace Input
     // if it is in the positive direction. Will always return a positive number
     float GetGamepadAxisNeg(SDL_Gamepad *gamepad, SDL_GamepadAxis axis);
     bool GetGamepadButton(SDL_Gamepad *gamepad, SDL_GamepadButton button);
+    bool GetGamepadButtonJustPressed(SDL_Gamepad *gamepad, SDL_GamepadButton button);
+    bool GetGamepadButtonJustPressed(SDL_GamepadButton button);
+    bool GetGamepadButtonJustReleased(SDL_Gamepad *gamepad, SDL_GamepadButton button);
+    GamepadState* GetGamepadState(SDL_Gamepad *gamepad);
     int GetNumRealKeyboards();
     void HandleEvent(SDL_Event *event);
     SDL_Gamepad* GetGamepad();
-    // Return the first gamepad that is pressing A. Or nullptr if no gamepad is
-    // pressing A.
-    SDL_Gamepad* ListenGamepadPressA();
+    // Returns the gamepad if the event is that gamepad pressing A.
+    SDL_Gamepad* ListenGamepadPressA(SDL_Event *event);
     int ListenKeyboardPressJoin();
     void DebugGUI();
     void Update();

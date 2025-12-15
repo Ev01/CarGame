@@ -17,6 +17,7 @@
 
 #include "../glad/glad.h"
 #include "input.h"
+#include "input_mapping.h"
 #include "audio.h"
 #include "render.h"
 #include "player.h"
@@ -298,7 +299,8 @@ SDL_AppResult MainGame::HandleEvent(SDL_Event *event)
     */
 
     if (gGameState == GAME_IN_WORLD) {
-        if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_ESCAPE) {
+        //if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_ESCAPE) {
+        if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_PAUSE)) {
             UI::OpenMenu(UI::GetPauseMenu());
             Pause();
         }
@@ -330,6 +332,7 @@ SDL_AppResult MainGame::Update()
     ImGui::NewFrame();
 
     InputUpdate();
+    UI::Update();
     DebugGUI();
 
     switch (gGameState) {

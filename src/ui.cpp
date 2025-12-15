@@ -5,6 +5,7 @@
 #include "options.h"
 #include "player.h"
 #include "input.h"
+#include "input_mapping.h"
 
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
@@ -131,18 +132,21 @@ void UI::Menu::SelectPrev()
 
 void UI::Menu::HandleEvent(SDL_Event *event)
 {
-    if (event->type == SDL_EVENT_KEY_DOWN) {
-        if (event->key.scancode == SDL_SCANCODE_DOWN) {
-            SelectNext();
-        }
-        else if (event->key.scancode == SDL_SCANCODE_UP) {
-            SelectPrev();
-        }
-        else if (event->key.scancode == SDL_SCANCODE_RETURN) {
-            //UI::DoMenuAction(GetSelectedMenuAction());
-            GetSelectedMenuItem()->DoAction();
-        }
+    if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_UI_DOWN)) {
+        SelectNext();
     }
+    if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_UI_UP)) {
+        SelectPrev();
+    }
+    if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_UI_ACCEPT)) {
+        GetSelectedMenuItem()->DoAction();
+    }
+
+
+}
+
+void UI::Menu::Update()
+{
 }
 
 UI::MenuItem* UI::Menu::GetSelectedMenuItem()
@@ -228,7 +232,7 @@ void UI::HandleEvent(SDL_Event *event)
 {
     if (showAddPlayerDialog) {
         int newRealKeyboard = Input::ListenKeyboardPressJoin();
-        SDL_Gamepad *gamepad = Input::ListenGamepadPressA();
+        SDL_Gamepad *gamepad = Input::ListenGamepadPressA(event);
         if (newRealKeyboard != 0) {
             int newPlayerId = Player::AddPlayer();
             gPlayers[newPlayerId].UseKeyboard(newRealKeyboard);
@@ -240,7 +244,8 @@ void UI::HandleEvent(SDL_Event *event)
             gPlayers[newPlayerId].UseGamepad(gamepad);
             showAddPlayerDialog = false;
         }
-        else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_ESCAPE) {
+        //else if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_ESCAPE) {
+        else if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_UI_CANCEL)) {
             showAddPlayerDialog = false;
         }
     }
@@ -249,6 +254,15 @@ void UI::HandleEvent(SDL_Event *event)
         if (currentMenu != nullptr) {
             currentMenu->HandleEvent(event);
         }
+    }
+}
+
+
+void UI::Update()
+{
+    UI::Menu *currentMenu = UI::GetCurrentMenu();
+    if (currentMenu != nullptr) {
+        currentMenu->Update();
     }
 }
 

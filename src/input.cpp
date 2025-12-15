@@ -1,5 +1,7 @@
 #include "input.h"
+#include "input_mapping.h"
 #include "player.h"
+
 
 #include "../vendor/imgui/imgui.h"
 #include <SDL3/SDL.h>
@@ -12,6 +14,7 @@
 
 bool scancodesDown[SDL_SCANCODE_COUNT];
 SDL_Gamepad *gamepads[MAX_GAMEPADS];
+GamepadState gamepadStates[MAX_GAMEPADS];
 SDL_KeyboardID keyboards[MAX_KEYBOARDS];
 // A physical keyboard can have multiple SDL_KeyboardIDs. For example a gaming
 // keyboard might have one ID for the arrow keys and another ID for the other
@@ -26,164 +29,12 @@ int numOpenedGamepads = 0;
 //InputMappingKeyboard gDefaultKeyboardMapping;
 
 Uint8 keyboardStates[MAX_KEYBOARDS][SDL_SCANCODE_COUNT];
-enum {
-    KEY_STATE_FLAG_PRESSED       = 1,
-    KEY_STATE_FLAG_JUST_PRESSED  = 2,
-    KEY_STATE_FLAG_JUST_RELEASED = 4
-};
-
-ControlScheme gDefaultControlScheme;
 
 
-void InputMapping::AssignMapping(SDL_Scancode aScancode)
-{
-    mappingType = MAPPING_TYPE_SCANCODE;
-    scancode = aScancode;
-}
-void InputMapping::AssignMapping(SDL_GamepadButton aButton)
-{
-    mappingType = MAPPING_TYPE_GAMEPAD_BUTTON;
-    button = aButton;
-}
-void InputMapping::AssignMapping(SDL_GamepadAxis aAxis, bool isAxisPos)
-{
-    if (isAxisPos) {
-        mappingType = MAPPING_TYPE_GAMEPAD_AXIS_POS;
-    }
-    else {
-        mappingType = MAPPING_TYPE_GAMEPAD_AXIS_NEG;
-    }
-    axis = aAxis;
-}
-float InputMapping::GetValue(SDL_Gamepad *gamepad)
-{
-    if (gamepad == nullptr && mappingType != MAPPING_TYPE_SCANCODE) {
-        return 0.0;
-    }
-
-    switch (mappingType) {
-        case MAPPING_TYPE_SCANCODE:
-            // Only enable keyboard when not given controller to use
-            /*
-            if (gamepad == nullptr) {
-                return (float) Input::IsScanDown(scancode);
-            }
-            */
-            break;
-        case MAPPING_TYPE_GAMEPAD_AXIS_POS:
-            return Input::GetGamepadAxisPos(gamepad, axis);
-        case MAPPING_TYPE_GAMEPAD_AXIS_NEG:
-            return Input::GetGamepadAxisNeg(gamepad, axis);
-        case MAPPING_TYPE_GAMEPAD_BUTTON:
-            return Input::GetGamepadButton(gamepad, button);
-        case MAPPING_TYPE_NONE:
-            return 0.0;
-    }
-
-    return 0.0;
-}
-float InputMapping::GetValue(int realKeyboardID)
-{
-    //if (realKeyboardID == 0 || mappingType != MAPPING_TYPE_SCANCODE) {
-    if (mappingType != MAPPING_TYPE_SCANCODE) {
-        return 0.0;
-    }
-    if (realKeyboardID == 0) {
-        // If the keyboard ID is invalid, default to SDL's internal keyboard
-        // state, which does not differentiate between different keyboards.
-        return (float) SDL_GetKeyboardState(NULL)[scancode];
-    }
-    
-    RealKeyboard *realKeyboard = RealKeyboard::GetByID(realKeyboardID);
-    if (realKeyboard != nullptr) {
-        return (float) realKeyboard->IsScanDown(scancode);
-    } else {
-        return 0.0;
-    }
-}
 
 
-void InputAction::AddMapping(SDL_Scancode scancode)
-{
-    numMappingsSet = SDL_min(numMappingsSet, 2);
-    mappings[numMappingsSet++].AssignMapping(scancode);
-}
-void InputAction::AddMapping(SDL_GamepadButton button)
-{
-    numMappingsSet = SDL_min(numMappingsSet, 2);
-    mappings[numMappingsSet++].AssignMapping(button);
-}
-void InputAction::AddMapping(SDL_GamepadAxis axis, bool isPosAxis)
-{
-    numMappingsSet = SDL_min(numMappingsSet, 2);
-    mappings[numMappingsSet++].AssignMapping(axis, isPosAxis);
-}
-float InputAction::GetValue(SDL_Gamepad *gamepad) 
-{
-    float toReturn = 0.0;
-    for (int i = 0; i < numMappingsSet; i++) {
-        // Choose the mapping with the greatest input value. This should
-        // work fine in most occasions
-        toReturn = SDL_max(toReturn, mappings[i].GetValue(gamepad));
-    }
-    return toReturn;
-}
-float InputAction::GetValue(int realKeyboardID) 
-{
-    /*
-    if (realKeyboardID == 0) {
-        return 0.0;
-    }
-    */
-    float toReturn = 0.0;
-    for (int i = 0; i < numMappingsSet; i++) {
-        // Choose the mapping with the greatest input value. This should
-        // work fine in most occasions
-        toReturn = SDL_max(toReturn, mappings[i].GetValue(realKeyboardID));
-    }
-    return toReturn;
-}
-void InputAction::ClearMappings()
-{
-    numMappingsSet = 0;
-}
-void InputAction::HandleEvent(SDL_Event *event)
-{
-    /*
-    for (int i = 0; i < numMappingsSet; i++) {
-        switch (mappings[i].mappingType) {
-            case MAPPING_TYPE_SCANCODE:
-                if (event->type == SDL_EVENT_KEY_DOWN 
-                        || event->type == SDL_EVENT_KEY_UP) {
-                    lastPressed = i;
-                    return;
-                }
-                break;
 
-            case MAPPING_TYPE_GAMEPAD_BUTTON:
-                if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
-                        || event->type == SDL_EVENT_GAMEPAD_BUTTON_UP) {
-                    lastPressed = i;
-                    return;
-                }
-                break;
-            
-            case MAPPING_TYPE_GAMEPAD_AXIS_NEG:
-            case MAPPING_TYPE_GAMEPAD_AXIS_POS:
-                if (event->type == SDL_EVENT_GAMEPAD_AXIS_MOTION) {
-                    lastPressed = i;
-                    return;
-                }
-                break;
-            case MAPPING_TYPE_NONE:
-        }
-    }
-    */
-
-}
-
-
-/* a
+/* 
 static void RegisterKeyboard(SDL_KeyboardID keyboardID)
 {
     if (numKeyboards >= MAX_KEYBOARDS) return;
@@ -198,7 +49,7 @@ static void RegisterKeyboard(SDL_KeyboardID keyboardID)
 }
 */
 
-/*pawfhe
+/*
 static void RegisterRealKeyboard(
         const std::unordered_set<SDL_KeyboardID>& realKeyboard)
 {
@@ -216,6 +67,8 @@ void RealKeyboard::Init()
 
     id = ++RealKeyboard::idCounter;
 }
+
+
 void RealKeyboard::Deinit()
 {
     id = 0;
@@ -226,10 +79,13 @@ void RealKeyboard::Deinit()
     }
 }
 
+
 bool RealKeyboard::ContainsRawKeyboard(SDL_KeyboardID rawID)
 {
     return rawKeyboardIDs.find(rawID) != rawKeyboardIDs.end();
 }
+
+
 void RealKeyboard::HandleEvent(SDL_Event *event)
 {
     if ((event->type != SDL_EVENT_KEY_DOWN && event->type != SDL_EVENT_KEY_UP)
@@ -254,6 +110,8 @@ void RealKeyboard::HandleEvent(SDL_Event *event)
         SDL_Log("Return state: %d", keyState[event->key.scancode]);
     }
 }
+
+
 void RealKeyboard::NewFrame()
 {
     for (int j = 0; j < SDL_SCANCODE_COUNT; j++) {
@@ -262,6 +120,8 @@ void RealKeyboard::NewFrame()
     }
     justRegistered = false;
 }
+
+
 RealKeyboard* RealKeyboard::GetByID(int id)
 {
     for (int i = 0; i < MAX_KEYBOARDS; i++) {
@@ -274,10 +134,14 @@ RealKeyboard* RealKeyboard::GetByID(int id)
     }
     return nullptr;
 }
+
+
 const char* RealKeyboard::GetName()
 {
     return SDL_GetKeyboardNameForID(*rawKeyboardIDs.begin());
 }
+
+
 bool RealKeyboard::IsScanDown(SDL_Scancode scancode)
 {
     if (!IsValid()) return false;
@@ -331,33 +195,71 @@ static int RegisterRealKeyboard(const SDL_KeyboardID *rawIDs,
 }
 
 
-float ControlScheme::GetInputForAction(GameAction action, SDL_Gamepad *gamepad)
+
+void GamepadState::HandleEvent(SDL_Event *event, SDL_Gamepad *gamepad)
 {
-    return actions[action].GetValue(gamepad);
+    if (event->type != SDL_EVENT_GAMEPAD_BUTTON_DOWN
+            && event->type != SDL_EVENT_GAMEPAD_BUTTON_UP
+            && event->type != SDL_EVENT_GAMEPAD_AXIS_MOTION) {
+        return;
+    }
+    /*
+    SDL_Gamepad *gamepad = SDL_GetGamepadFromID(event->gbutton.which);
+    if (gamepad != gamepads[gamepadIdx]) {
+        return;
+    }
+    */
+    if (gamepad != SDL_GetGamepadFromID(event->gbutton.which)) {
+        return;
+    }
+
+    if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
+        buttons[event->gbutton.button] |= KEY_STATE_FLAG_JUST_PRESSED;
+    }
+    else if (event->type == SDL_EVENT_GAMEPAD_BUTTON_UP) {
+        buttons[event->gbutton.button] |= KEY_STATE_FLAG_JUST_RELEASED;
+    }
+    
+    if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
+            || event->type == SDL_EVENT_GAMEPAD_BUTTON_UP) {
+        // reset pressed flag.
+        buttons[event->gbutton.button] &= ~KEY_STATE_FLAG_PRESSED;
+        if (event->gbutton.down) {
+            buttons[event->gbutton.button] |= KEY_STATE_FLAG_PRESSED;
+        }
+    }
+
+
 }
 
-float ControlScheme::GetInputForAction(GameAction action,
-                                       int realKeyboardID)
-{
-    return actions[action].GetValue(realKeyboardID);
-}
 
-float ControlScheme::GetSignedInputForAction(GameAction negAction,
-                                             GameAction posAction, 
-                                             SDL_Gamepad *gamepad)
+bool GamepadState::IsButtonJustPressed(SDL_GamepadButton button)
 {
-    return actions[posAction].GetValue(gamepad) 
-         - actions[negAction].GetValue(gamepad);
+    return (bool) (buttons[button] & KEY_STATE_FLAG_JUST_PRESSED);
 }
-
-float ControlScheme::GetSignedInputForAction(GameAction negAction,
-                                             GameAction posAction, 
-                                             int realKeyboardID)
+bool GamepadState::IsButtonJustReleased(SDL_GamepadButton button)
 {
-    return actions[posAction].GetValue(realKeyboardID) 
-         - actions[negAction].GetValue(realKeyboardID);
+    return (bool) (buttons[button] & KEY_STATE_FLAG_JUST_RELEASED);
 }
+bool GamepadState::IsButtonDown(SDL_GamepadButton button)
+{
+    return (bool) (buttons[button] & KEY_STATE_FLAG_PRESSED);
+}
+/*
+float GamepadState::GetAxis(SDL_GamepadAxis axis)
+{
 
+}
+*/
+
+
+void GamepadState::NewFrame()
+{
+     for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT; i++) {
+         // Clear all flags except pressed flag.
+         buttons[i] &= KEY_STATE_FLAG_PRESSED;
+     }
+}
 
 
 void Input::Init()
@@ -397,6 +299,31 @@ void Input::Init()
             SDL_SCANCODE_D);
     gDefaultControlScheme.actions[ACTION_LOOK_RIGHT].AddMapping(
             SDL_GAMEPAD_AXIS_RIGHTX, true);
+
+    gDefaultControlScheme.actions[ACTION_UI_DOWN].AddMapping(
+            SDL_GAMEPAD_BUTTON_DPAD_DOWN);
+    gDefaultControlScheme.actions[ACTION_UI_DOWN].AddMapping(
+            SDL_SCANCODE_DOWN);
+
+    gDefaultControlScheme.actions[ACTION_UI_UP].AddMapping(
+            SDL_GAMEPAD_BUTTON_DPAD_UP);
+    gDefaultControlScheme.actions[ACTION_UI_UP].AddMapping(
+            SDL_SCANCODE_UP);
+
+    gDefaultControlScheme.actions[ACTION_UI_ACCEPT].AddMapping(
+            SDL_GAMEPAD_BUTTON_SOUTH);
+    gDefaultControlScheme.actions[ACTION_UI_ACCEPT].AddMapping(
+            SDL_SCANCODE_RETURN);
+
+    gDefaultControlScheme.actions[ACTION_UI_CANCEL].AddMapping(
+            SDL_SCANCODE_ESCAPE);
+    gDefaultControlScheme.actions[ACTION_UI_CANCEL].AddMapping(
+            SDL_GAMEPAD_BUTTON_EAST);
+
+    gDefaultControlScheme.actions[ACTION_PAUSE].AddMapping(
+            SDL_SCANCODE_ESCAPE);
+    gDefaultControlScheme.actions[ACTION_PAUSE].AddMapping(
+            SDL_GAMEPAD_BUTTON_START);
 }
 
 
@@ -459,15 +386,26 @@ void Input::NewFrame()
         }
         realKeyboards[i].NewFrame();
     }
+    for (int i = 0; i < numOpenedGamepads; i++) {
+        if (gamepads[i] != nullptr) {
+            gamepadStates[i].NewFrame();
+        }
+    }
 }
 
 
-SDL_Gamepad* Input::ListenGamepadPressA()
+SDL_Gamepad* Input::ListenGamepadPressA(SDL_Event *event)
 {
+    /*
     for (int i = 0; i < numOpenedGamepads; i++) {
-        if (GetGamepadButton(gamepads[i], SDL_GAMEPAD_BUTTON_SOUTH)) {
+        if (GetGamepadButtonJustPressed(gamepads[i], SDL_GAMEPAD_BUTTON_SOUTH)) {
             return gamepads[i];
         }
+    }
+    */
+    if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN 
+            && event->gbutton.button == SDL_GAMEPAD_BUTTON_SOUTH) {
+        return SDL_GetGamepadFromID(event->gbutton.which);
     }
     return nullptr;
 }
@@ -484,6 +422,7 @@ static bool IsKeyboardRegistered(SDL_KeyboardID keyboardID)
     return false;
 }
 */
+
 
 int Input::ListenKeyboardPressJoin()
 {
@@ -660,6 +599,12 @@ void Input::HandleEvent(SDL_Event *event)
         }
         realKeyboards[i].HandleEvent(event);
     }
+
+    for (int i = 0; i < numOpenedGamepads; i++) {
+        if (gamepads[i] != nullptr) {
+            gamepadStates[i].HandleEvent(event, gamepads[i]);
+        }
+    }
 }
 
 
@@ -703,12 +648,18 @@ float Input::GetGamepadAxis(SDL_Gamepad *gamepad, SDL_GamepadAxis axis)
     }
     return normAmount;
 }
+
+
 float Input::GetGamepadAxisPos(SDL_Gamepad *gamepad, SDL_GamepadAxis axis)
 {
+    if (gamepad == nullptr) return 0.0;
     return SDL_max(GetGamepadAxis(gamepad, axis), 0);
 }
+
+
 float Input::GetGamepadAxisNeg(SDL_Gamepad *gamepad, SDL_GamepadAxis axis)
 {
+    if (gamepad == nullptr) return 0.0;
     return -SDL_min(GetGamepadAxis(gamepad, axis), 0);
 }
 
@@ -727,7 +678,43 @@ SDL_Gamepad* Input::GetGamepad()
 
 bool Input::GetGamepadButton(SDL_Gamepad *gamepad, SDL_GamepadButton button)
 {
-    return SDL_GetGamepadButton(gamepad, button);
+    //return SDL_GetGamepadButton(gamepad, button);
+    if (gamepad == nullptr) return false;
+    return GetGamepadState(gamepad)->IsButtonDown(button);
+}
+
+bool Input::GetGamepadButtonJustPressed(SDL_Gamepad *gamepad, SDL_GamepadButton button)
+{
+    if (gamepad == nullptr) {
+        return GetGamepadButtonJustPressed(button);
+    }
+    return GetGamepadState(gamepad)->IsButtonJustPressed(button);
+}
+bool Input::GetGamepadButtonJustPressed(SDL_GamepadButton button)
+{
+    for (int i = 0; i < numOpenedGamepads; i++) {
+        if (gamepads[i] != nullptr) {
+            if (gamepadStates[i].IsButtonJustPressed(button)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+bool Input::GetGamepadButtonJustReleased(SDL_Gamepad *gamepad, SDL_GamepadButton button)
+{
+    if (gamepad == nullptr) return false;
+    return GetGamepadState(gamepad)->IsButtonJustReleased(button);
+}
+
+GamepadState* Input::GetGamepadState(SDL_Gamepad *gamepad)
+{
+    for (int i = 0; i < numOpenedGamepads; i++) {
+        if (gamepad == gamepads[i]) {
+            return &gamepadStates[i];
+        }
+    }
+    return nullptr;
 }
 
 

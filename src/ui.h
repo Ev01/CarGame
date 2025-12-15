@@ -62,6 +62,7 @@ namespace UI {
         MenuAction GetSelectedMenuAction();
         MenuItem* GetSelectedMenuItem();
         void HandleEvent(SDL_Event *event);
+        void Update();
     };
 
     //void DoMenuAction(MenuAction action);
@@ -75,6 +76,7 @@ namespace UI {
     Menu* GetCurrentMenu();
     void CloseAllMenus();
     void HandleEvent(SDL_Event *event);
+    void Update();
     bool GetShowPlayerAddDialog();
 
     Menu* GetPauseMenu();

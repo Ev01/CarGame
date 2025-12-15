@@ -57,6 +57,7 @@ PRIVATE
     src/convert.cpp
     src/vehicle.cpp
     src/input.cpp
+    src/input_mapping.cpp
     src/audio.cpp
     src/render.cpp
     src/render_internal.cpp
