@@ -35,7 +35,7 @@ static void DrawMenu()
         glm::vec2 pos = UI::GetPositionAnchored(
                 glm::vec2(width, 0.0), glm::vec2(0.0, yOffset),
                 UI_ANCHOR_CENTRE, 0, 0, screenWidth, screenHeight);
-        Render::RenderText(Font::defaultFace, textShader, text, pos.x, pos.y,
+        Render::RenderText(Font::defaultFace, text, pos.x, pos.y,
                            scale, col);
     }
 }
@@ -72,11 +72,11 @@ void Render::DrawRect(float x, float y, float w, float h, glm::vec4 colour)
 }
 
 
-void Render::RenderText(Font::Face *face, ShaderProg &s, std::string text, float x, float y,
+void Render::RenderText(Font::Face *face, std::string text, float x, float y,
                         float scale, glm::vec3 colour)
 {
-    glUseProgram(s.id);
-    s.SetVec3((char*)"textColour", colour.x, colour.y, colour.z);
+    glUseProgram(textShader.id);
+    textShader.SetVec3((char*)"textColour", colour.x, colour.y, colour.z);
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(textVAO);
 
@@ -135,12 +135,12 @@ static void DrawAddPlayerDialog()
     
     glm::vec2 textPos = UI::GetPositionAnchored(glm::vec2(textWidth, textHeight),
             glm::vec2(0, 0), UI_ANCHOR_TOP, rectInner.x, rectInner.y, rectInner.z, rectInner.w);
-    Render::RenderText(Font::defaultFace, textShader, text, textPos.x, textPos.y,
+    Render::RenderText(Font::defaultFace, text, textPos.x, textPos.y,
             scale, glm::vec3(0.0, 0.0, 0.0));
 
     glm::vec2 textPos2 = UI::GetPositionAnchored(glm::vec2(textWidth2, textHeight),
             glm::vec2(0, 0), UI_ANCHOR_BOTTOM, rectInner.x, rectInner.y, rectInner.z, rectInner.w);
-    Render::RenderText(Font::defaultFace, textShader, text2, textPos2.x, textPos2.y,
+    Render::RenderText(Font::defaultFace, text2, textPos2.x, textPos2.y,
             scale, glm::vec3(0.0, 0.0, 0.0));
 }
 
@@ -212,7 +212,7 @@ void Render::RenderPlayerTachometer(int playerNum)
         //char vehKphStr[16];
         //SDL_itoa(vehKph, vehKphStr, 10);
         // TODO: Make this easier to position
-        Render::RenderText(Font::defaultFace, textShader, std::to_string(vehKph), 
+        Render::RenderText(Font::defaultFace, std::to_string(vehKph), 
                 screenWidth + margin.x - scale.x / 2.0 - 10.0f,
                 margin.y + scale.y / 2.0 - 60.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
     }
@@ -249,7 +249,7 @@ void Render::GuiPass()
         float textHeight = Font::defaultFace->GetLineHeight();
         glm::vec2 pos = UI::GetPositionAnchored(glm::vec2(textWidth, textHeight), glm::vec2(0, 0),
                 UI_ANCHOR_CENTRE, 0, 0, screenWidth, screenHeight);
-        RenderText(Font::defaultFace, textShader, text, pos.x, pos.y, 1.0, glm::vec3(0, 0, 0));
+        RenderText(Font::defaultFace, text, pos.x, pos.y, 1.0, glm::vec3(0, 0, 0));
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);
