@@ -389,6 +389,7 @@ void World::CleanUp()
     World::DestroyAllLights();
     Render::DeleteAllLights();
     mapModel.reset(nullptr);
+    existingCheckpoints.clear();
 
     Vehicle::DestroyAllVehicles();
     Player::ResetVehiclePointers();
