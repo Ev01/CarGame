@@ -362,23 +362,22 @@ void World::InputUpdate()
 void World::Init()
 {
     // Audio
-    checkpointSound = Audio::CreateSoundFromFile("data/sound/sound2.wav");
-    checkpointSound->doRepeat = false;
+    if (checkpointSound == nullptr) {
+        checkpointSound = Audio::CreateSoundFromFile("data/sound/sound2.wav");
+        checkpointSound->doRepeat = false;
+    }
 
-    carSettings = GetVehicleSettingsFromFile("data/car.json");
-    carSettings.Init();
+    if (!carSettings.IsInited()) {
+        carSettings = GetVehicleSettingsFromFile("data/car.json");
+        carSettings.Init();
+    }
 
     CreateCars();
-    //carSettings2 = GetVehicleSettingsFromFile("data/car2.json");
-    //carSettings2.Init();
-    //car->Init(carSettings);
-    //car2->Init(carSettings);
 
-    //gPlayers[0].SetVehicle(car);
-    //gPlayers[1].SetVehicle(car2);
-    //CreateCheckpoint(JPH::Vec3(1, 2, 1));
-
-    mapModel = std::unique_ptr<Model>(LoadModel(mapFilepaths[gMapOption.selectedChoice], MapNodeCallback, LightCallback));
+    if (mapModel.get() == nullptr) {
+        mapModel = std::unique_ptr<Model>(
+                LoadModel(mapFilepaths[gMapOption.selectedChoice], MapNodeCallback, LightCallback));
+    }
     Phys::LoadMap(*mapModel);
     
     RespawnVehicles();
@@ -387,8 +386,18 @@ void World::Init()
 
 void World::CleanUp()
 {
+    World::DestroyAllLights();
+    Render::DeleteAllLights();
+    mapModel.reset(nullptr);
+
     Vehicle::DestroyAllVehicles();
+    Player::ResetVehiclePointers();
     carSettings.Destroy();
+    Audio::DeleteSound(checkpointSound);
+    checkpointSound = nullptr;
+    if (Phys::IsMapLoaded()) {
+        Phys::UnloadMap();
+    }
 }
 
 

@@ -31,6 +31,7 @@ struct VehicleSettings
     void Init();
     void Destroy();
     void DebugGUI();
+    bool IsInited();
 
     JPH::WheelSettings* GetWheelFR() const;
     JPH::WheelSettings* GetWheelFL() const;
@@ -39,8 +40,8 @@ struct VehicleSettings
 
     std::string modelFile;
     std::string wheelModelFile;
-    Model *vehicleModel;
-    Model *wheelModel;
+    Model *vehicleModel = nullptr;
+    Model *wheelModel = nullptr;
     float mass;
     float frontCamber;
     float frontToe;
@@ -85,7 +86,11 @@ struct Vehicle
     float GetLongVelocity();
     float GetSpeedoSpeed();
     JPH::WheeledVehicleController* GetController();
+    const Model* GetVehicleModel();
+    const Model* GetWheelModel();
+    const JPH::Ref<JPH::StaticCompoundShapeSettings> GetShape();
     void DebugGUI(unsigned int id);
+
 
     float mForward = 0;
     float mBrake = 0;
@@ -103,13 +108,6 @@ struct Vehicle
     JPH::RMat44 headLightRightTransform;
 
     JPH::Body *mBody = nullptr;
-
-    // The below 4 could probably be removed and just have a pointer to
-    // VehicleSettings object instead.
-    const Model *mVehicleModel;
-    const Model *mWheelModel;
-    JPH::Ref<JPH::StaticCompoundShapeSettings> mCompoundShape;
-    JPH::Array<JPH::Ref<JPH::WheelSettings>> mWheels;
 
     const VehicleSettings *mSettings = nullptr;
 

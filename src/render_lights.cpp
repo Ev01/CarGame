@@ -71,6 +71,7 @@ Render::SpotLight* Render::CreateSpotLight()
 
 void Render::DestroySpotLight(SpotLight *spotLight)
 {
+    if (spotLight == nullptr) return;
     for (size_t i = 0; i < spotLights.size(); i++) {
         if (spotLights[i] == spotLight) {
             spotLights[i] = nullptr;

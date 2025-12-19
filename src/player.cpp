@@ -224,3 +224,9 @@ void Player::DebugGUI()
 }
 
 
+void Player::ResetVehiclePointers()
+{
+    for (int i = 0; i < gNumPlayers; i++) {
+        gPlayers[i].vehicle = nullptr;
+    }
+}

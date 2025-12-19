@@ -33,6 +33,7 @@
 #define SPHERE_FORCE_MAG 2000.0f
 
 bool isJoltSetup = false;
+static bool isSimulationSetup = false;
     
 JPH::PhysicsSystem physics_system;
 
@@ -44,6 +45,7 @@ std::optional<JPH::TempAllocatorImpl> temp_allocator = std::nullopt;
 std::optional<JPH::JobSystemThreadPool> job_system = std::nullopt;
 
 std::vector<JPH::BodyID> mapBodyIds;
+static bool isMapLoaded = false;
 
 
 class MyContactListener : public JPH::ContactListener
@@ -106,6 +108,7 @@ void* alignedAllocateImpl(size_t inSize, size_t inAlignment)
 
 void Phys::SetupJolt() 
 {
+    SDL_Log("Seting up Jolt");
     // Register allocation hook. In this example we'll just let Jolt use malloc / free but you can override these if you want (see Memory.h).
     // This needs to be done before any other Jolt function is called.
     //RegisterDefaultAllocator();
@@ -149,6 +152,7 @@ void Phys::SetupJolt()
 
 void Phys::LoadMap(const Model &mapModel)
 {
+    SDL_Log("Loading map...");
     JPH::BodyInterface &bodyInterface = physics_system.GetBodyInterface();
     for (size_t n = 0; n < mapModel.nodes.size(); n++) {
         const ModelNode &node = *(mapModel.nodes[n]);
@@ -189,16 +193,20 @@ void Phys::LoadMap(const Model &mapModel)
     bodyInterface.AddBodiesFinalize(
             mapBodyIds.data(), mapBodyIds.size(),
             state, JPH::EActivation::DontActivate);
+
+    isMapLoaded = true;
 }
 
 
 void Phys::UnloadMap()
 {
     SDL_assert(mapBodyIds.size() > 0); // Map was never loaded
+    SDL_Log("Unloading map...");
     JPH::BodyInterface &bodyInterface = physics_system.GetBodyInterface();
     bodyInterface.RemoveBodies(mapBodyIds.data(), mapBodyIds.size());
     bodyInterface.DestroyBodies(mapBodyIds.data(), mapBodyIds.size());
     mapBodyIds.clear();
+    isMapLoaded = false;
 }
 
 
@@ -220,7 +228,10 @@ bool Phys::CastRay(
 
 void Phys::SetupSimulation()
 {
+    // TODO: Create a function to destroy the simulation.
+    if (isSimulationSetup) return;
     if (!isJoltSetup) Phys::SetupJolt();
+    SDL_Log("Setting up simulation");
 
     // This is the max amount of rigid bodies that you can add to the physics system. If you try to add more you'll get an error.
     // Note: This value is low because this is a simple test. For a real project use something in the order of 65536.
@@ -294,6 +305,7 @@ void Phys::SetupSimulation()
     // You should definitely not call this every frame or when e.g. streaming in a new level section as it is an expensive operation.
     // Instead insert all new objects in batches instead of 1 at a time to keep the broad phase efficient.
     physics_system.OptimizeBroadPhase();
+    isSimulationSetup = true;
 }
 
 
@@ -336,3 +348,4 @@ JPH::BodyInterface&  Phys::GetBodyInterface()
     return physics_system.GetBodyInterface();
 }
 
+bool Phys::IsMapLoaded() { return isMapLoaded; }

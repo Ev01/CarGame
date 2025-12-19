@@ -70,6 +70,7 @@ namespace Phys {
     void InputUpdate();
     JPH::PhysicsSystem& GetPhysicsSystem();
     JPH::BodyInterface&  GetBodyInterface();
+    bool IsMapLoaded();
 }
 
 

@@ -37,6 +37,7 @@ namespace Audio
     void CleanUp();
     void Update();
     Sound* CreateSoundFromFile(const char* filename);
+    void DeleteSound(Sound *sound);
     
 }
 

@@ -256,7 +256,7 @@ void Render::DrawCars(ShaderProg &shader)
         carTrans = glm::translate(carTrans, carPos);
         carTrans = carTrans * QuatToMatrix(car->GetRotation());
 
-        car->mVehicleModel->Draw(shader, carTrans);
+        car->GetVehicleModel()->Draw(shader, carTrans);
 
         // Draw car wheels
         for (int i = 0; i < 4; i++) {
@@ -264,7 +264,7 @@ void Render::DrawCars(ShaderProg &shader)
             if (car->IsWheelFlipped(i)) {
                 wheelTrans = glm::rotate(wheelTrans, SDL_PI_F, glm::vec3(1.0f, 0.0f, 0.0f));
             }
-            car->mWheelModel->Draw(shader, wheelTrans);
+            car->GetWheelModel()->Draw(shader, wheelTrans);
         }
     }
 }

@@ -108,6 +108,20 @@ Audio::Sound* Audio::CreateSoundFromFile(const char* filename)
 }
 
 
+void Audio::DeleteSound(Audio::Sound *sound)
+{
+    if (sound == nullptr) return;
+    for (size_t i = 0; i < existingSounds.size(); i++) {
+        if (sound == existingSounds[i]) {
+            SDL_DestroyAudioStream(sound->stream);
+            SDL_free(sound);
+            // TODO: erase could be slow
+            existingSounds.erase(existingSounds.begin() + i);
+        }
+    }
+}
+
+
 void Audio::Update()
 {
     for (Audio::Sound *sound : existingSounds) {

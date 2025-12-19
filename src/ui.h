@@ -24,6 +24,7 @@ enum MenuAction {
     MA_CYCLE_CHOICE,
     MA_ADD_PLAYER,
     MA_QUIT,
+    MA_EXIT_WORLD,
 };
 
 /*

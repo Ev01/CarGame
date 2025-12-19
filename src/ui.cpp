@@ -39,9 +39,10 @@ UI::Menu pauseMenu = {
     {
         {"Resume", MA_BACK},
         {"Options", MA_OPEN_MENU, &optionsMenu},
+        {"Quit to Main Menu", MA_EXIT_WORLD},
         {"Quit Game", MA_QUIT},
     },
-    3, 0
+    4, 0
 };
 
 
@@ -180,6 +181,10 @@ void UI::MenuItem::DoAction()
         case MA_ADD_PLAYER:
             //Player::AddPlayer();
             showAddPlayerDialog = true;
+            break;
+        case MA_EXIT_WORLD:
+            UI::MenuBack();
+            MainGame::EndWorld();
             break;
     }
 }

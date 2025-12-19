@@ -170,6 +170,13 @@ VehicleSettings GetVehicleSettingsFromFile(const char* filename)
 }
 
 
+bool VehicleSettings::IsInited()
+{
+    return wheelModel != nullptr;
+}
+
+
+
 void VehicleSettings::Init()
 {
     PrepareLoadCar(this);
@@ -220,6 +227,10 @@ void VehicleSettings::Destroy()
 {
     delete vehicleModel;
     delete wheelModel;
+    vehicleModel = nullptr;
+    wheelModel = nullptr;
+    mCompoundShape = nullptr;
+    mWheels.clear();
 }
 
 
@@ -364,10 +375,10 @@ void Vehicle::Init(const VehicleSettings &settings)
     JPH::BodyInterface &bodyInterface = physicsSystem.GetBodyInterface();
 
     //static VehicleSettings settings = GetVehicleSettingsFromFile("data/car.json");
-    mWheels = settings.mWheels;
-    mCompoundShape = settings.mCompoundShape;
-    mVehicleModel = settings.vehicleModel;
-    mWheelModel = settings.wheelModel;
+    //mWheels = settings.mWheels;
+    //mCompoundShape = settings.mCompoundShape;
+    //mVehicleModel = settings.vehicleModel;
+    //mWheelModel = settings.wheelModel;
 
     // Set up wheels
     
@@ -417,10 +428,10 @@ void Vehicle::Init(const VehicleSettings &settings)
     //colTester = new VehicleCollisionTesterCastCylinder(Layers::MOVING);
     mColTester = new JPH::VehicleCollisionTesterRay(Phys::Layers::MOVING);
     
-	// Create vehicle body
+    // Create vehicle body
     JPH::RVec3 position(6, 3, 12);
-    SDL_assert(mCompoundShape != nullptr);
-    JPH::BodyCreationSettings carBodySettings(mCompoundShape, position, 
+    SDL_assert(GetShape() != nullptr);
+    JPH::BodyCreationSettings carBodySettings(GetShape(), position, 
                                               JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), 0.0f),
                                               JPH::EMotionType::Dynamic, Phys::Layers::MOVING);
 
@@ -429,22 +440,22 @@ void Vehicle::Init(const VehicleSettings &settings)
     mBody = bodyInterface.CreateBody(carBodySettings);
     bodyInterface.AddBody(mBody->GetID(), JPH::EActivation::Activate);
 
-	// Create vehicle constraint
+    // Create vehicle constraint
     JPH::VehicleConstraintSettings constraintSettings;
 
-    constraintSettings.mWheels = mWheels;
+    constraintSettings.mWheels = settings.mWheels;
 
     JPH::WheeledVehicleControllerSettings *controller = new JPH::WheeledVehicleControllerSettings;
-	constraintSettings.mController = controller;
+    constraintSettings.mController = controller;
     controller->mEngine.mMaxTorque = settings.maxTorque;
 
     // Set which wheels are driven
     controller->mDifferentials.resize(1);
-    for (unsigned int i = 0; i < mWheels.size(); i++) {
-        if (mWheels[i].GetPtr() == GetWheelFL()) {
+    for (unsigned int i = 0; i < settings.mWheels.size(); i++) {
+        if (settings.mWheels[i].GetPtr() == GetWheelFL()) {
             controller->mDifferentials[0].mLeftWheel = i;
         }
-        else if (mWheels[i].GetPtr() == GetWheelFR()) {
+        else if (settings.mWheels[i].GetPtr() == GetWheelFR()) {
             controller->mDifferentials[0].mRightWheel = i;
         }
     }
@@ -528,7 +539,7 @@ void Vehicle::DebugGUI(unsigned int id)
     ImGui::Text("Mass: %f", 1.0 / motionProperties->GetInverseMass());
 
     int i = 0;
-    for (JPH::Ref<JPH::WheelSettings> wheel : mWheels) {
+    for (JPH::Ref<JPH::WheelSettings> wheel : mSettings->mWheels) {
         ImGui::Text("Wheel %d", i++);
         ImGui::Text("mSuspensionMinLength: %f", wheel->mSuspensionMinLength);
         ImGui::Text("mSuspensionMaxLength: %f", wheel->mSuspensionMaxLength);
@@ -852,12 +863,36 @@ float Vehicle::GetSpeedoSpeed()
 void Vehicle::Destroy()
 {
     JPH::BodyInterface &bodyInterface = Phys::GetPhysicsSystem().GetBodyInterface();
+    JPH::PhysicsSystem &physicsSystem = Phys::GetPhysicsSystem();
+
+    physicsSystem.RemoveConstraint(mVehicleConstraint);
+    physicsSystem.RemoveStepListener(mVehicleConstraint);
 
     bodyInterface.RemoveBody(mBody->GetID());
     bodyInterface.DestroyBody(mBody->GetID());
+    mBody = nullptr;
 
     Render::DestroySpotLight(headLightLeft);
     Render::DestroySpotLight(headLightRight);
+    headLightLeft = nullptr;
+    headLightRight = nullptr;
+    Audio::DeleteSound(engineSnd);
+    Audio::DeleteSound(driftSnd);
+    engineSnd = nullptr;
+    driftSnd = nullptr;
+}
+
+const Model* Vehicle::GetVehicleModel()
+{
+    return mSettings->vehicleModel;
+}
+const Model* Vehicle::GetWheelModel()
+{
+    return mSettings->wheelModel;
+}
+const JPH::Ref<JPH::StaticCompoundShapeSettings> Vehicle::GetShape()
+{
+    return mSettings->mCompoundShape;
 }
 
 

@@ -219,9 +219,7 @@ void Render::RenderPlayerTachometer(int playerNum)
         SDL_itoa(vehKph, vehKphStr, 10);
         RenderTextAnchored(Font::defaultFace, vehKphStr, glm::vec2(0, -tachoRect.h/4.0), 1.0, 
                 UI_ANCHOR_CENTRE, glm::vec3(1, 1, 1), tachoRect);
-
     }
-
 }
 
 

@@ -198,6 +198,20 @@ void MainGame::StartWorld()
 }
 
 
+void MainGame::EndWorld()
+{
+    if (gGameState == GAME_PRESS_START_SCREEN) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Tried to end world, but world hasn't been started");
+        return;
+    }
+
+    World::CleanUp();
+    MainGame::gGameState = GAME_PRESS_START_SCREEN;
+    UI::CloseAllMenus();
+    UI::OpenMenu(&UI::mainMenu);
+}
+
+
 void MainGame::Quit()
 {
     SDL_Log("Quitting game...");

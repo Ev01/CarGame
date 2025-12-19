@@ -63,6 +63,7 @@ struct Player {
     static void AddPlayerAndVehicle(VehicleSettings &settings);
     static void PhysicsUpdateAllPlayers(double delta);
     static void InputUpdateAllPlayers();
+    static void ResetVehiclePointers();
 };
 
 extern Player gPlayers[MAX_PLAYERS];

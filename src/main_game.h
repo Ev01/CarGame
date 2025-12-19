@@ -13,6 +13,7 @@ namespace MainGame {
     SDL_AppResult HandleEvent(SDL_Event *event);
     SDL_AppResult Update();
     void StartWorld();
+    void EndWorld();
     void Quit();
     void CleanUp();
 
