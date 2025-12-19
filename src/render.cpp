@@ -410,46 +410,6 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
 }
 
 
-void Render::RenderText(Font::Face *face, ShaderProg &s, std::string text, float x, float y,
-                        float scale, glm::vec3 colour)
-{
-    glUseProgram(s.id);
-    s.SetVec3((char*)"textColour", colour.x, colour.y, colour.z);
-    glActiveTexture(GL_TEXTURE0);
-    glBindVertexArray(textVAO);
-
-    std::string::const_iterator c;
-    for (c = text.begin(); c != text.end(); c++) {
-        Character ch = face->characters[*c - 32];
-
-        float xPos = x + ch.bearing.x * scale;
-        float yPos = y - (ch.size.y - ch.bearing.y) * scale;
-        float w = ch.size.x * scale;
-        float h = ch.size.y * scale;
-        // Update VBO for each character
-        float vertices[6][4] = {
-            { xPos,     yPos + h, 0.0f, 0.0f },
-            { xPos,     yPos,     0.0f, 1.0f },
-            { xPos + w, yPos,     1.0f, 1.0f },
-
-            { xPos,     yPos + h, 0.0f, 0.0f },
-            { xPos + w, yPos,     1.0f, 1.0f },
-            { xPos + w, yPos + h, 1.0f, 0.0f }
-        };
-        // render glyph texture over quad
-        glBindTexture(GL_TEXTURE_2D, ch.texture.id);
-        // Update content of VBO memory
-        glBindBuffer(GL_ARRAY_BUFFER, textVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        // render quad
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        // Advance cursors for next glyph (advance is in 1/64 pixels)
-        x += (ch.advance >> 6) * scale;
-    }
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-}
 
 void Render::UpdatePlayerCamAspectRatios()
 {

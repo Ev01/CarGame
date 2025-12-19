@@ -69,6 +69,7 @@ namespace World {
     std::vector<Checkpoint>& GetCheckpoints();
     Model& GetCurrentMapModel();
     RaceState GetRaceState();
+    RaceProgress& GetRaceProgress();
 
     extern ChoiceOption gMapOption;
 };

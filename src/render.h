@@ -31,8 +31,6 @@ namespace Render {
     void RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
                      bool enableSkybox = true, Player *p = nullptr);
     void RenderSceneRaw(ShaderProg &shader, Player *p = nullptr);
-    void RenderText(Font::Face *face, ShaderProg &s, std::string text, float x, float y,
-                    float scale, glm::vec3 colour);
 
     void HandleEvent(SDL_Event *event);
     void DeleteAllLights();

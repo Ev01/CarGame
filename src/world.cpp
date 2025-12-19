@@ -498,3 +498,4 @@ void World::DestroyAllLights()
 
 Model& World::GetCurrentMapModel() { return *mapModel; }
 RaceState World::GetRaceState()           { return raceProgress.mState; }
+RaceProgress& World::GetRaceProgress()    { return raceProgress; }
