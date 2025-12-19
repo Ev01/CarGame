@@ -13,6 +13,7 @@ struct Texture;
 struct Model;
 struct Material;
 struct Player;
+struct Rect;
 enum UIAnchor : unsigned int;
 
 extern unsigned int fbo;
@@ -58,10 +59,12 @@ namespace Render {
     void InitSkybox();
     void InitText();
     void CreateQuadVAO();
-    void GetPlayerSplitScreenBounds(int playerNum, int *outX, int *outY,
-                                           int *outW, int *outH);
+    void GetPlayerSplitScreenBounds(int playerNum, float *outX, float *outY,
+                                           float *outW, float *outH);
     void RenderSceneSplitScreen();
     void UpdateWindowSize();
     void RenderShadowDepthToScreen();
     void ToggleFullscreen();
+
+    Rect ScreenBoundary();
 }

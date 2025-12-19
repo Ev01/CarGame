@@ -35,6 +35,13 @@ enum MenuItemType {
 
 struct ChoiceOption;
 
+struct Rect {
+    float x = 0.0;
+    float y = 0.0;
+    float w = 0.0;
+    float h = 0.0;
+};
+
 namespace UI {
     struct Menu;
 
@@ -68,9 +75,9 @@ namespace UI {
     //void DoMenuAction(MenuAction action);
 
     glm::vec2 GetPositionAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
-            float boundX, float boundY, float boundW, float boundH);
-    glm::vec4 GetRectAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
-            float boundX, float boundY, float boundW, float boundH);
+            Rect bound);
+    Rect GetRectAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
+            Rect bound);
     void OpenMenu(Menu *toOpen);
     void MenuBack();
     Menu* GetCurrentMenu();

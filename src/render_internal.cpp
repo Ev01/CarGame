@@ -10,6 +10,7 @@
 #include "vehicle.h"
 #include "player.h"
 #include "shader.h"
+#include "ui.h"
 
 #include "../vendor/imgui/imgui.h"
 
@@ -496,26 +497,26 @@ void Render::DebugGUI()
 
 
 
-void Render::GetPlayerSplitScreenBounds(int playerNum, int *outX, int *outY,
-                                       int *outW, int *outH)
+void Render::GetPlayerSplitScreenBounds(int playerNum, float *outX, float *outY,
+                                       float *outW, float *outH)
 {
-    int w = screenWidth;
-    int h = screenHeight;
+    float w = screenWidth;
+    float h = screenHeight;
     if (doSplitScreen && gNumPlayers >= 2) {
-        w = screenWidth / 2;
+        w = screenWidth / 2.0;
         if (gNumPlayers >= 3) {
-            h = screenHeight / 2;
+            h = screenHeight / 2.0;
         }
     }
     // Bottom left of screen
-    int x, y;
+    float x, y;
     switch (playerNum) {
         case 0: /* Player 1 */
             x = 0;
             y = screenHeight - h;
             break;
         case 1: /* Player 2 */
-            x = screenWidth / 2;
+            x = screenWidth / 2.0;
             y = screenHeight - h;
             break;
         case 2: /* Player 3 */
@@ -523,7 +524,7 @@ void Render::GetPlayerSplitScreenBounds(int playerNum, int *outX, int *outY,
             y = 0;
             break;
         case 3: /* Player 4 */
-            x = screenWidth / 2;
+            x = screenWidth / 2.0;
             y = 0;
             break;
     }
@@ -548,7 +549,7 @@ void Render::RenderSceneSplitScreen()
     GLERR;
     glUseProgram(pbrShader.id);
     GLERR;
-    int playerScreenWidth, playerScreenHeight, xOffset, yOffset;
+    float playerScreenWidth, playerScreenHeight, xOffset, yOffset;
     for (int i = 0; i < gNumPlayers; i++) {
         GetPlayerSplitScreenBounds(i, &xOffset, &yOffset, 
                                    &playerScreenWidth, &playerScreenHeight);
@@ -613,3 +614,7 @@ void Render::ToggleFullscreen()
                 window, !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN));
 }
 
+Rect Render::ScreenBoundary()
+{
+    return {0, 0, (float) screenWidth, (float) screenHeight};
+}

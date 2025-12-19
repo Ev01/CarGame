@@ -53,39 +53,39 @@ bool showAddPlayerDialog = false;
 
 
 glm::vec2 UI::GetPositionAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
-            float boundX, float boundY, float boundW, float boundH)
+            Rect bound)
 {
     glm::vec2 pos;
     //float boundW  = (float)screenWidth;
     //float boundH = (float)screenHeight;
-    float boundR = boundX + boundW; /* right boundary */
-    float boundT = boundY + boundH; /* top boundary   */
+    float boundR = bound.x + bound.w; /* right boundary */
+    float boundT = bound.y + bound.h; /* top boundary   */
 
     if (anchor & UI_ANCHOR_LEFT) {
-        pos.x = boundX + margin.x;
+        pos.x = bound.x + margin.x;
     } 
     else if (anchor & UI_ANCHOR_RIGHT) {
         pos.x = boundR + margin.x - size.x;
     }
     else { // Centered horizontally
-        pos.x = boundX + boundW / 2.0 - size.x / 2.0 + margin.x;
+        pos.x = bound.x + bound.w / 2.0 - size.x / 2.0 + margin.x;
     }
 
     if (anchor & UI_ANCHOR_BOTTOM) {
-        pos.y = boundY + margin.y;
+        pos.y = bound.y + margin.y;
     }
     else if (anchor & UI_ANCHOR_TOP) {
         pos.y = boundT + margin.y - size.y;
     }
     else { // Centered vertically
-        pos.y = boundY + boundH / 2.0 - size.y / 2.0 + margin.y;
+        pos.y = bound.y + bound.h / 2.0 - size.y / 2.0 + margin.y;
     }
 
     return pos;
 }
 
-glm::vec4 UI::GetRectAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
-        float boundX, float boundY, float boundW, float boundH)
+Rect UI::GetRectAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
+        Rect bound)
 {
     glm::vec2 bl;
     glm::vec2 tr;
@@ -112,11 +112,11 @@ glm::vec4 UI::GetRectAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor,
         trMargin.y += size.y / 2.0;
     }
     bl = GetPositionAnchored(glm::vec2(0, 0), blMargin, anchor,
-            boundX, boundY, boundW, boundH);
+            bound);
     tr = GetPositionAnchored(glm::vec2(0, 0), trMargin, anchor,
-            boundX, boundY, boundW, boundH);
+            bound);
 
-    return glm::vec4(bl.x, bl.y, tr.x - bl.x, tr.y - bl.y);
+    return {bl.x, bl.y, tr.x - bl.x, tr.y - bl.y};
 }
 
 void UI::Menu::SelectNext()

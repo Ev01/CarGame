@@ -31,12 +31,8 @@ static void DrawMenu()
         float yOffset = -Font::defaultFace->GetLineHeight() * scale * i;
         char text[64];
         menu->items[i].GetText(text, 64);
-        float width = Font::defaultFace->GetWidthOfText(text, SDL_strlen(text)) * scale;
-        glm::vec2 pos = UI::GetPositionAnchored(
-                glm::vec2(width, 0.0), glm::vec2(0.0, yOffset),
-                UI_ANCHOR_CENTRE, 0, 0, screenWidth, screenHeight);
-        Render::RenderText(Font::defaultFace, text, pos.x, pos.y,
-                           scale, col);
+        Render::RenderTextAnchored(Font::defaultFace, text, glm::vec2(0.0, yOffset),
+                scale, UI_ANCHOR_CENTRE, col, Render::ScreenBoundary());
     }
 }
 
@@ -114,54 +110,63 @@ void Render::RenderText(Font::Face *face, std::string text, float x, float y,
 }
 
 
+void Render::RenderTextAnchored(Font::Face *face, const char* text, 
+        glm::vec2 margin, float scale, UIAnchor anchor, glm::vec3 colour,
+        Rect bound)
+{
+        float textWidth = face->GetWidthOfText(text, SDL_strlen(text)) * scale;
+        float textHeight = face->GetLineHeight() * scale;
+        glm::vec2 pos = UI::GetPositionAnchored(glm::vec2(textWidth, textHeight), margin,
+                anchor, bound);
+        RenderText(face, text, pos.x, pos.y, scale, colour);
+
+}
+
+
 static void DrawAddPlayerDialog()
 {
     const float scale = 0.5;
     const char* text = "Press Up + Enter on keyboard or A on controller..."; 
     const char* text2 = "Press Escape to cancel.";
+    
     float textWidth = Font::defaultFace->GetWidthOfText(text, SDL_strlen(text)) * scale;
     float textWidth2 = Font::defaultFace->GetWidthOfText(text2, SDL_strlen(text2)) * scale;
     float textHeight = Font::defaultFace->GetLineHeight() * scale;
+    
     const float vertSpacing = 10.0f;
     glm::vec2 textSize = glm::vec2(SDL_max(textWidth, textWidth2), textHeight * 2) + vertSpacing;
     glm::vec2 rectMargin = glm::vec2(24, 24);
 
-    glm::vec4 rect = UI::GetRectAnchored(textSize + rectMargin, glm::vec2(0, 0),
-            UI_ANCHOR_CENTRE, 0, 0, screenWidth, screenHeight);
-    glm::vec4 rectInner = UI::GetRectAnchored(textSize, glm::vec2(0, 0),
-            UI_ANCHOR_CENTRE, 0, 0, screenWidth, screenHeight);
+    Rect rect = UI::GetRectAnchored(textSize + rectMargin, glm::vec2(0, 0),
+            UI_ANCHOR_CENTRE, Render::ScreenBoundary());
+    Rect rectInner = UI::GetRectAnchored(textSize, glm::vec2(0, 0),
+            UI_ANCHOR_CENTRE, Render::ScreenBoundary());
     const glm::vec4 col = glm::vec4(0.9, 0.8, 0.8, 0.8);
-    Render::DrawRect(rect.x, rect.y, rect.z, rect.w, col);
+    Render::DrawRect(rect.x, rect.y, rect.w, rect.h, col);
     
-    glm::vec2 textPos = UI::GetPositionAnchored(glm::vec2(textWidth, textHeight),
-            glm::vec2(0, 0), UI_ANCHOR_TOP, rectInner.x, rectInner.y, rectInner.z, rectInner.w);
-    Render::RenderText(Font::defaultFace, text, textPos.x, textPos.y,
-            scale, glm::vec3(0.0, 0.0, 0.0));
+    Render::RenderTextAnchored(Font::defaultFace, text, glm::vec2(0, 0), scale, 
+            UI_ANCHOR_TOP, glm::vec3(0, 0, 0), rectInner);
 
-    glm::vec2 textPos2 = UI::GetPositionAnchored(glm::vec2(textWidth2, textHeight),
-            glm::vec2(0, 0), UI_ANCHOR_BOTTOM, rectInner.x, rectInner.y, rectInner.z, rectInner.w);
-    Render::RenderText(Font::defaultFace, text2, textPos2.x, textPos2.y,
-            scale, glm::vec3(0.0, 0.0, 0.0));
+    Render::RenderTextAnchored(Font::defaultFace, text2, glm::vec2(0, 0), scale, 
+            UI_ANCHOR_BOTTOM, glm::vec3(0, 0, 0), rectInner);
 }
 
 
 void Render::RenderUIAnchored(Texture tex, glm::vec2 scale, glm::vec2 margin,
-                             float rotation, UIAnchor anchor,
-                             float boundX, float boundY,
-                             float boundW, float boundH)
+                              float rotation, UIAnchor anchor, Rect bound)
 {
     glm::mat4 trans = glm::mat4(1.0);
     glm::vec2 pos;
-    //float boundW  = (float)screenWidth;
-    //float boundH = (float)screenHeight;
-    if (boundW == 0.0) boundW = (float)screenWidth;
-    if (boundH == 0.0) boundH = (float)screenHeight;
+    //float bound.w  = (float)screenWidth;
+    //float bound.h = (float)screenHeight;
+    if (bound.w == 0.0) bound.w = (float)screenWidth;
+    if (bound.h == 0.0) bound.h = (float)screenHeight;
     
     // Divide scale because the quad is originally 2 wide and 2 high.
     //scale = scale / 2.0f;
     glm::vec2 rotPivot = scale / 2.0f;
 
-    pos = UI::GetPositionAnchored(scale, margin, anchor, boundX, boundY, boundW, boundH);
+    pos = UI::GetPositionAnchored(scale, margin, anchor, bound);
     trans = glm::translate(trans, glm::vec3(pos.x, pos.y, 0.0f));
     // Translate back after rotating so the pivot point stays in the same
     // place.
@@ -187,11 +192,12 @@ void Render::RenderUIAnchored(Texture tex, glm::vec2 scale, glm::vec2 margin,
 
 void Render::RenderPlayerTachometer(int playerNum)
 {
-    int boundX, boundY, boundW, boundH;
-    GetPlayerSplitScreenBounds(playerNum, &boundX, &boundY, &boundW, &boundH);
+    //int boundX, boundY, boundW, boundH;
+    Rect bound;
+    GetPlayerSplitScreenBounds(playerNum, &bound.x, &bound.y, &bound.w, &bound.h);
     RenderUIAnchored(tachoMeterTex, glm::vec2(256.0f, 256.0f),
                      glm::vec2(-32.0f, 32.0f), 0.0, UI_ANCHOR_BOTTOM_RIGHT,
-                     boundX, boundY, boundW, boundH);
+                     bound);
 
     // Draw the needle
     Player &p = gPlayers[playerNum];
@@ -205,16 +211,15 @@ void Render::RenderPlayerTachometer(int playerNum)
         const float rpmRange = 8000.0;
         float needleAngle = zeroAngle - rpm / rpmRange * angleRange;
         RenderUIAnchored(tachoNeedleTex, scale, margin, needleAngle, 
-                UI_ANCHOR_BOTTOM_RIGHT, boundX, boundY, boundW, boundH);
+                UI_ANCHOR_BOTTOM_RIGHT, bound);
+        Rect tachoRect = UI::GetRectAnchored(scale, margin, UI_ANCHOR_BOTTOM_RIGHT, bound);
 
-        //int vehKph = (int) (p.vehicle->GetLongVelocity() * 3.6);
-        int vehKph = SDL_abs (p.vehicle->GetSpeedoSpeed() * 3.6);
-        //char vehKphStr[16];
-        //SDL_itoa(vehKph, vehKphStr, 10);
-        // TODO: Make this easier to position
-        Render::RenderText(Font::defaultFace, std::to_string(vehKph), 
-                screenWidth + margin.x - scale.x / 2.0 - 10.0f,
-                margin.y + scale.y / 2.0 - 60.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
+        int vehKph = SDL_abs(p.vehicle->GetSpeedoSpeed() * 3.6);
+        char vehKphStr[16];
+        SDL_itoa(vehKph, vehKphStr, 10);
+        RenderTextAnchored(Font::defaultFace, vehKphStr, glm::vec2(0, -tachoRect.h/4.0), 1.0, 
+                UI_ANCHOR_CENTRE, glm::vec3(1, 1, 1), tachoRect);
+
     }
 
 }
@@ -241,15 +246,12 @@ void Render::GuiPass()
     }
 
     // Draw race start countdown
-    if (World::GetRaceState() == RACE_COUNTING_DOWN) {
+    if (World::GetRaceState() == RACE_COUNTING_DOWN && MainGame::gGameState == GAME_IN_WORLD) {
         int secondsLeft = (int) World::GetRaceProgress().mCountdownTimer + 1;
         char text[4];
         SDL_itoa(secondsLeft, text, 10);
-        float textWidth = Font::defaultFace->GetWidthOfText(text, SDL_strlen(text));
-        float textHeight = Font::defaultFace->GetLineHeight();
-        glm::vec2 pos = UI::GetPositionAnchored(glm::vec2(textWidth, textHeight), glm::vec2(0, 0),
-                UI_ANCHOR_CENTRE, 0, 0, screenWidth, screenHeight);
-        RenderText(Font::defaultFace, text, pos.x, pos.y, 1.0, glm::vec3(0, 0, 0));
+        RenderTextAnchored(Font::defaultFace, text, glm::vec2(0, 0), 1.0, UI_ANCHOR_CENTRE, 
+                glm::vec3(0, 0, 0), ScreenBoundary());
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);
