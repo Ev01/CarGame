@@ -221,18 +221,19 @@ float Render::ScreenAspect()
     // Screen width and height
     //int sw, sh;
     //bool screenSuccess = SDL_GetWindowSize(window, &sw, &sh);
+    UpdateWindowSize();
     //if (screenSuccess) {
         float aspect = (float) screenWidth / (float) screenHeight;
         // Divide aspect by 2.0 for split screen
-        SDL_Log("Split: %d, num players: %d", doSplitScreen, gNumPlayers);
+        //SDL_Log("Split: %d, num players: %d", doSplitScreen, gNumPlayers);
         if (doSplitScreen && gNumPlayers == 2) {
             SDL_Log("Dividing");
             aspect /= 2.0;
         }
-        SDL_Log("Aspect 2: %f", aspect);
+        SDL_Log("Aspect: %f, width: %d, height: %d", aspect, screenWidth, screenHeight);
         return aspect;
     //}
-    return 0.0;
+    //return 0.0;
 }
 
 
@@ -413,10 +414,10 @@ void Render::RenderScene(const glm::mat4 &view, const glm::mat4 &projection,
 
 void Render::UpdatePlayerCamAspectRatios()
 {
-        float aspect = Render::ScreenAspect();
-        for (int i = 0; i < gNumPlayers; i++) {
-            gPlayers[i].cam.cam.SetAspectRatio(aspect);
-        }
+    float aspect = Render::ScreenAspect();
+    for (int i = 0; i < gNumPlayers; i++) {
+        gPlayers[i].cam.cam.SetAspectRatio(aspect);
+    }
 }
 
 void Render::HandleEvent(SDL_Event *event)

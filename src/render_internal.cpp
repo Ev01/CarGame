@@ -610,8 +610,9 @@ void Render::RenderShadowDepthToScreen()
 
 void Render::ToggleFullscreen()
 {
-        SDL_SetWindowFullscreen(
-                window, !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN));
+    SDL_SetWindowFullscreen(
+            window, !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN));
+    UpdatePlayerCamAspectRatios();
 }
 
 Rect Render::ScreenBoundary()
