@@ -232,6 +232,20 @@ void Render::RenderPlayerTachometer(int playerNum)
 }
 
 
+static void RenderPlayerLaps(int playerNum)
+{
+    Rect bound;
+    Render::GetPlayerSplitScreenBounds(playerNum, &bound.x, &bound.y, &bound.w, &bound.h);
+    char text[16];
+    int lapsToDisplay = gPlayers[playerNum].raceProgress.GetLapsCompleted() + 1;
+    lapsToDisplay = SDL_min(lapsToDisplay, World::GetRaceProgress().mTotalLaps);
+    SDL_snprintf(text, 16, "Lap: %d", lapsToDisplay);
+    Render::RenderTextAnchored(Font::defaultFace, text, glm::vec2(32, -32), 1.0, 
+            UI_ANCHOR_TOP_LEFT, glm::vec3(1, 1, 1), bound);
+
+}
+
+
 void Render::GuiPass()
 {
     if (MainGame::gGameState == GAME_PRESS_START_SCREEN) {
@@ -244,10 +258,11 @@ void Render::GuiPass()
         DrawDialog(UI::GetCurrentDialog());
     }
 
-    // Render the tachometer for all players
+    // Render all players' huds
     if (MainGame::gGameState == GAME_IN_WORLD) {
         for (int i = 0; i < gNumPlayers; i++) {
             RenderPlayerTachometer(i);
+            RenderPlayerLaps(i);
             // Only render player 1 if doSplitScreen is off.
             if (!doSplitScreen) break;
         }

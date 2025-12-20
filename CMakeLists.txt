@@ -68,6 +68,7 @@ PRIVATE
     src/player.cpp
     src/ui.cpp
     src/ui_menu.cpp
+    src/options.cpp
     src/font.cpp
     glad/glad.c
 )

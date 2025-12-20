@@ -46,9 +46,11 @@ struct RaceProgress {
     Uint64 mRaceStartMS = 0;
     float mTimePassed = 0.0;
     int mWinningPlayerIdx = -1;
+    int mTotalLaps = 1;
 };
 
 struct ChoiceOption;
+struct IntOption;
 
 namespace World {
     void AssimpAddLight(const aiLight *aLight, const aiNode *aNode,
@@ -70,9 +72,11 @@ namespace World {
     Vehicle& GetCar2();
     */
     std::vector<Checkpoint>& GetCheckpoints();
+    int GetNumCheckpointsPerLap();
     Model& GetCurrentMapModel();
     RaceState GetRaceState();
     RaceProgress& GetRaceProgress();
 
     extern ChoiceOption gMapOption;
+    extern IntOption gLapsOption;
 };

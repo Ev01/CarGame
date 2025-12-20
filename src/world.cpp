@@ -48,7 +48,7 @@ const char* mapFilepaths[] = {
 };
 
 ChoiceOption World::gMapOption = {0, mapDisplayNames, 4};
-    
+IntOption World::gLapsOption   = {1, 1, 10}; 
 
 static void CreateCheckpoint(JPH::Vec3 position, unsigned int num)
 {
@@ -177,6 +177,7 @@ void World::BeginRaceCountdown()
     */
     raceProgress.mState = RACE_COUNTING_DOWN;
     raceProgress.mCountdownTimer = 3.0;
+    raceProgress.mTotalLaps = gLapsOption.value;
 }
 
 
@@ -279,7 +280,7 @@ void World::OnContactAdded(const JPH::Body &inBody1, const JPH::Body &inBody2)
         if (inBody1.GetID() == nextCheckpoint.mBodyID 
                 || inBody2.GetID() == nextCheckpoint.mBodyID) {
             gPlayers[i].raceProgress.CollectCheckpoint();
-            if (gPlayers[i].raceProgress.IsFinishedRace(existingCheckpoints.size())) {
+            if (gPlayers[i].raceProgress.IsFinishedRace(existingCheckpoints.size() * raceProgress.mTotalLaps)) {
                 EndRace(i);
             }
             checkpointSound->Play();
@@ -518,6 +519,7 @@ void World::DestroyAllLights()
 }
 
 
-Model& World::GetCurrentMapModel() { return *mapModel; }
-RaceState World::GetRaceState()           { return raceProgress.mState; }
-RaceProgress& World::GetRaceProgress()    { return raceProgress; }
+Model& World::GetCurrentMapModel()     { return *mapModel; }
+int World::GetNumCheckpointsPerLap()   { return existingCheckpoints.size(); }
+RaceState World::GetRaceState()        { return raceProgress.mState; }
+RaceProgress& World::GetRaceProgress() { return raceProgress; }

@@ -35,15 +35,17 @@ UI::Menu removePlayerMenu = {
 
 UI::Menu mainMenu = {
     {
-        // Title             Action           Menu / ChoiceOption
+        // Title             Action                             Menu / ChoiceOption
         {"Play",             MA_START_GAME}, 
         {"Starting Map",     MA_CYCLE_CHOICE, {.choiceOption = &World::gMapOption}},
+        {"Num Laps",         MA_INC_INTOPTION,{.intOption = &World::gLapsOption}, 
+            MA_DEC_INTOPTION, MA_INC_INTOPTION},
         {"Add Player",       MA_ADD_PLAYER},
         {"Remove Player",    MA_OPEN_MENU,    {.menuToOpen = &removePlayerMenu}},
         {"Options",          MA_OPEN_MENU,    {.menuToOpen = &optionsMenu}}, 
         {"Quit",             MA_QUIT}, 
     },
-    6, 0
+    7, 0
 };
 
 UI::Menu pauseMenu = {
@@ -81,7 +83,13 @@ void UI::Menu::HandleEvent(SDL_Event *event)
         SelectPrev();
     }
     if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_UI_ACCEPT)) {
-        GetSelectedMenuItem()->DoAction();
+        GetSelectedMenuItem()->DoAction(ACTION_UI_ACCEPT);
+    }
+    if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_UI_LEFT)) {
+        GetSelectedMenuItem()->DoAction(ACTION_UI_LEFT);
+    }
+    if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_UI_RIGHT)) {
+        GetSelectedMenuItem()->DoAction(ACTION_UI_RIGHT);
     }
 }
 
@@ -112,9 +120,24 @@ void UI::Menu::AddItem(MenuItem newItem)
 
 
 
-void UI::MenuItem::DoAction()
+void UI::MenuItem::DoAction(GameAction inputAction)
 {
-    switch (action) {
+    MenuAction actionToUse;
+    switch (inputAction) {
+        case ACTION_UI_ACCEPT:
+            actionToUse = action;
+            break;
+        case ACTION_UI_LEFT:
+            actionToUse = leftAction;
+            break;
+        case ACTION_UI_RIGHT:
+            actionToUse = rightAction;
+            break;
+        default:
+            return;
+    }
+
+    switch (actionToUse) {
         case MA_NONE:
             break;
         case MA_START_GAME:
@@ -133,6 +156,12 @@ void UI::MenuItem::DoAction()
             break;
         case MA_CYCLE_CHOICE:
             choiceOption->SelectNext();
+            break;
+        case MA_INC_INTOPTION:
+            intOption->Increase();
+            break;
+        case MA_DEC_INTOPTION:
+            intOption->Decrease();
             break;
         case MA_ADD_PLAYER:
             //Player::AddPlayer();
@@ -153,12 +182,20 @@ void UI::MenuItem::DoAction()
 
 void UI::MenuItem::GetText(char *outText, int maxlen)
 {
-    if (action == MA_CYCLE_CHOICE) {
-        // TODO: Clean this up
-        SDL_snprintf(outText, maxlen, "%s: %s", text,
-                choiceOption->optionStrings[choiceOption->selectedChoice]);
-    } else {
-        SDL_snprintf(outText, maxlen, "%s", text);
+    // TODO: Could be good if there was a separate menuItemType member to
+    // differentiate between these.
+    switch (action) {
+        case MA_CYCLE_CHOICE:
+            SDL_snprintf(outText, maxlen, "%s: %s", text,
+                    choiceOption->GetSelectedString());
+            break;
+        case MA_INC_INTOPTION:
+        case MA_DEC_INTOPTION:
+            SDL_snprintf(outText, maxlen, "%s: %d", text, intOption->value);
+            break;
+        default:
+            SDL_snprintf(outText, maxlen, "%s", text);
+            break;
     }
 }
 

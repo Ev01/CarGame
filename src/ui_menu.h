@@ -8,6 +8,8 @@ enum MenuAction {
     MA_OPEN_MENU,
     MA_BACK,
     MA_CYCLE_CHOICE,
+    MA_INC_INTOPTION,
+    MA_DEC_INTOPTION,
     MA_ADD_PLAYER,
     MA_REMOVE_PLAYER,
     MA_QUIT,
@@ -16,7 +18,8 @@ enum MenuAction {
 
 // Forward declarations
 struct ChoiceOption;
-
+struct IntOption;
+enum GameAction: unsigned int;
 
 namespace UI {
     struct Menu;
@@ -28,10 +31,16 @@ namespace UI {
         union {
             Menu *menuToOpen = NULL; // If action == MA_OPEN_MENU
             ChoiceOption *choiceOption; // If action == MA_CYCLE_CHOICE
+            IntOption *intOption; // If action == MA_INC_INTOPTION 
+                                  // or MA_DEC_INTOPTION
             int playerToRemove; // If action == MA_REMOVE_PLAYER
         };
+        MenuAction leftAction = MA_NONE;
+        MenuAction rightAction = MA_NONE;
 
-        void DoAction();
+        void DoAction(GameAction inputAction);
+        void DoRightAction();
+        void DoLeftAction();
         /* Put the full display text in outText, including the choice value if
          * this is a CYCLE_CHOICE item. */
         void GetText(char *outText, int maxlen);

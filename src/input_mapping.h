@@ -35,9 +35,12 @@ enum GameAction : unsigned int {
     ACTION_UI_START,
     ACTION_UI_UP,
     ACTION_UI_DOWN,
+    ACTION_UI_LEFT,
+    ACTION_UI_RIGHT,
     ACTION_UI_ACCEPT,
     ACTION_PAUSE,
     ACTION_UI_CANCEL,
+    
 
     NUM_ACTIONS
 };

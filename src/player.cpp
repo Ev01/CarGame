@@ -1,7 +1,6 @@
 #include "player.h"
 
 #include "vehicle.h"
-#include "input.h"
 #include "input_mapping.h"
 #include "camera.h"
 #include "render.h"
@@ -32,6 +31,12 @@ bool PlayerRaceProgress::IsFinishedRace(int totalCheckpointCount)
 void PlayerRaceProgress::Reset()
 {
     checkpointsCollected = 0;
+}
+
+
+int PlayerRaceProgress::GetLapsCompleted()
+{
+    return checkpointsCollected / World::GetNumCheckpointsPerLap();
 }
 
 

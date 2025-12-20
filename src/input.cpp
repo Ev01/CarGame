@@ -310,6 +310,16 @@ void Input::Init()
     gDefaultControlScheme.actions[ACTION_UI_UP].AddMapping(
             SDL_SCANCODE_UP);
 
+    gDefaultControlScheme.actions[ACTION_UI_LEFT].AddMapping(
+            SDL_GAMEPAD_BUTTON_DPAD_LEFT);
+    gDefaultControlScheme.actions[ACTION_UI_LEFT].AddMapping(
+            SDL_SCANCODE_LEFT);
+
+    gDefaultControlScheme.actions[ACTION_UI_RIGHT].AddMapping(
+            SDL_GAMEPAD_BUTTON_DPAD_RIGHT);
+    gDefaultControlScheme.actions[ACTION_UI_RIGHT].AddMapping(
+            SDL_SCANCODE_RIGHT);
+
     gDefaultControlScheme.actions[ACTION_UI_ACCEPT].AddMapping(
             SDL_GAMEPAD_BUTTON_SOUTH);
     gDefaultControlScheme.actions[ACTION_UI_ACCEPT].AddMapping(
