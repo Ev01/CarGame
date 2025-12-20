@@ -41,8 +41,8 @@ struct Rect {
 
 namespace UI {
     // Forward declarations
-    struct Menu;
-    struct MenuItem;
+    //struct Menu;
+    //struct MenuItem;
 
     struct Dialog {
         const char* line1;
@@ -57,18 +57,12 @@ namespace UI {
             Rect bound);
     Rect GetRectAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
             Rect bound);
-    void OpenMenu(Menu *toOpen);
-    void MenuBack();
-    Menu* GetCurrentMenu();
     Dialog* GetCurrentDialog();
     void OpenDialog(Dialog *toOpen);
     void OpenEndRaceDialog();
     void OpenAddPlayerDialog();
     void CloseCurrentDialog();
-    void CloseAllMenus();
     void HandleEvent(SDL_Event *event);
     void Update();
 
-    Menu* GetPauseMenu();
-    Menu* GetMainMenu();
 }

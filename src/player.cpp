@@ -190,6 +190,17 @@ int Player::AddPlayer()
     return gNumPlayers++;
 }
 
+
+void Player::RemovePlayer(int playerIdx)
+{
+    if (playerIdx >= gNumPlayers) return;
+    // Shift players to the right in array down
+    for (int i = playerIdx; i < gNumPlayers - 1; i++) {
+        gPlayers[i] = gPlayers[i + 1];
+    }
+    gNumPlayers--;
+}
+
 void Player::AddPlayerAndVehicle(VehicleSettings &settings)
 {
     Player::AddPlayer();

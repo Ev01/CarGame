@@ -12,39 +12,6 @@
 
 
 
-UI::Menu optionsMenu = {
-    {
-        //{"Add Player", MA_ADD_PLAYER_AND_VEHICLE},
-        {"Option 1", MA_NONE},
-        {"Option 2", MA_NONE},
-        {"Option 3", MA_NONE},
-        {"Back",     MA_BACK}
-    },
-    4, 0
-};
-
-UI::Menu mainMenu = {
-    {
-        // Title         Action           Menu     ChoiceOption
-        {"Play",         MA_START_GAME}, 
-        {"Starting Map", MA_CYCLE_CHOICE, nullptr, &World::gMapOption},
-        {"Add Player",   MA_ADD_PLAYER},
-        {"Options",      MA_OPEN_MENU, &optionsMenu}, 
-        {"Quit",         MA_QUIT}, 
-    },
-    5, 0
-};
-
-UI::Menu pauseMenu = {
-    {
-        {"Resume", MA_BACK},
-        {"Options", MA_OPEN_MENU, &optionsMenu},
-        {"Quit to Main Menu", MA_EXIT_WORLD},
-        {"Quit Game", MA_QUIT},
-    },
-    4, 0
-};
-
 UI::Dialog addPlayerDialog = {
     "Press Up + Enter on keyboard or A on controller...",
     "Press Escape to cancel.",
@@ -58,11 +25,8 @@ UI::Dialog endRaceDialog = {
 };
 
 
-static constexpr int cMaxStackSize = 8;
 
-UI::Menu* menuStack[cMaxStackSize];
 UI::Dialog *currentDialog = nullptr;
-int menuStackSize = 0;
 //bool showAddPlayerDialog = false;
 //bool showRaceEndDialog = false;
 
@@ -136,36 +100,6 @@ Rect UI::GetRectAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor,
 
 
 
-void UI::OpenMenu(UI::Menu *toOpen)
-{
-    if (toOpen == nullptr) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, 
-                "Warning: Tried to call UI::OpenMenu with nullptr");
-        return;
-    }
-    if (menuStackSize == cMaxStackSize) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                "Warning: Cannot open menu. Already at max stack size!");
-    }
-    menuStack[menuStackSize++] = toOpen;
-}
-
-
-void UI::MenuBack()
-{
-    if (menuStackSize == 0) {
-        return;
-    }
-    menuStack[menuStackSize - 1] = nullptr;
-    menuStackSize--;
-}
-
-
-UI::Menu* UI::GetCurrentMenu()
-{
-    if (menuStackSize == 0) return nullptr;
-    return menuStack[menuStackSize-1];
-}
 
 
 UI::Dialog* UI::GetCurrentDialog()
@@ -198,10 +132,6 @@ void UI::OpenAddPlayerDialog()
 }
 
 
-void UI::CloseAllMenus()
-{
-    while (GetCurrentMenu() != nullptr) MenuBack();
-}
 
 
 
@@ -300,5 +230,3 @@ void UI::Update()
 
 
 
-UI::Menu* UI::GetPauseMenu() { return &pauseMenu; }
-UI::Menu* UI::GetMainMenu()  { return &mainMenu; }

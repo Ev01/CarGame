@@ -23,7 +23,7 @@
 #include "player.h"
 #include "font.h"
 #include "ui.h"
-#include "vehicle.h"
+#include "ui_menu.h"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H

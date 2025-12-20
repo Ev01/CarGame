@@ -4,6 +4,62 @@
 #include "input_mapping.h"
 #include "player.h"
 #include "main_game.h"
+#include "world.h"
+
+UI::Menu optionsMenu = {
+    {
+        //{"Add Player", MA_ADD_PLAYER_AND_VEHICLE},
+        {"Option 1", MA_NONE},
+        {"Option 2", MA_NONE},
+        {"Option 3", MA_NONE},
+        {"Back",     MA_BACK}
+    },
+    4, 0
+};
+
+static void RemovePlayerMenuOnOpen(UI::Menu *menu)
+{
+    menu->ClearItems();
+    for (int i = 0; i < gNumPlayers; i++) {
+        UI::MenuItem newItem;
+        newItem.action = MA_REMOVE_PLAYER;
+        newItem.playerToRemove = i;
+        SDL_snprintf(newItem.text, sizeof(newItem.text), "Remove Player %d", i+1);
+        menu->AddItem(newItem);
+    }
+    menu->AddItem({"Back", MA_BACK});
+}
+UI::Menu removePlayerMenu = {
+    {}, 0, 0, RemovePlayerMenuOnOpen
+};
+
+UI::Menu mainMenu = {
+    {
+        // Title             Action           Menu / ChoiceOption
+        {"Play",             MA_START_GAME}, 
+        {"Starting Map",     MA_CYCLE_CHOICE, {.choiceOption = &World::gMapOption}},
+        {"Add Player",       MA_ADD_PLAYER},
+        {"Remove Player",    MA_OPEN_MENU,    {.menuToOpen = &removePlayerMenu}},
+        {"Options",          MA_OPEN_MENU,    {.menuToOpen = &optionsMenu}}, 
+        {"Quit",             MA_QUIT}, 
+    },
+    6, 0
+};
+
+UI::Menu pauseMenu = {
+    {
+        {"Resume",            MA_BACK},
+        {"Options",           MA_OPEN_MENU, {.menuToOpen = &optionsMenu}},
+        {"Quit to Main Menu", MA_EXIT_WORLD},
+        {"Quit Game",         MA_QUIT},
+    },
+    4, 0
+};
+
+
+static constexpr int cMaxStackSize = 8;
+int menuStackSize = 0;
+UI::Menu* menuStack[cMaxStackSize];
 
 void UI::Menu::SelectNext()
 {
@@ -38,11 +94,22 @@ UI::MenuItem* UI::Menu::GetSelectedMenuItem()
     return &items[selectedIdx];
 }
 
-
 MenuAction UI::Menu::GetSelectedMenuAction()
 {
     return items[selectedIdx].action;
 }
+void UI::Menu::ClearItems()
+{
+    numItems = 0;
+    selectedIdx = 0;
+}
+void UI::Menu::AddItem(MenuItem newItem)
+{
+    if (numItems < UI::cMaxMenuItems) {
+        items[numItems++] = newItem;
+    }
+}
+
 
 
 void UI::MenuItem::DoAction()
@@ -72,6 +139,11 @@ void UI::MenuItem::DoAction()
             //showAddPlayerDialog = true;
             OpenAddPlayerDialog();
             break;
+        case MA_REMOVE_PLAYER:
+            SDL_Log("Remove player %d", playerToRemove);
+            Player::RemovePlayer(playerToRemove);
+            UI::MenuBack();
+            break;
         case MA_EXIT_WORLD:
             UI::MenuBack();
             MainGame::EndWorld();
@@ -89,3 +161,46 @@ void UI::MenuItem::GetText(char *outText, int maxlen)
         SDL_snprintf(outText, maxlen, "%s", text);
     }
 }
+
+
+
+void UI::OpenMenu(UI::Menu *toOpen)
+{
+    if (toOpen == nullptr) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, 
+                "Warning: Tried to call UI::OpenMenu with nullptr");
+        return;
+    }
+    if (menuStackSize == cMaxStackSize) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "Warning: Cannot open menu. Already at max stack size!");
+    }
+    
+    if (toOpen->OnOpenFunc != nullptr) {
+        toOpen->OnOpenFunc(toOpen);
+    }
+    menuStack[menuStackSize++] = toOpen;
+}
+
+void UI::MenuBack()
+{
+    if (menuStackSize == 0) {
+        return;
+    }
+    menuStack[menuStackSize - 1] = nullptr;
+    menuStackSize--;
+}
+
+UI::Menu* UI::GetCurrentMenu()
+{
+    if (menuStackSize == 0) return nullptr;
+    return menuStack[menuStackSize-1];
+}
+
+void UI::CloseAllMenus()
+{
+    while (GetCurrentMenu() != nullptr) MenuBack();
+}
+
+UI::Menu* UI::GetPauseMenu() { return &pauseMenu; }
+UI::Menu* UI::GetMainMenu()  { return &mainMenu; }

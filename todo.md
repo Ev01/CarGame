@@ -144,9 +144,14 @@ atlas that stores all shadows side by side.
 15/12
 - [x] Players can progress through the race independently.
 
+19/12 - 20/12
+- [x] Simple end race screen.
+- [x] Remove players from menu
+
+
 - [ ] Add titles to menus 
 - [ ] Checkpoints that look like archways.
-- [ ] Simple end race screen.
+- [ ] Change number of laps
 
 - [ ] Add VSync option to menu.
 - [ ] Add display settings to menu (windowed/fullscreen + video resolution)

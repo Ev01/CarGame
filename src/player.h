@@ -61,6 +61,7 @@ struct Player {
     void DebugGUI();
 
     static int AddPlayer();
+    static void RemovePlayer(int playerIdx);
     static void AddPlayerAndVehicle(VehicleSettings &settings);
     static void PhysicsUpdateAllPlayers(double delta);
     static void InputUpdateAllPlayers();
