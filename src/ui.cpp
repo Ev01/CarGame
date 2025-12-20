@@ -1,8 +1,8 @@
 #include "ui.h"
+#include "ui_menu.h"
 
 #include "main_game.h"
 #include "world.h"
-#include "options.h"
 #include "player.h"
 #include "input.h"
 #include "input_mapping.h"
@@ -23,7 +23,7 @@ UI::Menu optionsMenu = {
     4, 0
 };
 
-UI::Menu UI::mainMenu = {
+UI::Menu mainMenu = {
     {
         // Title         Action           Menu     ChoiceOption
         {"Play",         MA_START_GAME}, 
@@ -134,78 +134,6 @@ Rect UI::GetRectAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor,
     return {bl.x, bl.y, tr.x - bl.x, tr.y - bl.y};
 }
 
-void UI::Menu::SelectNext()
-{
-   selectedIdx++;
-   if (selectedIdx >= numItems) selectedIdx = 0;
-}
-void UI::Menu::SelectPrev()
-{
-   selectedIdx--;
-   if (selectedIdx < 0) selectedIdx = numItems - 1;
-}
-
-void UI::Menu::HandleEvent(SDL_Event *event)
-{
-    if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_UI_DOWN)) {
-        SelectNext();
-    }
-    if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_UI_UP)) {
-        SelectPrev();
-    }
-    if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_UI_ACCEPT)) {
-        GetSelectedMenuItem()->DoAction();
-    }
-}
-
-void UI::Menu::Update()
-{
-}
-
-UI::MenuItem* UI::Menu::GetSelectedMenuItem()
-{
-    return &items[selectedIdx];
-}
-
-
-void UI::MenuItem::DoAction()
-{
-    switch (action) {
-        case MA_NONE:
-            break;
-        case MA_START_GAME:
-            if (gNumPlayers > 0) {
-                MainGame::StartWorld();
-            }
-            break;
-        case MA_QUIT:
-            MainGame::Quit();
-            break;
-        case MA_OPEN_MENU:
-            UI::OpenMenu(menuToOpen);
-            break;
-        case MA_BACK:
-            UI::MenuBack();
-            break;
-        case MA_CYCLE_CHOICE:
-            choiceOption->SelectNext();
-            break;
-        case MA_ADD_PLAYER:
-            //Player::AddPlayer();
-            //showAddPlayerDialog = true;
-            OpenDialog(&addPlayerDialog);
-            break;
-        case MA_EXIT_WORLD:
-            UI::MenuBack();
-            MainGame::EndWorld();
-            break;
-    }
-}
-
-MenuAction UI::Menu::GetSelectedMenuAction()
-{
-    return items[selectedIdx].action;
-}
 
 
 void UI::OpenMenu(UI::Menu *toOpen)
@@ -261,6 +189,12 @@ void UI::OpenDialog(Dialog *toOpen)
 void UI::OpenEndRaceDialog()
 {
     OpenDialog(&endRaceDialog);
+}
+
+
+void UI::OpenAddPlayerDialog()
+{
+    OpenDialog(&addPlayerDialog);
 }
 
 
@@ -364,16 +298,7 @@ void UI::Update()
 }
 
 
-void UI::MenuItem::GetText(char *outText, int maxlen)
-{
-    if (action == MA_CYCLE_CHOICE) {
-        // TODO: Clean this up
-        SDL_snprintf(outText, maxlen, "%s: %s", text,
-                choiceOption->optionStrings[choiceOption->selectedChoice]);
-    } else {
-        SDL_snprintf(outText, maxlen, "%s", text);
-    }
-}
 
 
 UI::Menu* UI::GetPauseMenu() { return &pauseMenu; }
+UI::Menu* UI::GetMainMenu()  { return &mainMenu; }

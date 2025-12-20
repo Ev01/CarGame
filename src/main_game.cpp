@@ -211,7 +211,7 @@ void MainGame::EndWorld()
     World::CleanUp();
     MainGame::gGameState = GAME_PRESS_START_SCREEN;
     UI::CloseAllMenus();
-    UI::OpenMenu(&UI::mainMenu);
+    UI::OpenMenu(UI::GetMainMenu());
 }
 
 
@@ -265,7 +265,7 @@ SDL_AppResult MainGame::Init()
     // Players
     //Player::AddPlayer();
 
-    UI::OpenMenu(&UI::mainMenu);
+    UI::OpenMenu(UI::GetMainMenu());
 
 
     glViewport(0, 0, 800, 600);

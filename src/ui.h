@@ -16,16 +16,6 @@ enum UIAnchor : unsigned int {
 };
 
 
-enum MenuAction {
-    MA_NONE,
-    MA_START_GAME,
-    MA_OPEN_MENU,
-    MA_BACK,
-    MA_CYCLE_CHOICE,
-    MA_ADD_PLAYER,
-    MA_QUIT,
-    MA_EXIT_WORLD,
-};
 
 /*
 enum MenuItemType {
@@ -39,6 +29,7 @@ enum DialogType {
     DIALOG_RACE_END
 };
 
+// Forward declarations
 struct ChoiceOption;
 
 struct Rect {
@@ -49,34 +40,9 @@ struct Rect {
 };
 
 namespace UI {
+    // Forward declarations
     struct Menu;
-
-
-    struct MenuItem {
-        char text[64];
-        MenuAction action = MA_NONE;
-        Menu *menuToOpen  = nullptr; // If action == MA_OPEN_MENU
-        ChoiceOption *choiceOption = nullptr; // If action == MA_CYCLE_CHOICE
-
-        void DoAction();
-        /* Put the full display text in outText, including the choice value if
-         * this is a CYCLE_CHOICE item. */
-        void GetText(char *outText, int maxlen);
-    };
-
-
-    struct Menu {
-        MenuItem items[8];   
-        int numItems = 0;
-        int selectedIdx = 0;
-
-        void SelectNext();
-        void SelectPrev();
-        MenuAction GetSelectedMenuAction();
-        MenuItem* GetSelectedMenuItem();
-        void HandleEvent(SDL_Event *event);
-        void Update();
-    };
+    struct MenuItem;
 
     struct Dialog {
         const char* line1;
@@ -86,8 +52,6 @@ namespace UI {
         void GetLine1(char *outText, int maxLen);
         void GetLine2(char *outText, int maxLen);
     };
-
-    //void DoMenuAction(MenuAction action);
 
     glm::vec2 GetPositionAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
             Rect bound);
@@ -99,12 +63,12 @@ namespace UI {
     Dialog* GetCurrentDialog();
     void OpenDialog(Dialog *toOpen);
     void OpenEndRaceDialog();
+    void OpenAddPlayerDialog();
     void CloseCurrentDialog();
     void CloseAllMenus();
     void HandleEvent(SDL_Event *event);
     void Update();
 
     Menu* GetPauseMenu();
-
-    extern Menu mainMenu;
+    Menu* GetMainMenu();
 }

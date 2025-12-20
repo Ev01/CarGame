@@ -7,6 +7,7 @@
 #include "world.h"
 #include "texture.h"
 #include "ui.h"
+#include "ui_menu.h"
 #include "font.h"
 #include "shader.h"
 #include "glerr.h"
