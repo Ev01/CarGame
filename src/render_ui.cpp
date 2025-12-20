@@ -18,6 +18,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <SDL3/SDL.h>
+
 
 static void DrawMenu()
 {
@@ -123,11 +125,15 @@ void Render::RenderTextAnchored(Font::Face *face, const char* text,
 }
 
 
-static void DrawAddPlayerDialog()
+static void DrawDialog(UI::Dialog *dialog)
 {
     const float scale = 0.5;
-    const char* text = "Press Up + Enter on keyboard or A on controller..."; 
-    const char* text2 = "Press Escape to cancel.";
+    //const char* text = dialog->line1; 
+    //const char* text2 = dialog->line2;
+    char text[64];
+    char text2[64];
+    dialog->GetLine1(text, 64);
+    dialog->GetLine2(text2, 64);
     
     float textWidth = Font::defaultFace->GetWidthOfText(text, SDL_strlen(text)) * scale;
     float textWidth2 = Font::defaultFace->GetWidthOfText(text2, SDL_strlen(text2)) * scale;
@@ -149,7 +155,9 @@ static void DrawAddPlayerDialog()
 
     Render::RenderTextAnchored(Font::defaultFace, text2, glm::vec2(0, 0), scale, 
             UI_ANCHOR_BOTTOM, glm::vec3(0, 0, 0), rectInner);
+
 }
+
 
 
 void Render::RenderUIAnchored(Texture tex, glm::vec2 scale, glm::vec2 margin,
@@ -230,8 +238,9 @@ void Render::GuiPass()
     }
     // Render the current menu
     DrawMenu();
-    if (UI::GetShowPlayerAddDialog()) {
-        DrawAddPlayerDialog();
+    // Draw the current dialog
+    if (UI::GetCurrentDialog()) {
+        DrawDialog(UI::GetCurrentDialog());
     }
 
     // Render the tachometer for all players

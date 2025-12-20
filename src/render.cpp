@@ -218,22 +218,15 @@ bool Render::Init()
 
 float Render::ScreenAspect()
 {
-    // Screen width and height
-    //int sw, sh;
-    //bool screenSuccess = SDL_GetWindowSize(window, &sw, &sh);
     UpdateWindowSize();
-    //if (screenSuccess) {
-        float aspect = (float) screenWidth / (float) screenHeight;
-        // Divide aspect by 2.0 for split screen
-        //SDL_Log("Split: %d, num players: %d", doSplitScreen, gNumPlayers);
-        if (doSplitScreen && gNumPlayers == 2) {
-            SDL_Log("Dividing");
-            aspect /= 2.0;
-        }
-        SDL_Log("Aspect: %f, width: %d, height: %d", aspect, screenWidth, screenHeight);
-        return aspect;
-    //}
-    //return 0.0;
+    float aspect = (float) screenWidth / (float) screenHeight;
+    // Divide aspect by 2.0 for split screen
+    if (doSplitScreen && gNumPlayers == 2) {
+        //SDL_Log("Dividing");
+        aspect /= 2.0;
+    }
+    //SDL_Log("Aspect: %f, width: %d, height: %d", aspect, screenWidth, screenHeight);
+    return aspect;
 }
 
 
@@ -279,7 +272,8 @@ void Render::RenderFrame()
 
     GLERR;
     
-    if (MainGame::gGameState == GAME_IN_WORLD || MainGame::gGameState == GAME_IN_WORLD_PAUSED) {
+    if (MainGame::gGameState == GAME_IN_WORLD 
+            || MainGame::gGameState == GAME_IN_WORLD_PAUSED) {
         RenderSceneSplitScreen();
         //RenderShadowDepthToScreen();
     }

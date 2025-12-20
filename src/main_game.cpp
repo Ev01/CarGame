@@ -23,6 +23,7 @@
 #include "player.h"
 #include "font.h"
 #include "ui.h"
+#include "vehicle.h"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -193,6 +194,8 @@ void MainGame::StartWorld()
     UI::CloseAllMenus();
     Phys::SetupSimulation();
     World::Init();
+    // Start race immediatley after starting the world.
+    World::BeginRaceCountdown();
     Render::UpdatePlayerCamAspectRatios();
     MainGame::gGameState = GAME_IN_WORLD;
 }
@@ -314,7 +317,8 @@ SDL_AppResult MainGame::HandleEvent(SDL_Event *event)
 
     if (gGameState == GAME_IN_WORLD) {
         //if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_ESCAPE) {
-        if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_PAUSE)) {
+        if (gDefaultControlScheme.EventMatchesActionJustPressed(event, ACTION_PAUSE)
+                && World::GetRaceState() != RACE_ENDED) {
             UI::OpenMenu(UI::GetPauseMenu());
             Pause();
         }

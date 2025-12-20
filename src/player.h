@@ -21,6 +21,7 @@ enum InputDeviceType {
 
 struct PlayerRaceProgress {
     void CollectCheckpoint();
+    bool IsFinishedRace(int totalCheckpointCount);
     void Reset();
     float finishTime = 0.0;
     unsigned int checkpointsCollected = 0;

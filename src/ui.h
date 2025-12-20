@@ -34,6 +34,11 @@ enum MenuItemType {
 };
 */
 
+enum DialogType {
+    DIALOG_PLAYER_ADD,
+    DIALOG_RACE_END
+};
+
 struct ChoiceOption;
 
 struct Rect {
@@ -73,6 +78,15 @@ namespace UI {
         void Update();
     };
 
+    struct Dialog {
+        const char* line1;
+        const char* line2;
+        DialogType type;
+        void HandleEvent(SDL_Event *event);
+        void GetLine1(char *outText, int maxLen);
+        void GetLine2(char *outText, int maxLen);
+    };
+
     //void DoMenuAction(MenuAction action);
 
     glm::vec2 GetPositionAnchored(glm::vec2 size, glm::vec2 margin, UIAnchor anchor, 
@@ -82,10 +96,13 @@ namespace UI {
     void OpenMenu(Menu *toOpen);
     void MenuBack();
     Menu* GetCurrentMenu();
+    Dialog* GetCurrentDialog();
+    void OpenDialog(Dialog *toOpen);
+    void OpenEndRaceDialog();
+    void CloseCurrentDialog();
     void CloseAllMenus();
     void HandleEvent(SDL_Event *event);
     void Update();
-    bool GetShowPlayerAddDialog();
 
     Menu* GetPauseMenu();
 

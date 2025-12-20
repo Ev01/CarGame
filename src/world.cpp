@@ -8,6 +8,7 @@
 #include "audio.h"
 #include "player.h"
 #include "options.h"
+#include "ui.h"
 
 #include "../vendor/imgui/imgui.h"
 
@@ -22,7 +23,6 @@
 #include <SDL3/SDL.h>
 
 #include <vector>
-#include <algorithm>
 
 static std::vector<Render::SpotLight*> spotLights;
 static VehicleSettings carSettings;
@@ -142,7 +142,7 @@ static void ChangeMap(const char *modelFileName)
 }
 
 
-static void BeginRaceCountdown()
+void World::BeginRaceCountdown()
 {
     JPH::BodyInterface &bodyInterface = Phys::GetBodyInterface();
 
@@ -191,10 +191,11 @@ static void ResetCheckpoints()
 */
 
 
-void RaceProgress::EndRace()
+void RaceProgress::EndRace(int winningPlayerIdx)
 {
     //mFinishTime = (SDL_GetTicks() - mRaceStartMS) / 1000.0;
-    mState = RACE_NONE;
+    mState = RACE_ENDED;
+    mWinningPlayerIdx = winningPlayerIdx;
     SDL_Log("Finished race in %f seconds", mTimePassed);
 }
 
@@ -214,9 +215,13 @@ void World::BeginRace()
 }
 
 
-void World::EndRace()
+void World::EndRace(int winningPlayerIdx)
 {
-    raceProgress.EndRace();
+    raceProgress.EndRace(winningPlayerIdx);
+    for (int i = 0; i < gNumPlayers; i++) {
+        gPlayers[i].vehicle->HoldInPlace();
+    }
+    UI::OpenEndRaceDialog();
 }
 
 
@@ -274,6 +279,9 @@ void World::OnContactAdded(const JPH::Body &inBody1, const JPH::Body &inBody2)
         if (inBody1.GetID() == nextCheckpoint.mBodyID 
                 || inBody2.GetID() == nextCheckpoint.mBodyID) {
             gPlayers[i].raceProgress.CollectCheckpoint();
+            if (gPlayers[i].raceProgress.IsFinishedRace(existingCheckpoints.size())) {
+                EndRace(i);
+            }
             checkpointSound->Play();
         }
     }
@@ -298,6 +306,7 @@ void RaceProgress::Update(float delta)
             mTimePassed += delta;
             break;
         case RACE_NONE:
+        case RACE_ENDED:
             break;
     }
 }
@@ -314,6 +323,7 @@ void World::Update(float delta)
         case RACE_STARTED:
             //raceTime = (SDL_GetTicks() - raceProgress.mRaceStartMS) / 1000.0;
         case RACE_NONE:
+        case RACE_ENDED:
             raceTime = raceProgress.mTimePassed;
             break;
     }
@@ -347,7 +357,7 @@ void World::Update(float delta)
 
 void World::InputUpdate()
 {
-    if (raceProgress.mState != RACE_COUNTING_DOWN) {
+    if (raceProgress.mState != RACE_COUNTING_DOWN && raceProgress.mState != RACE_ENDED) {
         for (Vehicle *v : Vehicle::GetExistingVehicles()) {
             v->ReleaseFromHold();
         }
@@ -386,8 +396,10 @@ void World::Init()
 
 void World::CleanUp()
 {
+    raceProgress.mState = RACE_NONE;
     World::DestroyAllLights();
     Render::DeleteAllLights();
+    Render::ResetSpotLightsGPU();
     mapModel.reset(nullptr);
     existingCheckpoints.clear();
 

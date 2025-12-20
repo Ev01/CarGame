@@ -5,7 +5,8 @@
 enum GameState {
     GAME_PRESS_START_SCREEN,
     GAME_IN_WORLD,
-    GAME_IN_WORLD_PAUSED
+    GAME_IN_WORLD_PAUSED,
+    //GAME_IN_WORLD_RACE_END
 };
 
 namespace MainGame {
@@ -14,6 +15,7 @@ namespace MainGame {
     SDL_AppResult Update();
     void StartWorld();
     void EndWorld();
+    //void EndRaceScreen();
     void Quit();
     void CleanUp();
 

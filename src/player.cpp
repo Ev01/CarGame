@@ -16,9 +16,16 @@ void PlayerRaceProgress::CollectCheckpoint()
 {
     checkpointsCollected++;
     //mCheckpointsCollected %= existingCheckpoints.size();
-    if (checkpointsCollected == World::GetCheckpoints().size()) {
-        World::EndRace();
-    }
+    //if (checkpointsCollected == World::GetCheckpoints().size()) {
+    //    World::EndRace();
+    //}
+}
+
+
+
+bool PlayerRaceProgress::IsFinishedRace(int totalCheckpointCount)
+{
+    return checkpointsCollected >= totalCheckpointCount;
 }
 
 

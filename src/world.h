@@ -21,7 +21,8 @@ namespace JPH {
 enum RaceState {
     RACE_NONE,
     RACE_COUNTING_DOWN,
-    RACE_STARTED
+    RACE_STARTED,
+    RACE_ENDED
 };
 
 struct Checkpoint {
@@ -38,12 +39,13 @@ struct Checkpoint {
 
 struct RaceProgress {
     void BeginRace();
-    void EndRace();
+    void EndRace(int winningPlayerIdx = -1);
     void Update(float delta);
     RaceState mState = RACE_NONE;
     float mCountdownTimer = 0.0;
     Uint64 mRaceStartMS = 0;
     float mTimePassed = 0.0;
+    int mWinningPlayerIdx = -1;
 };
 
 struct ChoiceOption;
@@ -60,8 +62,9 @@ namespace World {
     void Init();
     void CleanUp();
     void CreateCars();
-    void EndRace();
+    void EndRace(int winningPlayerIdx = -1);
     void BeginRace();
+    void BeginRaceCountdown();
     /*
     Vehicle& GetCar();
     Vehicle& GetCar2();

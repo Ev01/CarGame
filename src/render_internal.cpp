@@ -272,7 +272,8 @@ void Render::DrawCars(ShaderProg &shader)
 
 void Render::DrawCheckpoints(ShaderProg &shader, Player *p)
 {
-    if (World::GetCheckpoints().size() > 0 && World::GetRaceState() != RACE_NONE) {
+    if (World::GetCheckpoints().size() > 0 && World::GetRaceState() != RACE_NONE
+            && World::GetRaceState() != RACE_ENDED) {
         Checkpoint &checkpoint = World::GetCheckpoints()[p->raceProgress.checkpointsCollected % World::GetCheckpoints().size()];
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, ToGlmVec3(checkpoint.GetPosition()));
