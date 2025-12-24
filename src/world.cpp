@@ -39,15 +39,16 @@ JPH::Vec3 raceStartPos;
 JPH::Quat raceStartRot;
 
 
-const char* mapDisplayNames[] = {"Map01", "Map02", "simple_map", "racetrack1"};
+const char* mapDisplayNames[] = {"Map01", "Map02", "simple_map", "racetrack1", "racetrack2"};
 const char* mapFilepaths[] = {
     "data/models/no_tex_map.gltf",
     "data/models/map1.gltf",
     "data/models/simple_map.gltf",
     "data/models/racetrack1.gltf",
+    "data/models/racetrack2.gltf",
 };
 
-ChoiceOption World::gMapOption = {0, mapDisplayNames, 4};
+ChoiceOption World::gMapOption = {0, mapDisplayNames, 5};
 IntOption World::gLapsOption   = {1, 1, 10}; 
 
 static void CreateCheckpoint(JPH::Vec3 position, unsigned int num)
