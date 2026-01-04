@@ -29,6 +29,11 @@ find_package(Freetype REQUIRED)
 add_library(imgui)
 add_subdirectory(vendor/imgui)
 
+set(USE_AVX2 OFF)
+set(USE_AVX512 OFF)
+set(USE_LZCNT OFF)
+set(USE_TZCNT OFF)
+set(USE_FMADD OFF)
 add_subdirectory(vendor/JoltPhysics/Build)
 
 #include_directories(include ~/cmake/freetype-2.13.3-win64/include/freetype2/)
