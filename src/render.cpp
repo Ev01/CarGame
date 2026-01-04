@@ -9,10 +9,7 @@
 #include "model.h"
 #include "shader.h"
 #include "../glad/glad.h"
-#include "world.h"
 #include "player.h"
-#include "font.h"
-#include "main_game.h"
 #include "glerr.h"
 
 #include "../vendor/imgui/backends/imgui_impl_sdl3.h"
@@ -35,6 +32,7 @@ static VehicleCamera cam2;
 static VehicleCamera cam3;
 static unsigned int physFrameCounter = 0;
 static const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+static bool doRenderWorld = false;
 
 /*
  * Render the scene without any shader setup
@@ -254,7 +252,8 @@ void Render::RenderFrame()
 {
     GLERR;
 
-    if (MainGame::gGameState == GAME_IN_WORLD) {
+    //if (MainGame::gGameState == GAME_IN_WORLD) {
+    if (doRenderWorld) {
         ShadowPass();
     }
 
@@ -272,8 +271,9 @@ void Render::RenderFrame()
 
     GLERR;
     
-    if (MainGame::gGameState == GAME_IN_WORLD 
-            || MainGame::gGameState == GAME_IN_WORLD_PAUSED) {
+    //if (MainGame::gGameState == GAME_IN_WORLD 
+    //        || MainGame::gGameState == GAME_IN_WORLD_PAUSED) {
+    if (doRenderWorld) {
         RenderSceneSplitScreen();
         //RenderShadowDepthToScreen();
     }
@@ -445,7 +445,9 @@ void Render::CleanUp()
     glDeleteFramebuffers(1, &fbo);
 }
 
+void Render::SetDoRenderWorld(bool value)   { doRenderWorld = value; } 
 
+bool Render::GetDoRenderWorld()            { return doRenderWorld; }
 SDL_Window* Render::GetWindow()            { return window; }
 SDL_GLContext& Render::GetGLContext()      { return context; }
 Render::SunLight& Render::GetSunLight()    { return sunLight; }

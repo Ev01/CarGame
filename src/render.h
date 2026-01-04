@@ -43,6 +43,9 @@ namespace Render {
 
     SunLight& GetSunLight();
 
+    void SetDoRenderWorld(bool value);
+    bool GetDoRenderWorld();
+
 }
 
 
