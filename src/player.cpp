@@ -36,7 +36,12 @@ void PlayerRaceProgress::Reset()
 
 int PlayerRaceProgress::GetLapsCompleted()
 {
-    return checkpointsCollected / World::GetNumCheckpointsPerLap();
+    int checkpointsPerLap = World::GetNumCheckpointsPerLap();
+    if (checkpointsPerLap == 0) {
+        return -1;
+    } else {
+        return checkpointsCollected / checkpointsPerLap;
+    }
 }
 
 

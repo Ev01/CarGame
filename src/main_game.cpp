@@ -197,6 +197,7 @@ void MainGame::StartWorld()
     // Start race immediatley after starting the world.
     World::BeginRaceCountdown();
     Render::UpdatePlayerCamAspectRatios();
+    Render::SetDoRenderWorld(true);
     MainGame::gGameState = GAME_IN_WORLD;
 }
 
@@ -210,6 +211,7 @@ void MainGame::EndWorld()
 
     World::CleanUp();
     MainGame::gGameState = GAME_PRESS_START_SCREEN;
+    Render::SetDoRenderWorld(false);
     UI::CloseAllMenus();
     UI::OpenMenu(UI::GetMainMenu());
 }

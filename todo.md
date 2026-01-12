@@ -147,11 +147,11 @@ atlas that stores all shadows side by side.
 19/12 - 20/12
 - [x] Simple end race screen.
 - [x] Remove players from menu
+- [x] Change number of laps
 
 
 - [ ] Add titles to menus 
 - [ ] Checkpoints that look like archways.
-- [ ] Change number of laps
 
 - [ ] Add VSync option to menu.
 - [ ] Add display settings to menu (windowed/fullscreen + video resolution)
